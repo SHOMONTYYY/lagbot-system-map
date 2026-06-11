@@ -131,11 +131,19 @@ input,select,textarea{font-family:inherit}
   background:rgba(16,24,19,.92);border:1px solid var(--line);border-radius:var(--radius);
   padding:11px 13px;backdrop-filter:blur(4px);max-width:230px;
 }
-#legend h4{font-family:var(--mono);font-size:8.5px;letter-spacing:.26em;color:var(--mute);text-transform:uppercase;margin-bottom:8px}
+#legend h4{font-family:var(--mono);font-size:8.5px;letter-spacing:.26em;color:var(--mute);text-transform:uppercase;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;user-select:none}
+#legend h4:hover{color:var(--cream-dim)}
+#legend.collapsed h4{margin-bottom:0}
+#legend.collapsed .lg-row,#legend.collapsed .hint{display:none}
 .lg-row{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:10.5px;color:var(--cream-dim)}
 .lg-swatch{width:9px;height:9px;border-radius:3px;flex:none}
 .lg-line{width:18px;height:0;border-top:2px dashed var(--warn);flex:none}
 #legend .hint{margin-top:9px;padding-top:8px;border-top:1px solid var(--line-soft);font-size:9.5px;line-height:1.5;color:var(--mute)}
+
+/* ───────────────────────── live cursors ───────────────────────── */
+.rcursor{pointer-events:none;transition:opacity .4s}
+.rcursor.fading{opacity:0}
+.rcursor .rc-name{font-family:var(--mono);font-size:9px;letter-spacing:.06em;fill:#0E1612}
 
 /* ───────────────────────── trace bar ───────────────────────── */
 #traceBar{
@@ -703,12 +711,13 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
       <g id="edgesG"></g>
       <g id="nodesG"></g>
       <path id="ghost" d="" visibility="hidden"/>
+      <g id="cursorsG"></g>
     </g>
   </svg>
 </div>
 
 <aside id="legend">
-  <h4>Legend</h4>
+  <h4 id="legendHead">Legend <span id="legendCaret">▾</span></h4>
   <div class="lg-row"><span class="lg-swatch" style="background:#8E9AA8"></span>External system</div>
   <div class="lg-row"><span class="lg-swatch" style="background:#4FA97E"></span>Backend service</div>
   <div class="lg-row"><span class="lg-swatch" style="background:#7CC49C"></span>REST API surface</div>
@@ -1692,7 +1701,7 @@ document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==
 /* ════════════════════════════ team sync via Supabase ════════════════════════════ */
 const SYNC_DOC_ID="lagbot";
 const CLIENT_ID="c_"+Math.random().toString(36).slice(2);
-let sb=null, sbChannel=null, syncOn=false;
+let sb=null, sbChannel=null, curChannel=null, curReady=false, syncOn=false;
 function editorNameQuiet(){ try{ return sessionStorage.getItem("lagbot:editor")||"Unknown"; }catch(e){ return "Unknown"; } }
 function syncCfg(){
   const d=window.TEAM_CONFIG||{};
@@ -1702,13 +1711,18 @@ function syncCfg(){
   }
   catch(e){ return {url:String(d.supabaseUrl||"").trim().replace(/\/+$/,""), key:String(d.supabaseAnonKey||"").trim()}; }
 }
-function syncInit(){
+function syncTeardown(){
   if(sbChannel&&sb){ try{ sb.removeChannel(sbChannel); }catch(e){} }
-  sb=null; sbChannel=null; syncOn=false;
+  if(curChannel&&sb){ try{ sb.removeChannel(curChannel); }catch(e){} }
+  sbChannel=null; curChannel=null; curReady=false; syncOn=false; cursorsClear();
+}
+function syncInit(){
+  syncTeardown();
+  sb=null;
   const c=syncCfg();
   if(!c.url||!c.key) return;
   if(!window.supabase){ toast("Couldn't load the sync library — check your internet","warn"); return; }
-  try{ sb=window.supabase.createClient(c.url,c.key); syncOn=true; }catch(e){ sb=null; return; }
+  try{ sb=window.supabase.createClient(c.url,c.key,{realtime:{params:{eventsPerSecond:25}}}); syncOn=true; }catch(e){ sb=null; return; }
   sbChannel=sb.channel("sysmap-live")
     .on("postgres_changes",{event:"*",schema:"public",table:"sysmap",filter:"id=eq."+SYNC_DOC_ID},payload=>{
       const row=payload.new;
@@ -1716,6 +1730,10 @@ function syncInit(){
       applyRemote(row);
     })
     .subscribe();
+  curChannel=sb.channel("sysmap-cursors",{config:{broadcast:{self:false}}})
+    .on("broadcast",{event:"cursor"},({payload})=>cursorSeen(payload))
+    .on("broadcast",{event:"cursor-gone"},({payload})=>cursorDrop(payload&&payload.id))
+    .subscribe(s=>{ curReady=(s==="SUBSCRIBED"); });
 }
 function applyRemote(row){
   try{
@@ -1742,9 +1760,50 @@ async function cloudSave(){
   }catch(e){ return false; }
 }
 
+/* ════════════════════════════ live cursors ════════════════════════════ */
+const CURSOR_COLORS={Andre:"var(--svc)",David:"var(--page)",Joseph:"var(--chan)"};
+const cursors={};
+let curLast=0, curX=null, curY=null;
+function cursorPlace(c){ c.g.setAttribute("transform",`translate(${c.x},${c.y}) scale(${1/view.k})`); }
+function cursorsRescale(){ for(const id in cursors) cursorPlace(cursors[id]); }
+function cursorSeen(p){
+  if(!p||!p.id||p.id===CLIENT_ID||typeof p.x!=="number"||typeof p.y!=="number") return;
+  let c=cursors[p.id];
+  if(c&&c.name!==p.name){ cursorDrop(p.id); c=null; }
+  if(!c){
+    const col=CURSOR_COLORS[p.name]||"var(--mute)";
+    const g=svgEl("g",{class:"rcursor"},$("cursorsG"));
+    svgEl("path",{d:"M0 0 L0 13.5 L3.6 10.4 L6 15.6 L8.3 14.5 L5.9 9.5 L10.4 9 Z",fill:col,stroke:"#0E1612","stroke-width":"1"},g);
+    const name=String(p.name||"Unknown");
+    svgEl("rect",{x:11,y:12,width:name.length*5.6+10,height:14,rx:7,fill:col},g);
+    const t=svgEl("text",{x:16,y:22,class:"rc-name"},g);
+    t.textContent=name;
+    c=cursors[p.id]={g,x:0,y:0,timer:null,name:p.name};
+  }
+  c.x=p.x; c.y=p.y;
+  c.g.classList.remove("fading");
+  cursorPlace(c);
+  clearTimeout(c.timer);
+  c.timer=setTimeout(()=>{ c.g.classList.add("fading"); c.timer=setTimeout(()=>cursorDrop(p.id),450); },5000);
+}
+function cursorDrop(id){ const c=cursors[id]; if(!c) return; clearTimeout(c.timer); try{ c.g.remove(); }catch(e){} delete cursors[id]; }
+function cursorsClear(){ for(const id in cursors) cursorDrop(id); }
+function cursorBye(){ if(syncOn&&curChannel&&curReady){ try{ curChannel.send({type:"broadcast",event:"cursor-gone",payload:{id:CLIENT_ID}}); }catch(e){} } }
+mapEl.addEventListener("pointermove",ev=>{
+  if(!syncOn||!curChannel||!curReady) return;
+  const now=performance.now();
+  if(now-curLast<40) return;
+  const p=worldPt(ev.clientX,ev.clientY);
+  if(p.x===curX&&p.y===curY) return;
+  curLast=now; curX=p.x; curY=p.y;
+  try{ curChannel.send({type:"broadcast",event:"cursor",payload:{id:CLIENT_ID,name:editorNameQuiet(),x:p.x,y:p.y}}); }catch(e){}
+});
+window.addEventListener("pagehide",cursorBye);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") cursorBye(); });
+
 /* ════════════════════════════ view (pan/zoom) ════════════════════════════ */
 const view={x:60,y:60,k:1};
-function applyView(){ viewport.setAttribute("transform",`translate(${view.x},${view.y}) scale(${view.k})`); }
+function applyView(){ viewport.setAttribute("transform",`translate(${view.x},${view.y}) scale(${view.k})`); cursorsRescale(); }
 function worldPt(cx,cy){ const r=mapEl.getBoundingClientRect(); return {x:(cx-r.left-view.x)/view.k, y:(cy-r.top-view.y)/view.k}; }
 function zoomAt(cx,cy,f){
   const r=mapEl.getBoundingClientRect();
@@ -3424,7 +3483,7 @@ $("syncSave").onclick=async ()=>{
     toast("Connected — loaded the team's shared map");
   } else {
     const ok=await cloudSave();
-    if(!ok){ $("syncStatus").textContent="Connected, but couldn't write to the sysmap table — run the SQL from lagbot-map-team-sync.sql in the Supabase SQL editor, then try again."; syncOn=false; return; }
+    if(!ok){ $("syncStatus").textContent="Connected, but couldn't write to the sysmap table — run the SQL from lagbot-map-team-sync.sql in the Supabase SQL editor, then try again."; syncTeardown(); return; }
     toast("Connected — your map is now the team's shared map");
   }
   logChange("Connected this device to team sync");
@@ -3545,6 +3604,15 @@ window.addEventListener("keydown",ev=>{
     else { clearFocus(); clearSelection(); }
   }
 });
+
+/* ════════════════════════════ legend collapse ════════════════════════════ */
+function setLegendOpen(open){
+  $("legend").classList.toggle("collapsed",!open);
+  $("legendCaret").textContent=open?"▾":"▸";
+  try{ localStorage.setItem("lagbot:legendOpen",open?"1":"0"); }catch(e){}
+}
+$("legendHead").addEventListener("click",()=>setLegendOpen($("legend").classList.contains("collapsed")));
+(function(){ let v="1"; try{ v=localStorage.getItem("lagbot:legendOpen")||"1"; }catch(e){} setLegendOpen(v!=="0"); })();
 
 /* ════════════════════════════ init ════════════════════════════ */
 (async function init(){
