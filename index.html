@@ -357,6 +357,43 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
 .ai-prop .pbtns .pv{border-color:var(--api);color:var(--api)}
 .ai-prop .pbtns .pv:hover{background:var(--api);color:#0B110E}
 
+/* ───────────── projects launcher ───────────── */
+#launcher{position:fixed;inset:0;z-index:200;background:radial-gradient(120% 90% at 50% -10%,#13201a,#0B110E 60%);display:none;flex-direction:column;overflow-y:auto}
+#launcher.on{display:flex}
+#lzHead{padding:54px 32px 0;text-align:center;max-width:1000px;margin:0 auto;width:100%}
+#lzHead .lz-lb{font-family:var(--serif);font-style:italic;font-size:38px;color:var(--cream)}
+#lzHead .lz-sc{font-family:var(--mono);font-size:10px;letter-spacing:.34em;color:var(--svc);text-transform:uppercase;margin-top:6px}
+#lzHead .lz-tag{color:var(--cream-dim);font-size:14px;line-height:1.6;margin-top:16px;max-width:560px;margin-left:auto;margin-right:auto}
+#lzHead .lz-tag b{color:var(--current)}
+#lzGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:32px;max-width:1000px;margin:0 auto;width:100%}
+.lz-card{background:var(--pane);border:1px solid var(--line);border-radius:14px;padding:18px;cursor:pointer;transition:border-color .15s,transform .12s;position:relative;display:flex;flex-direction:column;min-height:150px}
+.lz-card:hover{border-color:var(--svc);transform:translateY(-2px)}
+.lz-card.new{border-style:dashed;align-items:center;justify-content:center;text-align:center;color:var(--cream-dim)}
+.lz-card.new:hover{border-color:var(--current);color:var(--current)}
+.lz-card .lz-name{font-family:var(--serif);font-style:italic;font-size:19px;color:var(--cream)}
+.lz-card .lz-desc{font-size:11.5px;color:var(--mute);line-height:1.5;margin-top:6px;flex:1}
+.lz-card .lz-stats{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--cream-dim);text-transform:uppercase;margin-top:12px;display:flex;gap:12px;flex-wrap:wrap}
+.lz-card .lz-stats b{color:var(--svc)}
+.lz-card .lz-badge{position:absolute;top:14px;right:14px;font-family:var(--mono);font-size:7px;letter-spacing:.16em;text-transform:uppercase;color:var(--current);border:1px solid var(--current);border-radius:6px;padding:2px 6px}
+.lz-card .lz-row{display:flex;gap:6px;margin-top:12px}
+.lz-card .lz-row button{flex:none;background:none;border:1px solid var(--line);color:var(--mute);border-radius:6px;font-family:var(--mono);font-size:8px;letter-spacing:.1em;padding:4px 8px;text-transform:uppercase}
+.lz-card .lz-row button:hover{border-color:var(--svc);color:var(--cream)}
+.lz-card .lz-row button.del:hover{border-color:var(--danger);color:var(--danger)}
+.lz-card .lz-open{margin-top:12px;background:var(--svc);border:none;color:#0B110E;border-radius:8px;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.12em;padding:9px;text-transform:uppercase}
+.lz-card .lz-open:hover{background:var(--api)}
+.lz-card .lz-plus{font-size:34px;line-height:1}
+#lzFoot{text-align:center;color:var(--mute);font-size:10.5px;padding:0 32px 40px;max-width:560px;margin:0 auto}
+#lzNewForm{position:fixed;inset:0;z-index:210;background:rgba(5,8,6,.7);display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+#lzNewForm.on{display:flex}
+#lzNewForm .box{width:min(440px,92vw);background:var(--pane);border:1px solid var(--line);border-radius:14px;padding:22px}
+#lzNewForm h3{font-family:var(--serif);font-style:italic;font-size:20px;margin-bottom:4px}
+#lzNewForm .tpl{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+#lzNewForm .tpl label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer;font-size:12px;color:var(--cream-dim)}
+#lzNewForm .tpl label:hover{border-color:var(--svc)}
+#lzNewForm .tpl input{margin-top:3px}
+#lzNewForm .tpl b{color:var(--cream)}
+@media (max-width:600px){#lzHead{padding:34px 18px 0}#lzGrid{padding:18px;gap:12px}#lzHead .lz-lb{font-size:30px}}
+
 /* hackathon — attack strobe on the map */
 @keyframes hackstrobe{
   0%,100%{ filter:drop-shadow(0 0 0 rgba(217,107,91,0)); }
@@ -757,8 +794,33 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
 </head>
 <body>
 
+<div id="launcher">
+  <div id="lzHead">
+    <div class="lz-lb">Circuit</div>
+    <div class="lz-sc">Visual System Builder</div>
+    <div class="lz-tag">Design any product from <b>backend to frontend</b> — map the architecture, draw the screens, trace the flows, and let the AI suggest what's missing. Open a project, or start a new one.</div>
+  </div>
+  <div id="lzGrid"></div>
+  <div id="lzFoot">Each project is its own map, saved on this device and (when connected) shared live with your team. The Lagbot System Map is here as the first project.</div>
+</div>
+<div id="lzNewForm"><div class="box">
+  <h3>New project</h3>
+  <div class="note" style="margin-bottom:12px">Name it, pick a starting point, then build it with the same tools.</div>
+  <div class="fgroup"><label>Project name</label><input type="text" id="lzName" placeholder="e.g. Storefront, Delivery App, CRM"></div>
+  <div class="fgroup"><label>Short description (optional)</label><input type="text" id="lzDesc" placeholder="one line about what it is"></div>
+  <div class="fgroup"><label>Start from</label>
+    <div class="tpl">
+      <label><input type="radio" name="lztpl" value="web" checked><span><b>Web / mobile app starter</b> — a small scaffold: user, API server, auth, database, and two pages, all wired up. Best starting point.</span></label>
+      <label><input type="radio" name="lztpl" value="blank"><span><b>Blank canvas</b> — empty lanes (External · Backend · AI Agents · API + Data · Frontend). Build everything yourself.</span></label>
+      <label><input type="radio" name="lztpl" value="copy"><span><b>Copy the current project</b> — duplicate whatever's open now as a starting point.</span></label>
+    </div>
+  </div>
+  <div class="btnrow" style="margin-top:6px"><button class="pbtn accent" id="lzCreate">Create project</button><button class="pbtn" id="lzCancel">Cancel</button></div>
+</div></div>
+
 <header id="topbar">
-  <div id="wordmark"><span class="lb">Lagbot</span><span class="sc">System Circuit</span></div>
+  <button class="tbtn" id="btnProjects" title="Switch project / back to projects" style="flex:none">⊞</button>
+  <div id="wordmark"><span class="lb" id="wmName">Lagbot</span><span class="sc" id="wmSub">System Circuit</span></div>
   <span id="saveDot">—</span>
   <div id="searchWrap"><input id="search" type="text" placeholder="search nodes… (dims everything else)" autocomplete="off"></div>
   <nav id="tools">
@@ -1060,7 +1122,7 @@ unused routes, Admins screen duplicates Sales▸Teams.
 /* ════════════════════════ DEFAULT DATA — Lagbot map (from frontend-map.md + backend-map.md @ 2f4eafe / 64f0b48) ════════════════════════ */
 const NODE_W = 224, NODE_H = 58;
 const BLIP_W = 110, BLIP_H = 24; /* compact security-fix blips */
-const STORE_KEY = "lagbot:sysmap:v2";
+let STORE_KEY = "lagbot:sysmap:v2"; /* per-project; reassigned when a project opens */
 
 const TYPES = {
   external:{label:"External", color:"#8E9AA8"},
@@ -1830,7 +1892,7 @@ window.addEventListener("beforeunload",flushSave);
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") flushSave(); });
 
 /* ════════════════════════════ team sync via Supabase ════════════════════════════ */
-const SYNC_DOC_ID="lagbot";
+let SYNC_DOC_ID="lagbot"; /* per-project Supabase row id */
 const CLIENT_ID="c_"+Math.random().toString(36).slice(2);
 let sb=null, sbChannel=null, curChannel=null, curReady=false, syncOn=false;
 function editorNameQuiet(){ try{ return sessionStorage.getItem("lagbot:editor")||"Unknown"; }catch(e){ return "Unknown"; } }
@@ -4591,25 +4653,147 @@ function setLegendOpen(open){
 $("legendHead").addEventListener("click",()=>setLegendOpen($("legend").classList.contains("collapsed")));
 (function(){ let v="1"; try{ v=localStorage.getItem("lagbot:legendOpen")||"1"; }catch(e){} setLegendOpen(v!=="0"); })();
 
-/* ════════════════════════════ init ════════════════════════════ */
-(async function init(){
-  showProfilePicker();
-  await loadHostedConfig();
-  syncInit();
+/* ════════════════════════════ projects — multi-project platform ════════════════════════════ */
+const GENERIC_PERSONA=`# Circuit — system map AI
+
+## Who you are
+You are Circuit, the analyst of THIS system map. The owner is building a software product and using this map to design it from backend to frontend. Speak plain English, short sentences, explain any jargon in a few words.
+
+## What you know
+Five lanes, left to right: External systems · Backend services · AI Agents · API + Data layer · Frontend pages (each page has a tappable wireframe). Data flows left→right on a user action and right→left coming back.
+
+## Your tasks
+1. Explain how the system fits together; trace real paths through the map.
+2. Find issues: gaps, missing connections, orphan nodes, risky stubs.
+3. Suggest new nodes, connections and UI components — and full backend+frontend packages — when they genuinely improve the design. Less is more.
+4. NEVER draw anything yourself. Every suggestion is a proposal the owner approves.
+
+## Visual skills
+Back your answers with actions: locate a node, highlight a set, open a wireframe, or preview a flow node-by-node.`;
+
+function nowISO(){ try{ return new Date().toISOString().slice(0,10); }catch(e){ return ""; } }
+function saveProjects(arr){ try{ localStorage.setItem("circuit:projects",JSON.stringify(arr)); }catch(e){} }
+function loadProjects(){
+  let arr=null;
+  try{ arr=JSON.parse(localStorage.getItem("circuit:projects")||"null"); }catch(e){}
+  if(!Array.isArray(arr)||!arr.length){
+    arr=[{id:"lagbot",name:"Lagbot System Map",desc:"WhatsApp sales assistant for Nigerian businesses — the original map.",storeKey:"lagbot:sysmap:v2",syncId:"lagbot",isLagbot:true,created:nowISO()}];
+    saveProjects(arr);
+  }
+  return arr;
+}
+let PROJECTS=[], activeProj=null;
+
+function blankState(name){
+  return {meta:{name:name||"New project",v:1,mergeRev:99}, nodes:[], edges:[], wireframes:{}, changelog:[], hackathon:[]};
+}
+function webStarterState(name){
+  return {meta:{name:name||"Web app",v:1,mergeRev:99},
+    nodes:[
+      {id:"u_user",label:"User / Browser",sub:"the people using your app",type:"external",layer:"ext",x:30,y:160},
+      {id:"u_api",label:"API Server",sub:"your backend — routes + logic",type:"service",layer:"svc",x:330,y:120},
+      {id:"u_auth",label:"Auth Service",sub:"login · sessions · tokens",type:"service",layer:"svc",x:330,y:270},
+      {id:"u_rest",label:"REST API",sub:"the endpoints your app calls",type:"api",layer:"bridge",x:640,y:120},
+      {id:"u_db",label:"Database",sub:"where your data lives",type:"db",layer:"bridge",x:640,y:270},
+      {id:"u_home",label:"Home Page",sub:"landing screen",type:"page",layer:"pages",x:985,y:120,wf:true},
+      {id:"u_dash",label:"Dashboard",sub:"the main app screen",type:"page",layer:"pages",x:985,y:270,wf:true}
+    ],
+    edges:[
+      {id:"ue1",from:"u_user",to:"u_home",label:"opens the app",dir:"both"},
+      {id:"ue2",from:"u_home",to:"u_rest",label:"calls the API"},
+      {id:"ue3",from:"u_dash",to:"u_rest",label:"reads + writes data"},
+      {id:"ue4",from:"u_rest",to:"u_api",label:"handled by"},
+      {id:"ue5",from:"u_api",to:"u_auth",label:"checks login"},
+      {id:"ue6",from:"u_api",to:"u_db",label:"queries"}
+    ],
+    wireframes:{
+      u_home:{start:"main",screens:{main:{title:"Home",rows:[
+        [{id:"h_t",label:"Page title",kind:"pageTitle",t2:"Welcome",t1:"Your app",links:[]}],
+        [{id:"h_s",label:"Subtitle",kind:"caption",t1:"One line about what your product does.",links:[]}],
+        [{id:"h_c",label:"Get started → Dashboard",kind:"cta",t1:"Get started",nav:"page:u_dash",links:["u_auth"]}]
+      ]}}},
+      u_dash:{start:"main",screens:{main:{title:"Dashboard",rows:[
+        [{id:"d_t",label:"Title",kind:"pageTitle",t2:"App",t1:"Dashboard",links:[]}],
+        [{id:"d_s",label:"A stat",kind:"darkStat",t2:"Total",t1:"0",links:["u_db"]}],
+        [{id:"d_l",label:"List of items",kind:"list",links:["u_db"]}]
+      ]}}}
+    },
+    changelog:[], hackathon:[]};
+}
+
+function projCounts(p){
+  try{ const raw=localStorage.getItem(p.storeKey); if(!raw) return p.isLagbot?{n:"·",e:"·"}:{n:0,e:0}; const s=JSON.parse(raw); return {n:(s.nodes||[]).length,e:(s.edges||[]).length}; }
+  catch(e){ return {n:"·",e:"·"}; }
+}
+function renderLauncher(){
+  PROJECTS=loadProjects();
+  const grid=$("lzGrid");
+  grid.innerHTML=PROJECTS.map(p=>{
+    const c=projCounts(p);
+    return `<div class="lz-card" data-open="${p.id}">
+      ${p.isLagbot?'<span class="lz-badge">Original</span>':""}
+      <div class="lz-name">${esc(p.name)}</div>
+      <div class="lz-desc">${esc(p.desc||"")}</div>
+      <div class="lz-stats"><span><b>${c.n}</b> nodes</span><span><b>${c.e}</b> lines</span>${p.created?`<span>${esc(p.created)}</span>`:""}</div>
+      <button class="lz-open" data-open="${p.id}">Open →</button>
+      <div class="lz-row" data-stop="1"><button data-ren="${p.id}">Rename</button>${p.isLagbot?"":`<button class="del" data-del="${p.id}">Delete</button>`}</div>
+    </div>`;
+  }).join("")+`<div class="lz-card new" id="lzNew"><div class="lz-plus">+</div><div style="margin-top:8px">New project</div></div>`;
+  grid.querySelectorAll(".lz-card[data-open]").forEach(el=>el.onclick=ev=>{ if(ev.target.closest("[data-stop]"))return; openProject(el.dataset.open); });
+  $("lzNew").onclick=()=>{ $("lzName").value=""; $("lzDesc").value=""; $("lzNewForm").classList.add("on"); setTimeout(()=>$("lzName").focus(),50); };
+  grid.querySelectorAll("[data-ren]").forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); const p=PROJECTS.find(x=>x.id===b.dataset.ren); const v=prompt("Rename project",p.name); if(v&&v.trim()){ p.name=v.trim(); saveProjects(PROJECTS); renderLauncher(); } });
+  grid.querySelectorAll("[data-del]").forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); const p=PROJECTS.find(x=>x.id===b.dataset.del); if(!confirm(`Delete project "${p.name}"? Its map is removed from this device.`))return; try{ localStorage.removeItem(p.storeKey); }catch(e){} PROJECTS=PROJECTS.filter(x=>x.id!==p.id); saveProjects(PROJECTS); renderLauncher(); });
+}
+function showLauncher(){ if(state) flushSave(); syncTeardown(); $("launcher").classList.add("on"); renderLauncher(); }
+$("lzCancel").onclick=()=>$("lzNewForm").classList.remove("on");
+$("lzCreate").onclick=()=>{
+  const name=$("lzName").value.trim()||"New project";
+  const desc=$("lzDesc").value.trim();
+  const tpl=(document.querySelector('input[name="lztpl"]:checked')||{}).value||"web";
+  const id="p"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  const p={id,name,desc,storeKey:"circuit:proj:"+id,syncId:"proj_"+id,persona:GENERIC_PERSONA,created:nowISO()};
+  let seed;
+  if(tpl==="copy"&&state) seed=clone(state);
+  else if(tpl==="blank") seed=blankState(name);
+  else seed=webStarterState(name);
+  seed.meta=seed.meta||{}; seed.meta.name=name; seed.meta.mergeRev=99;
+  try{ localStorage.setItem(p.storeKey,JSON.stringify(seed)); }catch(e){}
+  PROJECTS=loadProjects(); PROJECTS.push(p); saveProjects(PROJECTS);
+  $("lzNewForm").classList.remove("on");
+  openProject(id);
+};
+
+async function openProject(id){
+  PROJECTS=loadProjects();
+  const p=PROJECTS.find(x=>x.id===id); if(!p) return;
+  activeProj=p;
+  STORE_KEY=p.storeKey; SYNC_DOC_ID=p.syncId;
+  try{ localStorage.setItem("circuit:activeProject",id); }catch(e){}
+  if(!p.isLagbot) AI_PERSONA=p.persona||GENERIC_PERSONA;
+  $("wmName").textContent=p.isLagbot?"Lagbot":(p.name.split(/\s+/)[0]||"Circuit");
+  $("wmSub").textContent=p.isLagbot?"System Circuit":"Circuit";
+  try{ document.title=p.name+" · Circuit"; }catch(e){}
+  clearFocusAll(); aiHistory=[]; if($("aiMsgs")) $("aiMsgs").innerHTML=""; aiClose();
+  syncTeardown(); syncInit();
   let st=null, hadCloud=false;
   if(syncOn){ st=await cloudLoad(); hadCloud=!!st; }
   if(!st) st=ensureShape(await loadState());
   state=st;
-  mergeNewDefaults(state);
-  rebuild();
-  renderPanel();
-  requestAnimationFrame(()=>{ fitView(); });
-  if(syncOn){
-    if(!hadCloud) await cloudSave(); /* seed the shared row from this device */
-    setDot("Synced ✓","ok");
-  } else {
-    setDot(hasStore?"Saved":"Session only",hasStore?"ok":"warn");
-  }
+  if(p.isLagbot) mergeNewDefaults(state);
+  rebuild(); renderPanel();
+  $("launcher").classList.remove("on");
+  requestAnimationFrame(()=>fitView());
+  if(syncOn){ if(!hadCloud) await cloudSave(); setDot("Synced ✓","ok"); }
+  else setDot(hasStore?"Saved":"Session only",hasStore?"ok":"warn");
+  showProfilePicker();
+}
+$("btnProjects").onclick=showLauncher;
+
+/* ════════════════════════════ init ════════════════════════════ */
+(async function init(){
+  await loadHostedConfig();
+  PROJECTS=loadProjects();
+  showLauncher();
 })();
 })();
 </script>
