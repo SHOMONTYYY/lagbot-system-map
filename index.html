@@ -2986,10 +2986,27 @@ fetch("lagbot-map-ai.md",{cache:"no-store"}).then(r=>r.ok?r.text():null).then(t=
 
 const aiKey=()=>{ try{return localStorage.getItem("lagbot:aikey")||(window.TEAM_CONFIG||{}).aiKey||"";}catch(e){return (window.TEAM_CONFIG||{}).aiKey||"";} };
 const aiModel=()=>{ try{return localStorage.getItem("lagbot:aimodel")||"claude-opus-4-8";}catch(e){return "claude-opus-4-8";} };
+/* hosted on Vercel: /api/config supplies the Supabase keys and /api/ai
+   proxies Claude with the key kept server-side. Locally the endpoint
+   doesn't exist and this resolves silently with no effect. */
+let AI_PROXY=false;
+const aiOn=()=>!!aiKey()||AI_PROXY;
+async function loadHostedConfig(){
+  try{
+    const r=await fetch("/api/config",{cache:"no-store"});
+    if(!r.ok) return;
+    const c=await r.json();
+    const merged=Object.assign({},window.TEAM_CONFIG||{});
+    for(const k in c){ if(c[k]&&!merged[k]) merged[k]=c[k]; }
+    window.TEAM_CONFIG=merged;
+    AI_PROXY=!!c.aiProxy;
+    if(AI_PROXY) updateAiMode();
+  }catch(e){}
+}
 function updateAiMode(){
-  const k=aiKey();
-  aiModeEl.textContent=k?("claude · "+aiModel().replace("claude-","").replace(/-/g,".")):"offline brain";
-  aiModeEl.classList.toggle("claude",!!k);
+  const on=aiOn();
+  aiModeEl.textContent=on?("claude · "+aiModel().replace("claude-","").replace(/-/g,".")):"offline brain";
+  aiModeEl.classList.toggle("claude",on);
 }
 function laneName(id){ const L=LAYERS.find(l=>l.id===id); return L?L.name:id; }
 
@@ -3315,9 +3332,10 @@ async function askClaude(q){
       +(aiHistory.length?"\n\nEARLIER IN THIS CHAT:\n"+aiHistory.map(h=>`David: ${h.q}\nYou: ${h.a}`).join("\n"):"")
       +"\n\nDavid asks: "+q}]
   };
-  const res=await fetch("https://api.anthropic.com/v1/messages",{
+  const useProxy=!aiKey()&&AI_PROXY; /* a personal key set via ⚙ still wins */
+  const res=await fetch(useProxy?"/api/ai":"https://api.anthropic.com/v1/messages",{
     method:"POST",
-    headers:{
+    headers: useProxy ? {"content-type":"application/json"} : {
       "content-type":"application/json",
       "x-api-key":aiKey(),
       "anthropic-version":"2023-06-01",
@@ -3351,7 +3369,7 @@ async function runAiAsk(){
   if(!q||aiBusy) return;
   aiInputEl.value="";
   aiAppend("ai-msg you",`<span class="who">You</span>${esc(q)}`);
-  const useClaude=!!aiKey();
+  const useClaude=aiOn();
   const thinking=aiAppend("ai-msg ai",`<span class="who">Circuit</span><span class="ai-think">${useClaude?"thinking with Claude…":"checking the map…"}</span>`);
   aiBusy=true; aiAskBtn.disabled=true;
   try{
@@ -3377,9 +3395,9 @@ $("aiKeySave").onclick=()=>{
     if(v) localStorage.setItem("lagbot:aikey",v); else localStorage.removeItem("lagbot:aikey");
     localStorage.setItem("lagbot:aimodel",$("aiModelSel").value);
   }catch(e){}
-  updateAiMode(); closeModals(); toast(aiKey()?"Claude mode on ✦":"Offline brain mode");
+  updateAiMode(); closeModals(); toast(aiOn()?"Claude mode on ✦":"Offline brain mode");
 };
-$("aiKeyClear").onclick=()=>{ try{localStorage.removeItem("lagbot:aikey");}catch(e){} $("aiKeyInput").value=""; updateAiMode(); toast("Key removed — offline brain mode"); };
+$("aiKeyClear").onclick=()=>{ try{localStorage.removeItem("lagbot:aikey");}catch(e){} $("aiKeyInput").value=""; updateAiMode(); toast(aiOn()?"Personal key removed — using the team's AI":"Key removed — offline brain mode"); };
 updateAiMode();
 
 /* ════════════════════════════ sync modal wiring ════════════════════════════ */
@@ -3531,6 +3549,7 @@ window.addEventListener("keydown",ev=>{
 /* ════════════════════════════ init ════════════════════════════ */
 (async function init(){
   showProfilePicker();
+  await loadHostedConfig();
   syncInit();
   let st=null, hadCloud=false;
   if(syncOn){ st=await cloudLoad(); hadCloud=!!st; }

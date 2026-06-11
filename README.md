@@ -15,6 +15,23 @@ from this folder, then open **http://localhost:8755/** in a browser.
 (Don't open `index.html` directly via file:// — the AI persona file and
 team sync need a local server.)
 
+## Host it on Vercel
+
+Connect this repo to a Vercel project and set three **Environment
+Variables** (Project Settings → Environment Variables):
+
+| Variable | Value |
+|---|---|
+| `SUPABASE_URL` | the team-sync project URL (`https://xxxx.supabase.co`) |
+| `SUPABASE_ANON_KEY` | the project's anon public key (`eyJ…`) |
+| `ANTHROPIC_API_KEY` | the team's Anthropic key (`sk-ant-…`) |
+
+Then deploy. Visitors get team sync and Claude AI automatically:
+`api/config.js` hands the page the Supabase keys, and `api/ai.js` proxies
+AI requests so the Anthropic key never appears in the page source. No
+`team-config.js` is needed (or deployed) on the hosted site — that file
+remains the local/offline way to share keys.
+
 ## Features
 
 - **Map** — drag nodes, ⌁ connect, double-click orange pages for tappable
