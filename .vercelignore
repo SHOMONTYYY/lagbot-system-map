@@ -1,4 +1,4 @@
+team-config.js
 *.backup.html
 .DS_Store
-team-config.js
-.vercel
+.git
