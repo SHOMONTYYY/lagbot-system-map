@@ -25,11 +25,14 @@ team sync need a local server.)
   no key; an Anthropic API key (⚙ on the bar) switches on Claude reasoning.
   All AI suggestions are proposals — nothing is drawn without approval.
   Personality/instructions live in `lagbot-map-ai.md` (edit freely).
-- **≡ Log** — every change is signed: who · what · date · time. First change
-  per session asks your name.
+- **≡ Log** — every change is signed: who · what · date · time. Each page
+  load starts with a profile picker (Andre / David / Joseph) so changes are
+  always attributed; switch profile any time via ≡ Log.
 - **☁ Sync** — connect a Supabase project so the whole team shares one live
   map. One-time setup: run `lagbot-map-team-sync.sql` in the project's SQL
-  editor, then paste the project URL + anon key into ☁ Sync.
+  editor, then put the project URL + anon key in `team-config.js` (copy
+  `team-config.example.js`) — everyone with that file auto-connects. Or paste
+  them manually into ☁ Sync.
 
 ## Files
 
@@ -38,6 +41,7 @@ team sync need a local server.)
 | `index.html` | the entire app — single file, no build step |
 | `lagbot-map-ai.md` | the AI's persona/instructions (loaded fresh each page load) |
 | `lagbot-map-team-sync.sql` | one-time Supabase setup for team sync |
+| `team-config.example.js` | template for `team-config.js` — shared team keys (Supabase + AI). The real file is gitignored: share it privately, never commit it |
 | `docs/frontend-map.md` | source document — app architecture |
 | `docs/backend-map.md` | source document — backend architecture |
 
