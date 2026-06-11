@@ -336,6 +336,27 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
 .flownum text{fill:#0B110E;font-family:var(--mono);font-size:9.5px;font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none}
 #traceBar .tnum{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--current);color:#0B110E;font-family:var(--mono);font-size:9px;font-weight:700;margin:0 2px;vertical-align:middle}
 
+/* AI action chips (locate / highlight / open / preview) */
+.ai-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ai-act{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:14px;border:1px solid var(--line);background:var(--pane3);color:var(--cream-dim);font-family:var(--mono);font-size:9px;letter-spacing:.08em;cursor:pointer}
+.ai-act:hover{border-color:var(--current);color:var(--current)}
+.ai-act .ai-ai{color:var(--current)}
+
+/* animated preview — node pulse + ghost lines */
+@keyframes pvpulse{0%,100%{filter:drop-shadow(0 0 0 rgba(242,169,92,0))}50%{filter:drop-shadow(0 0 11px rgba(242,169,92,.9))}}
+.node.pv-pulse .body{stroke:var(--current)!important;stroke-width:2.4;animation:pvpulse .9s ease-in-out infinite}
+.node.pv-pulse .accent{fill:var(--current)!important}
+#previewGhost path{fill:none;stroke:var(--current);stroke-width:2.2;stroke-dasharray:7 7;opacity:.95;animation:flow 1.1s linear infinite;filter:drop-shadow(0 0 6px rgba(242,169,92,.6))}
+#previewGhost .pvnum circle{fill:var(--current);stroke:#0B110E;stroke-width:1.6}
+#previewGhost .pvnum text{fill:#0B110E;font-family:var(--mono);font-size:9.5px;font-weight:700;text-anchor:middle;dominant-baseline:central}
+#previewBar{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);z-index:56;display:none;align-items:center;gap:10px;background:rgba(16,24,19,.97);border:1px solid var(--current);border-radius:11px;padding:7px 13px;box-shadow:0 8px 28px rgba(0,0,0,.5)}
+#previewBar.on{display:flex}
+#previewBar .pvlabel{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--current)}
+#previewBar button{background:none;border:1px solid var(--line);color:var(--cream-dim);border-radius:7px;font-family:var(--mono);font-size:9px;letter-spacing:.1em;padding:4px 10px;text-transform:uppercase}
+#previewBar button:hover{border-color:var(--current);color:var(--current)}
+.ai-prop .pbtns .pv{border-color:var(--api);color:var(--api)}
+.ai-prop .pbtns .pv:hover{background:var(--api);color:#0B110E}
+
 /* hackathon — attack strobe on the map */
 @keyframes hackstrobe{
   0%,100%{ filter:drop-shadow(0 0 0 rgba(217,107,91,0)); }
@@ -778,6 +799,7 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
       <rect x="-4000" y="-4000" width="12000" height="12000" fill="url(#dots)" id="gridbg"/>
       <g id="layerLabels"></g>
       <g id="edgesG"></g>
+      <g id="previewGhost"></g>
       <g id="nodesG"></g>
       <g id="flowNums"></g>
       <path id="ghost" d="" visibility="hidden"/>
@@ -976,7 +998,12 @@ unused routes, Admins screen duplicates Sales▸Teams.
     <div id="drawerHint">Tap any element to <b>trace its backend path</b> on the map.</div>
     <div id="wfFlow"></div>
     <div class="wf-phone"><div class="wf-notch"></div><div class="wf-stack" id="wfStack"></div></div>
-    <button class="addElBtn" id="btnAddEl" style="display:none">+ Add element to this screen</button>
+    <div id="wfAddRow" style="display:none;gap:7px;max-width:340px;margin:12px auto 0">
+      <button class="addElBtn" id="btnAddEl" style="margin:0;flex:1">+ Add element</button>
+      <button class="addElBtn" id="btnLibEl" style="margin:0;flex:1" title="Pick from a library of ready-made components">▤ Library</button>
+      <button class="addElBtn" id="btnPasteEl" style="margin:0;flex:0 0 auto;display:none" title="Paste the copied component">⧉ Paste</button>
+    </div>
+    <div id="wfLib" style="display:none;max-width:340px;margin:8px auto 0"></div>
     <div id="elInspector" style="display:none"></div>
   </div>
 </aside>
@@ -999,6 +1026,9 @@ unused routes, Admins screen duplicates Sales▸Teams.
     <div class="hrow"><b>☁ Sync</b><span>Connect a Supabase project to share one live map with your whole team — changes sync within a second, signed with each editor's name. One-time setup SQL is in lagbot-map-team-sync.sql.</span></div>
     <div class="hrow"><b>⌗ Organise</b><span>Snaps every node back into its lane in flow order. Connections are untouched — only positions move.</span></div>
     <div class="hrow"><b>✦ Trace a flow</b><span>Ask the AI bar "how do conversations flow?" (or sale / receipt / token / withdrawal, or "from X to Y") and it lights the path and numbers the lines 1·2·3 in order.</span></div>
+    <div class="hrow"><b>✦ Show skills</b><span>Circuit backs its answers with action chips — 📍 locate a node, ✦ highlight a set, ▣ open a wireframe, ▶ preview a flow animated node-by-node. The first auto-plays so it shows exactly what it's explaining.</span></div>
+    <div class="hrow"><b>▶ Preview a change</b><span>Every AI suggestion has a Preview button — it animates the new line/node onto the map (or opens the screen) so you see the change before approving.</span></div>
+    <div class="hrow"><b>Reuse components</b><span>In ✎ edit, each component can be Duplicated, Copied, or Moved to another screen; ▤ Library drops in ready-made components in the app's style; ⧉ Paste reuses a copied one anywhere.</span></div>
     <div class="hrow"><b>⚔ Hackathon</b><span>A red-team self-audit. It picks a random angle, strobes through your architecture hunting for weak points, then shows its steps, what blocked it, and defensive fixes you can apply with one tap. ≡ History keeps every run.</span></div>
     <div class="hrow"><b>Edit wireframe</b><span>✎ turns on edit mode: add screens with the ＋ chip, tap a component to edit every property (text, badges, amounts, stats…), <b>drag components</b> to reorder — they snap between rows, or side-by-side when dropped on a row's right edge. + Add element places new components (bubbles, buttons, text, stats…), then wire them to backend nodes.</span></div>
     <div class="hrow"><b>Search</b><span>Type to dim everything except matching nodes.</span></div>
@@ -1020,6 +1050,7 @@ unused routes, Admins screen duplicates Sales▸Teams.
 </div>
 <div id="hackScan"></div>
 <div id="hackTicker"></div>
+<div id="previewBar"><span class="pvlabel">Preview</span><button id="pvReplay">▶ Replay</button><button id="pvClose">✕ Close</button></div>
 <div id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -2127,7 +2158,7 @@ function refreshClasses(){
   });
 }
 function setFocus(nodes,edges){ legendOff(); focus={nodes,edges}; refreshClasses(); }
-function clearFocus(){ legendOff(); focus=null; clearFlowNums(); hideTrace(); refreshClasses(); }
+function clearFocus(){ legendOff(); focus=null; clearFlowNums(); if(typeof clearPreview==="function") clearPreview(); hideTrace(); refreshClasses(); }
 /* legend rows highlight a whole category */
 let legendSel=null;
 function legendOff(){ legendSel=null; document.querySelectorAll("#legend .lg-row.active").forEach(r=>r.classList.remove("active")); }
@@ -2208,6 +2239,79 @@ function fitFlow(nset){
   view.y=(r.height-(y2-y1)*view.k)/2 - y1*view.k;
   applyView(); placeFlowNums();
 }
+
+/* ════════════════════════════ animated preview (Circuit's preview skill) ════════════════════════════ */
+let previewTimers=[], previewReplay=null;
+function clearPreview(){
+  previewTimers.forEach(clearTimeout); previewTimers=[];
+  const g=document.getElementById("previewGhost"); if(g) g.innerHTML="";
+  nodeEls.forEach(el=>el.g.classList.remove("pv-pulse"));
+  document.getElementById("previewBar").classList.remove("on");
+  previewReplay=null;
+}
+function ghostLine(aId, bId, num){
+  const a=nodeById(aId), b=nodeById(bId); if(!a||!b) return;
+  const g=document.getElementById("previewGhost"); if(!g) return;
+  const ca=nodeCenter(a), cb=nodeCenter(b);
+  const side=cb.x>=ca.x?"right":"left";
+  const p1={x: side==="right"?a.x+NODE_W:a.x, y:ca.y, side};
+  const p2={x: side==="right"?b.x:b.x+NODE_W, y:cb.y, side: side==="right"?"left":"right"};
+  const path=svgEl("path",{d:bez(p1,p2)},g);
+  if(num!=null){
+    let pt; try{ const L=path.getTotalLength(); pt=path.getPointAtLength(L*0.5); }catch(e){ pt={x:(p1.x+p2.x)/2,y:(p1.y+p2.y)/2}; }
+    const grp=svgEl("g",{class:"pvnum"},g);
+    svgEl("circle",{cx:pt.x,cy:pt.y,r:9},grp);
+    const t=svgEl("text",{x:pt.x,y:pt.y},grp); t.textContent=String(num);
+  }
+}
+/* seq = ordered node ids (real). ghostEdges = [{from,to}] lines that don't exist yet (drawn dashed). */
+function playPreview(seq, opts){
+  opts=opts||{};
+  seq=(seq||[]).filter(nodeById);
+  const ghosts=(opts.ghostEdges||[]).filter(g=>nodeById(g.from)&&nodeById(g.to));
+  if(!seq.length && !ghosts.length) return;
+  clearSelection(); closeDrawer(); clearFlowNums(); clearPreview();
+  const nset=new Set(seq);
+  ghosts.forEach(g=>{ nset.add(g.from); nset.add(g.to); });
+  focus={nodes:nset, edges:new Set()}; refreshClasses();
+  fitFlow(nset);
+  previewReplay=()=>playPreview(seq,opts);
+  showPreviewBar(opts.label||"Preview");
+  const {eKey}=adjacency();
+  const pairs=[];
+  for(let i=0;i<seq.length-1;i++) pairs.push([seq[i],seq[i+1],false]);
+  ghosts.forEach(g=>pairs.push([g.from,g.to,true]));
+  const pulse=id=>{ const el=nodeEls.get(id); if(el) el.g.classList.add("pv-pulse"); };
+  let t=200; const STEP=620;
+  const first=seq[0]||ghosts[0].from;
+  previewTimers.push(setTimeout(()=>pulse(first), 0));
+  pairs.forEach(([a,b,ghost],i)=>{
+    previewTimers.push(setTimeout(()=>{
+      pulse(a);
+      const ek=!ghost && eKey.get(a+"|"+b);
+      if(ek){ const el=edgeEls.get(ek); if(el){ el.g.classList.add("lit"); el.line.setAttribute("marker-end",edgeMarker(state.edges.find(x=>x.id===ek),true)); placeOneNum(el,i+1); } }
+      else ghostLine(a,b,i+1);
+      pulse(b);
+      document.getElementById("previewBar").querySelector(".pvlabel").textContent=`${opts.label||"Preview"} · ${i+1}/${pairs.length}`;
+    }, t));
+    t+=STEP;
+  });
+}
+function placeOneNum(el, n){
+  const g=document.getElementById("flowNums"); if(!g) return;
+  let pt; try{ const L=el.line.getTotalLength(); pt=el.line.getPointAtLength(L*0.5); }catch(e){ return; }
+  const grp=svgEl("g",{class:"flownum"},g);
+  svgEl("circle",{cx:pt.x,cy:pt.y,r:9},grp);
+  const t=svgEl("text",{x:pt.x,y:pt.y},grp); t.textContent=String(n);
+}
+function showPreviewBar(label){
+  const bar=document.getElementById("previewBar");
+  bar.querySelector(".pvlabel").textContent=label;
+  bar.classList.add("on");
+}
+document.getElementById("pvReplay").onclick=()=>{ if(previewReplay) previewReplay(); };
+document.getElementById("pvClose").onclick=()=>{ clearPreview(); clearFocus(); };
+
 /* detect a flow/path question from the prompt bar */
 function detectFlowQuery(q){
   const t=q.toLowerCase();
@@ -2971,7 +3075,9 @@ function renderWF(){
     ? `Edit mode — tap an element to retitle it, change its text, rewire its backend links, or point it at another screen. <b>＋</b> adds a screen; tap the current chip to rename it.`
     : `Tap an element to <b>trace its circuit</b> — ↗ what it calls, ↘ what feeds it. <span style="color:var(--page)">⇢</span> elements: tap twice to follow the flow.`;
   $("drawerEdit").classList.toggle("on",editWF);
-  $("btnAddEl").style.display=editWF?"block":"none";
+  $("wfAddRow").style.display=editWF?"flex":"none";
+  $("btnPasteEl").style.display=(editWF&&wfClip)?"inline-block":"none";
+  if(!editWF){ $("wfLib").style.display="none"; }
   wfStack.classList.toggle("editing",editWF);
   wfStack.innerHTML=(sc.modal?`<div class="wf-scrimhint">▒ modal — overlays the previous screen · tap outside closes</div>`:"")
     + (sc.rows.map(row=>`<div class="wf-row">${row.map(elHTML).join("")}</div>`).join("")
@@ -3020,6 +3126,68 @@ $("btnAddEl").onclick=()=>{
   sc.rows.push([el]);
   logChange(`Added component "${el.label}" on ${(nodeById(curWF)||{}).label||curWF} ▸ ${sc.title||curScreen}`);
   renderWF(); openElInspector(el); autosave();
+};
+
+/* ── component reuse: clipboard · move targets · library palette ── */
+let wfClip=null;
+function moveTargetOptions(){
+  let h="";
+  state.nodes.filter(n=>n.type==="page").forEach(pg=>{
+    const wf=state.wireframes[pg.id]; if(!wf||!wf.screens) return;
+    Object.keys(wf.screens).forEach(sid=>{
+      if(pg.id===curWF && sid===curScreen) return;
+      h+=`<option value="${pg.id}|${sid}">${esc(pg.label)} ▸ ${esc(wf.screens[sid].title||sid)}${wf.screens[sid].modal?" ◍":""}</option>`;
+    });
+  });
+  return h;
+}
+function addElToCurrent(spec){
+  const wf=state.wireframes[curWF]; if(!wf) return null;
+  const sc=wf.screens[curScreen]; if(!sc) return null;
+  const el=Object.assign({id:uid("el_"),links:[]}, clone(spec)); el.id=uid("el_");
+  sc.rows.push([el]);
+  logChange(`Added component "${el.label||el.kind}" on ${(nodeById(curWF)||{}).label||curWF} ▸ ${sc.title||curScreen}`);
+  renderWF(); autosave();
+  return el;
+}
+$("btnPasteEl").onclick=()=>{
+  if(!wfClip) return;
+  const el=addElToCurrent(wfClip); if(el) openElInspector(el);
+  toast("Pasted component");
+};
+/* ready-made components, drawn in the app's design language */
+const WF_LIBRARY=[
+  {label:"Dark hero card", el:{label:"Hero card",kind:"heroDark",t2:"Eyebrow",t1:"Big number",stats:[["Left","0"],["Right","0"]]}},
+  {label:"Stat tile", el:{label:"Stat tile",kind:"darkStat",t2:"Label",t1:"0"}},
+  {label:"Section header", el:{label:"Section",kind:"section",t1:"Section",r:"hint"}},
+  {label:"Caption text", el:{label:"Caption",kind:"caption",t1:"A line of explanatory text."}},
+  {label:"Link row", el:{label:"Link row",kind:"linkrow",t1:"● Tappable row",or:1}},
+  {label:"Primary button (CTA)", el:{label:"CTA",kind:"cta",t1:"Do the thing"}},
+  {label:"Outline button", el:{label:"Outline CTA",kind:"ctaLine",t1:"Secondary action"}},
+  {label:"Text input", el:{label:"Input",kind:"input"}},
+  {label:"Pills / chips", el:{label:"Pills",kind:"pillsT",t1:"One,Two,Three"}},
+  {label:"Toggle card", el:{label:"Toggle",kind:"toggleCard"}},
+  {label:"List rows", el:{label:"List",kind:"list"}},
+  {label:"Key–value rows", el:{label:"KV rows",kind:"kv"}},
+  {label:"Empty state", el:{label:"Empty state",kind:"empty",t1:"Nothing here yet",t2:"A one-line hint about what will appear."}},
+  {label:"Chat bubble (in)", el:{label:"Incoming bubble",kind:"bubbleIn",t1:"A customer message",tm:"now"}},
+  {label:"Chat bubble (out)", el:{label:"Nova reply",kind:"bubbleOut",t1:"Nova's reply",tm:"now",cap:"Generated by Lagbot"}},
+  {label:"Ledger / money row", el:{label:"Ledger row",kind:"ledger",t1:"Customer",t2:"detail · time",amt:"+₦0",cat:"Goods"}},
+  {label:"Bottom tab bar", el:{label:"Tab bar",kind:"tabbar",t1:"home"}}
+];
+$("btnLibEl").onclick=()=>{
+  const box=$("wfLib");
+  if(box.style.display==="block"){ box.style.display="none"; return; }
+  box.innerHTML=`<div class="note" style="margin-bottom:6px">Drop a ready-made component, then edit it:</div>`+
+    `<div style="display:flex;flex-wrap:wrap;gap:6px">`+
+    WF_LIBRARY.map((c,i)=>`<button class="addElBtn" style="margin:0;flex:0 0 auto;padding:6px 10px;font-size:9px" data-lib="${i}">${esc(c.label)}</button>`).join("")+
+    `</div>`;
+  box.style.display="block";
+  box.querySelectorAll("[data-lib]").forEach(b=>b.onclick=()=>{
+    const el=addElToCurrent(WF_LIBRARY[+b.dataset.lib].el);
+    box.style.display="none";
+    if(el) openElInspector(el);
+  });
 };
 
 /* ── drag & snap: reorder components in edit mode ── */
@@ -3141,6 +3309,9 @@ function openElInspector(el){
     <div class="fgroup"><label>All properties</label><div id="wProps">${propRowsHTML(el)}</div>
       <div class="btnrow"><select id="wPropSel" style="flex:2;min-width:0;background:var(--pane3);border:1px solid var(--line);border-radius:7px;color:var(--cream);font-size:11px;padding:7px 8px">${propAddOptions(el)||"<option disabled>all added</option>"}</select><button class="pbtn" id="wPropAdd" style="flex:1">+ Property</button></div>
       <div class="note" style="margin-top:6px">Stats format: Label:Value | Label:Value · Lines format: line one | line two</div></div>
+    <div class="fgroup"><label>Reuse this component</label>
+      <div class="btnrow"><button class="pbtn" id="wDup">⎘ Duplicate</button><button class="pbtn" id="wCopy">⧉ Copy</button></div>
+      <div class="btnrow" style="margin-top:6px"><select id="wMoveSel" style="flex:2;min-width:0;background:var(--pane3);border:1px solid var(--line);border-radius:7px;color:var(--cream);font-size:11px;padding:7px 8px"><option value="">Move to another screen…</option>${moveTargetOptions()}</select></div></div>
     <hr class="sep">
     <div class="btnrow"><button class="pbtn" id="wDone">Done</button><button class="pbtn ghost-danger" id="wDel">Delete element</button></div>`;
   $("wLabel").addEventListener("input",ev=>{ el.label=ev.target.value; renderWF(); autosave(); keepInspector(); });
@@ -3182,6 +3353,27 @@ function openElInspector(el){
     else if(k==="lines") el.lines=["New line"];
     else el[k]="";
     renderWF(); openElInspector(el); autosave();
+  };
+  $("wDup").onclick=()=>{
+    const sc=curScreenObj(); if(!sc) return;
+    const copy=clone(el); copy.id=uid("el_"); copy.label=(el.label||"Component")+" copy";
+    let placed=false;
+    sc.rows=sc.rows.map(r=>{ if(!placed&&r.some(e=>e.id===el.id)){ placed=true; return [r, [copy]]; } return [r]; }).flat();
+    logChange(`Duplicated component "${el.label}" on ${(nodeById(curWF)||{}).label||curWF} ▸ ${sc.title||curScreen}`);
+    renderWF(); openElInspector(copy); autosave(); toast("Duplicated — edit the copy");
+  };
+  $("wCopy").onclick=()=>{ wfClip=clone(el); delete wfClip.id; renderWF(); toast("Copied — use “Paste component” on any screen"); };
+  $("wMoveSel").onchange=ev=>{
+    const v=ev.target.value; if(!v) return;
+    const [tp,ts]=v.split("|");
+    const twf=state.wireframes[tp]; if(!twf||!twf.screens[ts]) return;
+    const sc=curScreenObj(); if(!sc) return;
+    sc.rows=sc.rows.map(r=>r.filter(e=>e.id!==el.id)).filter(r=>r.length);
+    twf.screens[ts].rows.push([el]);
+    logChange(`Moved component "${el.label}" to ${(nodeById(tp)||{}).label||tp} ▸ ${twf.screens[ts].title||ts}`);
+    autosave(); openDrawer(tp, ts);
+    setTimeout(()=>{ editWF=true; renderWF(); openElInspector(el); }, 60);
+    toast("Moved to "+(twf.screens[ts].title||ts));
   };
   $("wDone").onclick=()=>{ editingEl=null; elInspector.style.display="none"; };
   $("wDel").onclick=()=>{
@@ -3390,9 +3582,55 @@ document.addEventListener("pointerdown",ev=>{
   aiClose();
 },true);
 const nlink=n=>`<span class="nlink" data-node="${n.id}">${esc(n.label)}</span>`;
+
+/* ── Circuit's show-skills: locate · highlight · open · preview ── */
+function centerOn(id){
+  const n=nodeById(id); if(!n) return;
+  const r=mapEl.getBoundingClientRect(), c=nodeCenter(n);
+  view.x=(r.width-panelPad())/2 - c.x*view.k; view.y=r.height/2 - c.y*view.k; applyView();
+}
+let actSeq=0; const liveActs={};
+function runAction(a){
+  if(!a) return;
+  if(a.type==="locate"){
+    const id=(a.nodes||[]).find(nodeById); if(!id) return;
+    clearFocus(); selectNode(id); centerOn(id);
+  } else if(a.type==="highlight"){
+    const ns=new Set((a.nodes||[]).filter(nodeById));
+    const es=new Set();
+    (a.edges||[]).forEach(eid=>{ if(state.edges.some(e=>e.id===eid)) es.add(eid); });
+    if(!ns.size&&!es.size) return;
+    /* fill in edges among highlighted nodes if none given */
+    if(!es.size) state.edges.forEach(e=>{ if(ns.has(e.from)&&ns.has(e.to)) es.add(e.id); });
+    clearSelection(); closeDrawer(); clearPreview(); clearFlowNums();
+    focus={nodes:ns,edges:es}; refreshClasses(); fitFlow(ns);
+    showTrace(`<b>${esc(a.label||"Highlighted")}</b> — ${[...ns].slice(0,8).map(id=>esc((nodeById(id)||{}).label||id)).join(" · ")}`);
+  } else if(a.type==="open"){
+    if(a.page&&nodeById(a.page)) openDrawer(a.page, a.screen||undefined);
+  } else if(a.type==="preview"){
+    playPreview(a.nodes||a.seq||[], {ghostEdges:a.ghostEdges||[], label:a.label||"Preview"});
+  }
+}
+function actChip(a){
+  const ic={locate:"📍",highlight:"✦",open:"▣",preview:"▶"}[a.type]||"›";
+  const id="act"+(++actSeq); liveActs[id]=a;
+  return `<span class="ai-act" data-act="${id}"><span class="ai-ai">${ic}</span> ${esc(a.label||a.type)}</span>`;
+}
+function renderActions(host, actions){
+  const acts=(actions||[]).filter(a=>a&&a.type&&a.type!=="none").slice(0,4);
+  if(!acts.length) return;
+  const row=document.createElement("div"); row.className="ai-acts";
+  row.innerHTML=acts.map(actChip).join("");
+  host.appendChild(row);
+  /* auto-run the first one so Circuit shows what it's explaining */
+  setTimeout(()=>runAction(acts[0]), 120);
+}
+
 aiPanelEl.addEventListener("click",ev=>{
   const nl=ev.target.closest(".nlink");
-  if(nl){ const n=nodeById(nl.dataset.node); if(n) selectNode(n.id); return; }
+  if(nl){ const n=nodeById(nl.dataset.node); if(n){ clearFocus(); selectNode(n.id); centerOn(n.id); } return; }
+  const ac=ev.target.closest(".ai-act");
+  if(ac){ runAction(liveActs[ac.dataset.act]); return; }
 });
 
 /* — proposals: nothing is drawn until David approves — */
@@ -3404,6 +3642,28 @@ function resolveNodeRef(ref){
   return state.nodes.find(x=>x.label.toLowerCase()===t)
       || state.nodes.find(x=>x.label.toLowerCase().includes(t))
       || null;
+}
+/* animated preview of a single proposal before approving */
+function previewProposal(p){
+  if(!p) return;
+  if(p.kind==="edge"){
+    const a=resolveNodeRef(p.from), b=resolveNodeRef(p.to);
+    if(!a||!b){ toast("Can't preview — one end isn't on the map","warn"); return; }
+    playPreview([], {ghostEdges:[{from:a.id,to:b.id}], label:"New line"});
+  } else if(p.kind==="node"){
+    /* show where it would sit by spotlighting its lane neighbours */
+    const layer=p.node.layer||"svc";
+    const peers=state.nodes.filter(n=>n.layer===layer).map(n=>n.id);
+    if(!peers.length){ toast("New node — approve to place it in the "+laneName(layer)+" lane"); return; }
+    clearSelection(); closeDrawer(); clearPreview(); clearFlowNums();
+    focus={nodes:new Set(peers),edges:new Set()}; refreshClasses(); fitFlow(new Set(peers));
+    showTrace(`<b>New node preview</b> — “${esc(p.node.label)}” would join the <b>${esc(laneName(layer))}</b> lane (highlighted). Approve to place it.`);
+  } else if(p.kind==="element"){
+    if(p.page&&nodeById(p.page)){ openDrawer(p.page, p.screen||undefined); toast(`Opened ${(nodeById(p.page)||{}).label} — the component would drop in here`); }
+    /* also light the backend nodes it would wire to */
+    const links=(p.links||[]).filter(nodeById);
+    if(links.length) playPreview(links, {label:"Wires to"});
+  }
 }
 function renderProposals(props){
   const made=[];
@@ -3433,7 +3693,7 @@ function renderProposals(props){
         <div class="ppath">${esc(pg.label)} ▸ ${esc(sc.title||p.screen)} · ${aft?`directly below “${esc(aft.el.label)}”`:"at the bottom of the screen"}${okLinks.length?` · wires to ${esc(okLinks.map(l=>nodeById(l).label).join(", "))}`:" · UI-only"}</div>
         <div class="preason">${esc(p.reason||"")}</div>
         ${badLinks.length?`<div class="pwarn">⚠ Unknown backend ids dropped: ${esc(badLinks.join(", "))}</div>`:""}`;
-      inner+=`<div class="pbtns"><button class="ok" data-approve="${pid}">✓ Approve</button><button class="no" data-reject="${pid}">✕ Dismiss</button></div><div class="pstate"></div>`;
+      inner+=`<div class="pbtns"><button class="ok" data-approve="${pid}">✓ Approve</button><button class="pv" data-preview="${pid}">▶ Preview</button><button class="no" data-reject="${pid}">✕ Dismiss</button></div><div class="pstate"></div>`;
       aiAppend("ai-prop node-prop",inner);
       made.push(pid);
       return;
@@ -3463,7 +3723,7 @@ function renderProposals(props){
         <div class="preason">${esc(p.reason||"")}</div>
         ${dup?`<div class="pwarn">⚠ These two are already connected — approving would duplicate it.</div>`:""}`;
     }
-    inner+=`<div class="pbtns"><button class="ok" data-approve="${pid}">✓ Approve</button><button class="no" data-reject="${pid}">✕ Dismiss</button></div><div class="pstate"></div>`;
+    inner+=`<div class="pbtns"><button class="ok" data-approve="${pid}">✓ Approve</button><button class="pv" data-preview="${pid}">▶ Preview</button><button class="no" data-reject="${pid}">✕ Dismiss</button></div><div class="pstate"></div>`;
     aiAppend("ai-prop"+(p.kind==="node"?" node-prop":""),inner);
     made.push(pid);
   });
@@ -3481,6 +3741,8 @@ aiPanelEl.addEventListener("click",ev=>{
     all.disabled=true; all.textContent="✓ All approved";
     return;
   }
+  const pv=ev.target.closest("[data-preview]");
+  if(pv){ previewProposal(liveProps[pv.dataset.preview]); return; }
   const ok=ev.target.closest("[data-approve]"), no=ev.target.closest("[data-reject]");
   if(!ok&&!no) return;
   const card=ev.target.closest(".ai-prop");
@@ -3620,16 +3882,27 @@ const AI_SCHEMA={
         elLinks:{type:"string", description:"element only: comma-separated backend node ids this component wires to; empty string otherwise"}
       },
       required:["kind","from","to","label","status","reason","nodeLabel","nodeSub","nodeType","nodeLayer","elPage","elScreen","elAfter","elKind","elText","elText2","elLinks"]
+    }},
+    actions:{type:"array", description:"0-3 visual actions that SHOW what your answer explains. The first one auto-plays.", items:{
+      type:"object", additionalProperties:false,
+      properties:{
+        type:{type:"string", enum:["locate","highlight","open","preview","none"], description:"locate=center+select one node · highlight=spotlight a set · open=open a page's wireframe · preview=animate a flow node-by-node"},
+        nodes:{type:"string", description:"comma-separated node ids (locate uses the first; preview treats them as an ordered path)"},
+        page:{type:"string", description:"open only: page node id; empty otherwise"},
+        screen:{type:"string", description:"open only: screen id on that page, or empty for its first screen"},
+        label:{type:"string", description:"short chip label, e.g. 'Locate the Pipeline' or 'Preview the message flow'"}
+      },
+      required:["type","nodes","page","screen","label"]
     }}
   },
-  required:["answer","proposals"]
+  required:["answer","proposals","actions"]
 };
 let aiHistory=[];
 async function askClaude(q){
   const docs=await fetchScreenDocs(q);
   const body={
     model:aiModel(), max_tokens:5000,
-    system:AI_PERSONA+"\n\nReply via the JSON schema. 'answer' is for David. Proposals: use EXACT node ids in from/to. For kind 'node' fill nodeLabel/nodeSub/nodeType/nodeLayer. For kind 'element' (a new UI component on an app wireframe) fill elPage/elScreen/elAfter/elKind/elText/elText2/elLinks and put a short designer note in 'label' — reuse the wireframe kinds you can see in the map data, match the page's existing copy tone, place CTAs above the tab bar, and NEVER restyle, move or remove existing components unless asked. CRITICAL — pages vs modals: screens marked ◍ MODAL are overlays (bottom sheets / confirm modals), not pages. Content that belongs to a modal goes on that modal's screen; content that belongs to the page goes on the page screen — never mix them (e.g. the token payment sheet is a modal AFTER tapping a pack, so payment UI never sits inline on the Tokens page). If the right modal screen doesn't exist yet, say so in 'answer' and place the trigger element on the page instead. Check the FRONTEND CODE NOTES for what is a modal in the real app. When a feature needs both backend and frontend, propose the FULL PACKAGE in one answer, backend first: node(s) → line(s) → element(s), and explain the flow in 'answer'. Use empty strings for fields that don't apply. Maximum 4 proposals; zero is fine.",
+    system:AI_PERSONA+"\n\nReply via the JSON schema. 'answer' is for David. Proposals: use EXACT node ids in from/to. For kind 'node' fill nodeLabel/nodeSub/nodeType/nodeLayer. For kind 'element' (a new UI component on an app wireframe) fill elPage/elScreen/elAfter/elKind/elText/elText2/elLinks and put a short designer note in 'label' — reuse the wireframe kinds you can see in the map data, match the page's existing copy tone, place CTAs above the tab bar, and NEVER restyle, move or remove existing components unless asked. CRITICAL — pages vs modals: screens marked ◍ MODAL are overlays (bottom sheets / confirm modals), not pages. Content that belongs to a modal goes on that modal's screen; content that belongs to the page goes on the page screen — never mix them (e.g. the token payment sheet is a modal AFTER tapping a pack, so payment UI never sits inline on the Tokens page). If the right modal screen doesn't exist yet, say so in 'answer' and place the trigger element on the page instead. Check the FRONTEND CODE NOTES for what is a modal in the real app. When a feature needs both backend and frontend, propose the FULL PACKAGE in one answer, backend first: node(s) → line(s) → element(s), and explain the flow in 'answer'. Use empty strings for fields that don't apply. Maximum 4 proposals; zero is fine.\n\nVISUAL SKILLS — alongside your words, return up to 3 'actions' that SHOW what you explain on the map (the first auto-plays): 'locate' a key node, 'highlight' a related set, 'open' a page's wireframe, or 'preview' a flow as an ordered list of node ids that animates step by step. Use EXACT node ids. When you describe how something flows, prefer a 'preview' action with the nodes in order. When you point at one thing, 'locate' it. Empty array if the answer is purely conversational.",
     output_config:{format:{type:"json_schema", schema:AI_SCHEMA}},
     messages:[{role:"user", content: buildMapContext()
       +(docs?"\n\nFRONTEND CODE NOTES (distilled from the real app code — ground truth for layout, copy and design):\n"+docs:"")
@@ -3664,7 +3937,11 @@ async function askClaude(q){
     if(p.kind==="element") return {kind:"element", page:p.elPage, screen:p.elScreen, after:p.elAfter||"end", elKind:p.elKind||"card", t1:p.elText||"", t2:p.elText2||"", links:(p.elLinks||"").split(",").map(s=>s.trim()).filter(Boolean), label:p.label||p.elText||"New component", status:p.status||"planned", reason:p.reason||""};
     return {kind:"edge", from:p.from, to:p.to, label:p.label||"", status:p.status||"planned", reason:p.reason||""};
   });
-  return {html:esc(obj.answer||"").replace(/\n/g,"<br>"), proposals:props};
+  const actions=(obj.actions||[]).slice(0,3).map(a=>({
+    type:a.type, nodes:(a.nodes||"").split(",").map(s=>s.trim()).filter(Boolean),
+    page:a.page||"", screen:a.screen||"", label:a.label||a.type
+  })).filter(a=>a.type&&a.type!=="none");
+  return {html:esc(obj.answer||"").replace(/\n/g,"<br>"), proposals:props, actions};
 }
 
 let aiBusy=false;
@@ -3693,6 +3970,7 @@ async function runAiAsk(){
   try{
     const r = useClaude ? await askClaude(q) : localAnswer(q);
     thinking.innerHTML=`<span class="who">Circuit${useClaude?"":" · offline"}</span>${r.html}`;
+    if(r.actions&&r.actions.length) renderActions(thinking, r.actions);
     if(r.proposals&&r.proposals.length) renderProposals(r.proposals);
   }catch(err){
     thinking.innerHTML=`<span class="who">Circuit</span><span style="color:var(--danger)">${esc(err.message||"Something went wrong.")}</span>`;
