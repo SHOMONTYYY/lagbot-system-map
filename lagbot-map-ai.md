@@ -30,7 +30,13 @@ The map has five lanes, left to right (plus an infrastructure cluster top-left):
    Expo Push, Supabase Realtime. Key rule: the app READS straight from Supabase
    (RLS-scoped) and sends WRITES/ACTIONS through the backend REST API. The backend
    uses the service-role key, so every endpoint must scope by businessId itself.
-5. FRONTEND PAGES — every app screen, each with a tappable wireframe.
+5. FRONTEND PAGES — every app screen, each with a tappable wireframe that mirrors the
+   real app code (@ commit aef6e84). Pages are FLOWS, not single screens: Onboarding is
+   intro → name → type → tone → WhatsApp → phone → pairing → products → Nova → skills →
+   complete; Inventory contains its product editor and import screens (the app navigates
+   into them from Inventory's + and ⤴ icons); Wallet has setup mode → active mode →
+   withdraw modal; Settings is a hub + 9 sub-sections. The old Admins page no longer
+   exists in the app — it redirects to Sales ▸ Teams.
 
 Message flow: WhatsApp → Evolution → ngrok → Express Server → Webhook Handler →
 Message Pipeline → (agents + LLM Service → Claude) → reply back out via Evolution.
@@ -38,10 +44,13 @@ The pipeline also writes conversations/sales/metrics, fires team alerts via the
 Routing Engine, and pushes owner notifications via Expo Push.
 
 Known weak spots: wallet endpoints missing (withdraw, token purchase — Phase 2/3
-Paystack), demo wallet ledger shown to real users (App Review risk), forgot-password
-is a no-op, photo picker stubbed, token enforcement OFF, ngrok must become
-api.lagbot.app, dormant unused routes, Admins screen duplicates Sales▸Teams,
-dead code files to delete.
+Paystack), demo wallet ledger rows shown until the real wallet is live (App Review
+risk), product photo upload stubbed ("coming soon"), skill unlock purchases not live,
+token enforcement OFF, ngrok must become api.lagbot.app, dormant unused routes,
+dead code files to delete, and Delete Account bypasses the backend route (the app
+deletes the business row directly — not App Store 5.1.1(v) compliant).
+Fixed since the original docs: forgot-password now works; Admins page consolidated
+into Sales ▸ Teams.
 
 ## Staying current
 Every request includes the LIVE map state (all nodes and lines) plus a RECENT CHANGES

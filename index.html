@@ -642,6 +642,7 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
     <button class="tbtn" id="btnZoomIn">+</button>
     <button class="tbtn" id="btnExport">⤓ Export</button>
     <button class="tbtn" id="btnImport">⤒ Import</button>
+    <button class="tbtn" id="btnOrganise">⌗ Organise</button>
     <button class="tbtn danger" id="btnReset">↺ Reset</button>
     <button class="tbtn" id="btnSync">☁ Sync</button>
     <button class="tbtn" id="btnLog">≡ Log</button>
@@ -863,6 +864,7 @@ unused routes, Admins screen duplicates Sales▸Teams.
     <div class="hrow"><b>✦ AI bar</b><span>Ask the map anything from the bar at the bottom. The offline brain works instantly; add an Anthropic API key in ⚙ for Claude-powered reasoning. Suggested lines and nodes always wait for your approval before being drawn.</span></div>
     <div class="hrow"><b>≡ Log</b><span>Every change is signed — the first change each session asks for your name, then logs who · what · date · time. View or switch name via ≡ Log.</span></div>
     <div class="hrow"><b>☁ Sync</b><span>Connect a Supabase project to share one live map with your whole team — changes sync within a second, signed with each editor's name. One-time setup SQL is in lagbot-map-team-sync.sql.</span></div>
+    <div class="hrow"><b>⌗ Organise</b><span>Snaps every node back into its lane in flow order. Connections are untouched — only positions move.</span></div>
     <div class="hrow"><b>Edit wireframe</b><span>✎ turns on edit mode: add screens with the ＋ chip, tap the current chip to rename it (✕ deletes it), then tap any element to edit its text, set where tapping it twice navigates, and rewire which backend nodes it links to.</span></div>
     <div class="hrow"><b>Search</b><span>Type to dim everything except matching nodes.</span></div>
     <div class="hrow"><b>Keys</b><span>F fit · + / − zoom · Del removes selection · Esc closes / cancels.</span></div>
@@ -932,19 +934,17 @@ function defaultState(){ return {
     {id:"db_team", label:"DB · Team + Routing", sub:"team_members · routing_rules", type:"db", layer:"bridge", x:640, y:1472},
     {id:"db_skills", label:"DB · Skills", sub:"skills · user_skills (max 3)", type:"db", layer:"bridge", x:640, y:1556},
     {id:"db_metrics", label:"DB · Metrics", sub:"response time · accuracy · daily stats", type:"db", layer:"bridge", x:640, y:1640},
-    /* ── frontend pages ── */
-    {id:"page_auth", label:"Welcome + Auth", sub:"splash · login · signup · OTP", type:"page", layer:"pages", x:985, y:60, wf:true},
-    {id:"page_onboarding", label:"Onboarding", sub:"6-step wizard + 4 setup steps", type:"page", layer:"pages", x:985, y:204, wf:true},
-    {id:"page_dashboard", label:"Dashboard", sub:"revenue · tokens · Lagbot toggle", type:"page", layer:"pages", x:985, y:348, wf:true},
-    {id:"page_chats", label:"Chats", sub:"list + thread · realtime", type:"page", layer:"pages", x:985, y:492, wf:true},
-    {id:"page_inventory", label:"Inventory", sub:"products · low stock", type:"page", layer:"pages", x:985, y:636, wf:true},
-    {id:"page_product", label:"Product Editor + Import", sub:"new/edit · CSV/Excel/PDF import", type:"page", layer:"pages", x:985, y:780, wf:true},
-    {id:"page_sales", label:"Sales + Teams", sub:"confirm sales · roster · routing", type:"page", layer:"pages", x:985, y:924, wf:true},
-    {id:"page_wallet", label:"Wallet", sub:"balance · withdraw · ledger", type:"page", layer:"pages", x:985, y:1068, wf:true},
-    {id:"page_analytics", label:"Analytics", sub:"response time · accuracy · top customers", type:"page", layer:"pages", x:985, y:1212, wf:true},
-    {id:"page_skills", label:"Skills", sub:"toggle skills (max 3)", type:"page", layer:"pages", x:985, y:1356, wf:true},
-    {id:"page_settings", label:"Settings", sub:"hub + 9 sub-pages", type:"page", layer:"pages", x:985, y:1500, wf:true},
-    {id:"page_admins", label:"Admins", sub:"team roster (same table as Sales→Teams)", type:"page", layer:"pages", x:985, y:1644, wf:true},
+    /* ── frontend pages (wireframes mirror app code @ aef6e84) ── */
+    {id:"page_auth", label:"Welcome + Auth", sub:"welcome · login · signup · verify OTP", type:"page", layer:"pages", x:985, y:60, wf:true},
+    {id:"page_onboarding", label:"Onboarding Flow", sub:"intro → wizard → 4 steps → complete", type:"page", layer:"pages", x:985, y:204, wf:true},
+    {id:"page_dashboard", label:"Dashboard", sub:"greeting · revenue+tokens · Lagbot toggle · alerts", type:"page", layer:"pages", x:985, y:348, wf:true},
+    {id:"page_chats", label:"Chats", sub:"inbox → thread → customer profile · realtime", type:"page", layer:"pages", x:985, y:492, wf:true},
+    {id:"page_inventory", label:"Inventory Flow", sub:"stock → detail → editor → import", type:"page", layer:"pages", x:985, y:636, wf:true},
+    {id:"page_sales", label:"Sales + Teams", sub:"sales | teams · sheets · routing rules", type:"page", layer:"pages", x:985, y:780, wf:true},
+    {id:"page_wallet", label:"Wallet", sub:"setup → active · withdraw · tax ledger", type:"page", layer:"pages", x:985, y:924, wf:true},
+    {id:"page_analytics", label:"Analytics", sub:"response time · accuracy · top customers", type:"page", layer:"pages", x:985, y:1068, wf:true},
+    {id:"page_skills", label:"Skills", sub:"toggles (max 3) · locked + rare store", type:"page", layer:"pages", x:985, y:1212, wf:true},
+    {id:"page_settings", label:"Settings", sub:"hub + 9 sub-sections · deep-linkable", type:"page", layer:"pages", x:985, y:1356, wf:true},
     {id:"cl_core", label:"App Core · Expo client", sub:"AuthGate · AppContext · api.ts · database.ts · oauth.ts · cache.ts", type:"client", layer:"pages", x:985, y:-118},
     {id:"svc_ingress", label:"Ingress · ngrok tunnel", sub:"prod entry — swap to api.lagbot.app", type:"service", layer:"svc", x:330, y:140, status:"gap"},
     {id:"svc_guard", label:"Auth Middleware", sub:"requireAuth · requireBusiness → req.businessId", type:"service", layer:"svc", x:330, y:1405},
@@ -1020,10 +1020,10 @@ function defaultState(){ return {
     {id:"e44", from:"page_sales", to:"api_sales", label:"Confirm Sale (+linked product)"},
     {id:"e45", from:"page_sales", to:"api_routing", label:"rule editor + default seeding"},
     {id:"e46", from:"page_sales", to:"api_whatsapp", label:"Push to Team → send"},
-    {id:"e47", from:"page_product", to:"api_import", label:"upload file → parsed preview"},
+    {id:"e47", from:"page_inventory", to:"api_import", label:"upload file → parsed preview (import flow)"},
     {id:"e48", from:"page_settings", to:"api_whatsapp", label:"connect / disconnect"},
     {id:"e49", from:"page_settings", to:"api_ai", label:"settings refresh on every save"},
-    {id:"e50", from:"page_settings", to:"api_account", label:"Danger Zone — delete account"},
+    {id:"e50", from:"page_settings", to:"api_account", label:"delete account — NOT wired (app deletes business directly)", status:"gap"},
     {id:"e51", from:"page_settings", to:"api_wallet", label:"token purchase init", status:"gap"},
     {id:"e52", from:"page_wallet", to:"api_wallet", label:"GET wallet · withdraw", status:"gap"},
     /* pages → Supabase direct */
@@ -1038,8 +1038,7 @@ function defaultState(){ return {
     {id:"e61", from:"page_dashboard", to:"db_conversations", label:"recent chats (3)"},
     {id:"e62", from:"page_dashboard", to:"db_skills", label:"active skills grid"},
     {id:"e63", from:"page_chats", to:"db_conversations", label:"list · thread · unread · handoff flip"},
-    {id:"e64", from:"page_inventory", to:"db_products", label:"products read + soft delete"},
-    {id:"e65", from:"page_product", to:"db_products", label:"insert / update rows"},
+    {id:"e64", from:"page_inventory", to:"db_products", label:"read · insert · update · soft delete"},
     {id:"e66", from:"page_sales", to:"db_sales", label:"pending (10s poll) + confirmed reads"},
     {id:"e67", from:"page_sales", to:"db_team", label:"roster CRUD"},
     {id:"e68", from:"page_wallet", to:"db_business", label:"bank_details read"},
@@ -1048,7 +1047,6 @@ function defaultState(){ return {
     {id:"e71", from:"page_skills", to:"db_skills", label:"toggle skill (optimistic)"},
     {id:"e72", from:"page_settings", to:"db_business", label:"profile · persona · hours · bank · blocked"},
     {id:"e73", from:"page_settings", to:"db_tokens", label:"usage breakdown read"},
-    {id:"e74", from:"page_admins", to:"db_team", label:"roster CRUD (same table as Teams)"},
     {id:"e75", from:"cl_core", to:"sb_auth", label:"AuthGate: session → route guard"},
     {id:"e76", from:"cl_core", to:"db_business", label:"AppContext · 6 parallel loads on SIGNED_IN"},
     {id:"e77", from:"cl_core", to:"ch_push", label:"push-token registration · deep links"},
@@ -1087,243 +1085,424 @@ function defaultState(){ return {
     {id:"d14", from:"svc_server", to:"svc_webhook", label:"routes POST /webhook/evolution → handler"},
     {id:"d15", from:"svc_pipeline", to:"svc_saleshelp", label:"normalize + resolve detected items[]"},
     {id:"d16", from:"api_sales", to:"svc_saleshelp", label:"itemsForDecrement on confirm"},
-    {id:"d17", from:"ext_codemagic", to:"cl_core", label:"builds the iOS app binary"}
+    {id:"d17", from:"ext_codemagic", to:"cl_core", label:"builds the iOS app binary"},
+    {id:"d18", from:"page_wallet", to:"db_tokens", label:"tokens earned/day · bonus buckets"}
   ],
   wireframes:{
     page_dashboard:{start:"home", screens:{
       home:{title:"Home", rows:[
-        [{id:"d_hd", label:"Greeting · ⚙ gear → Settings · 🔔 bell", kind:"pageTitle", t1:"Hello, Nikea.", t2:"", ico:"⚙ 🔔", nav:"page:page_settings", links:["db_business"]}],
-        [{id:"d_rev", label:"Revenue Today hero (7-day trend)", kind:"heroDark", t2:"Revenue Today · last 7 days", t1:"₦0", links:["db_sales"]}],
-        [{id:"d_msg", label:"Messages stat (30s poll)", kind:"darkStat", t2:"Messages", t1:"199", links:["db_metrics"]},
-         {id:"d_pnd", label:"Pending sales stat → Sales", kind:"darkStat", t2:"Pending sales", t1:"0", nav:"page:page_sales", links:["db_sales"]}],
-        [{id:"d_tgl", label:"Lagbot switch · pause / resume Nova", kind:"lagbotCard", t1:"Lagbot", t2:"OFFLINE", links:["api_ai"], note:"optimistic toggle — reverts on failure"}],
-        [{id:"d_wrn", label:"WhatsApp not connected warning", kind:"warnText", t1:"WhatsApp not connected", nav:"page:page_settings", links:["api_whatsapp"]}],
-        [{id:"d_sk", label:"Active Skills header · Manage →", kind:"section", t1:"Active skills", r:"manage", nav:"page:page_skills", links:[]}],
-        [{id:"d_tiles", label:"Skill tiles ×3", kind:"skillTiles", t1:"Multi-Language,Price Quote,Sales Closer", links:["db_skills"]}],
-        [{id:"d_rc", label:"Recent Chats header · View all +12", kind:"section", t1:"Recent chats", r:"view all +12", nav:"page:page_chats", links:["db_conversations"]}],
-        [{id:"d_c1", label:"Chat row · Segscolors", kind:"chatCard", t1:"Segscolors Int'l Services", dt:"04 Jun", t2:"I'm ready anytime", bar:"or", nav:"page:page_chats", links:["db_conversations"]}],
-        [{id:"d_c2", label:"Chat row · Sales Arete Wood", kind:"chatCard", t1:"Sales Arete Wood Kronospan", dt:"04 Jun", t2:"Payment received, many thanks sir.", bar:"or", nav:"page:page_chats", links:["db_conversations"]}],
-        [{id:"d_tabs", label:"Tab bar · Home active", kind:"tabbar", t1:"home", links:["page_chats","page_inventory","page_sales","page_wallet"]}]
+        [{id:"d_hd", label:"Typewriter greeting · ⚙ → Settings", kind:"pageTitle", t1:"Hello, David.", ico:"⚙ 🔔", nav:"page:page_settings", links:["db_business"]}],
+        [{id:"d_bell", label:"🔔 bell → Alerts sheet", kind:"linkrow", t1:"🔔 Alerts", or:1, nav:"alerts", links:[]}],
+        [{id:"d_rev", label:"Revenue Today hero — left half → Sales · right (tokens) → Settings▸Tokens", kind:"heroDark", t2:"Revenue Today · LIVE", t1:"₦0", stats:[["Revenue","₦0"],["Tokens","500"]], lines:["500 free/day · meter refills daily"], nav:"page:page_sales", links:["db_sales","db_tokens"]}],
+        [{id:"d_an", label:"View analytics › link", kind:"linkrow", t1:"View analytics ›", nav:"page:page_analytics", links:["db_metrics"]}],
+        [{id:"d_msg", label:"Messages tile (all-time count)", kind:"darkStat", t2:"Messages", t1:"199", nav:"page:page_chats", links:["db_metrics"]},
+         {id:"d_pnd", label:"Pending Sales tile", kind:"darkStat", t2:"Pending sales", t1:"0", nav:"page:page_sales", links:["db_sales"]}],
+        [{id:"d_tgl", label:"Lagbot toggle card — logo · status dot · switch", kind:"lagbotCard", t1:"Lagbot", t2:"ONLINE", links:["api_ai"], note:"optimistic toggle · typewriter status feedback · reverts on error"}],
+        [{id:"d_sk", label:"Active Skills header", kind:"section", t1:"Active skills", r:"3 slots", nav:"page:page_skills", links:["db_skills"]}],
+        [{id:"d_tiles", label:"Skill tiles ×3 + 'Add skill' empty slots", kind:"skillTiles", t1:"Multi-Language,Price Quote,Sales Closer", nav:"page:page_skills", links:["db_skills"]}],
+        [{id:"d_rc", label:"Recent Chats header · View all", kind:"section", t1:"Recent chats", r:"view all", nav:"page:page_chats", links:["db_conversations"]}],
+        [{id:"d_c1", label:"Recent chat row", kind:"chatCard", t1:"Segscolors Int'l Services", dt:"2m", t2:"I'm ready anytime", tag:"Responded", bar:"gr", nav:"page:page_chats", links:["db_conversations"]}],
+        [{id:"d_c2", label:"Recent chat row (unread)", kind:"chatCard", t1:"Adaeze Okonkwo", dt:"1h", t2:"How much is delivery to Lekki?", badge:"1", bar:"or", nav:"page:page_chats", links:["db_conversations"]}],
+        [{id:"d_tabs", label:"Floating dock · Home active", kind:"tabbar", t1:"home", links:["page_chats","page_inventory","page_sales","page_wallet"]}]
+      ]},
+      alerts:{title:"Alerts", rows:[
+        [{id:"al_t", label:"Alerts bottom sheet", kind:"pageTitle", t2:"Notifications", t1:"Alerts", links:[]}],
+        [{id:"al_c", label:"Status line", kind:"caption", t1:"2 items need your attention.", links:[]}],
+        [{id:"al_1", label:"Out of / low tokens row", kind:"linkrow", t1:"● Tokens running low — top up before Lagbot pauses", or:1, nav:"page:page_settings:usage", links:["db_tokens"]}],
+        [{id:"al_2", label:"Lagbot paused row → toggles back on", kind:"linkrow", t1:"● Lagbot is paused — customers aren't getting AI replies", links:["api_ai"]}],
+        [{id:"al_3", label:"Customers waiting row", kind:"linkrow", t1:"● 2 customers waiting — reply before they go cold", nav:"page:page_chats", links:["db_conversations"]}],
+        [{id:"al_4", label:"Low stock row (per product ≤3 units)", kind:"linkrow", t1:"● Closet Installation is low — only 2 left", nav:"page:page_inventory", links:["db_products"]}],
+        [{id:"al_ok", label:"All-clear state", kind:"empty", t1:"Everything's running smoothly.", t2:"No alerts right now.", links:[]}]
       ]}
     }},
 
     page_chats:{start:"inbox", screens:{
       inbox:{title:"Inbox", rows:[
-        [{id:"c_hero", label:"Inbox hero · today / unread / leads", kind:"heroDark", t2:"Conversations", t1:"Inbox", ico:"⌕", stats:[["Today","0"],["Unread","1!"],["Leads · 7d","5!"]], links:["db_conversations","db_metrics"]}],
-        [{id:"c_cw", label:"● Connect WhatsApp status line", kind:"linkrow", t1:"● Connect WhatsApp", or:1, nav:"page:page_settings", links:["api_whatsapp"]},
-         {id:"c_lp", label:"● Lagbot is paused status line", kind:"linkrow", t1:"● Lagbot is paused", links:["api_ai"]}],
-        [{id:"c_f", label:"Filter pills", kind:"pillsT", t1:"All,Lead,Quoted,Paid,Archive", links:["db_conversations"]}],
+        [{id:"c_hd", label:"Header — CONVERSATIONS eyebrow · ⌕ search toggle", kind:"pageTitle", t2:"Conversations", t1:"Chats", ico:"⌕", links:["db_conversations"]}],
+        [{id:"c_wa", label:"WhatsApp / Lagbot status chip", kind:"linkrow", t1:"● Connect WhatsApp", or:1, nav:"page:page_settings:whatsapp", links:["api_whatsapp"]}],
+        [{id:"c_st", label:"Stat pills", kind:"pillsT", t1:"0 today,1 unread,5 leads · 7d", links:["db_conversations"]}],
+        [{id:"c_tags", label:"Tag filter pills — shake when a tag needs a reply", kind:"pillsT", t1:"All,Lead,Quoted,Paid,Archive", links:["db_conversations"]}],
+        [{id:"c_seg", label:"Segmented filter", kind:"seg2", t1:"All,Unread,AI Handled", on:0, links:["db_conversations"]}],
         [{id:"c_s1", label:"Needs You section", kind:"section", t1:"Needs you", b:"2", links:["db_conversations"]}],
-        [{id:"c_jl", label:"Chat card · Johnny Lee → thread", kind:"chatCard", t1:"Johnny Lee", dt:"04 Jun", t2:"Anything you like.", bar:"or", nav:"thread", links:["db_conversations"]}],
-        [{id:"c_j", label:"Chat card · J (responded, 1 unread)", kind:"chatCard", t1:"J", dt:"03 Jun", t2:"I think those links got sent by mistake?", tag:"Responded", badge:"1", bar:"gr", nav:"thread", links:["db_conversations"]}],
+        [{id:"c_r1", label:"Conversation row — swipe right = archive/restore", kind:"chatCard", t1:"Johnny Lee", dt:"04 Jun", t2:"Anything you like.", bar:"or", badge:"1", nav:"thread", links:["db_conversations"], note:"swipe → PATCH /conversations/:id/archive"}],
         [{id:"c_s2", label:"AI Handling section", kind:"section", t1:"AI handling", b:"4", bi:1, links:["db_conversations"]}],
-        [{id:"c_sg", label:"Chat card · Segscolors (AI)", kind:"chatCard", t1:"Segscolors Int'l Services", dt:"04 Jun", t2:"I'm ready anytime", bar:"or", nav:"thread", links:["db_conversations","ch_realtime"]}],
-        [{id:"c_tabs", label:"Tab bar · Chats active", kind:"tabbar", t1:"chats", links:["page_dashboard","page_inventory","page_sales","page_wallet"]}]
+        [{id:"c_r2", label:"Conversation row (AI, responded)", kind:"chatCard", t1:"Segscolors Int'l Services", dt:"04 Jun", t2:"I'm ready anytime", tag:"Responded", bar:"gr", nav:"thread", links:["db_conversations","ch_realtime"]}],
+        [{id:"c_tabs", label:"Floating dock · Chats active (unread badge)", kind:"tabbar", t1:"chats", links:["page_dashboard","page_inventory","page_sales","page_wallet"]}]
       ]},
-      thread:{title:"Chat view", rows:[
-        [{id:"t_hdr", label:"Header · back · Johnny Lee · AI Off pill", kind:"headerBack", t1:"Johnny Lee", t2:"You handling", pill:"AI Off", av:"JL", links:["db_conversations"], note:"AI pill flips status + logs human_interventions"}],
-        [{id:"t_b1", label:"Incoming bubble (live)", kind:"bubbleIn", t1:"Is this auto reply?", tm:"5:05 PM", links:["ch_realtime","db_conversations"]}],
-        [{id:"t_b2", label:"Nova reply bubble · Generated by Lagbot", kind:"bubbleOut", t1:"Nope, real person here. I'm Nova, Nikea Prime Solutions's assistant. What's the project about?", tm:"5:05 PM", cap:"Generated by Lagbot", links:["svc_pipeline","svc_llm"]}],
-        [{id:"t_dv", label:"Date divider", kind:"divider", t1:"Thursday", links:[]}],
-        [{id:"t_b3", label:"Incoming bubble · address", kind:"bubbleIn", t1:"NO 5, LOPEZ CLOSE, OFF WOLE OGUNJIMI STREET, OPEBI, IKEJA…", tm:"12:59 PM", links:["ch_realtime"]}],
-        [{id:"t_rc", label:"Receipt image bubble", kind:"receipt", t1:"receipt.jpg", tm:"2:49 PM", links:["svc_llm","svc_pipeline","db_business"], note:"vision verify vs bank_details ±5% — never auto-confirms"}],
-        [{id:"t_sug", label:"Lagbot Suggests bar", kind:"suggest", t1:"Lagbot suggests", t2:"David's still in Benin but I can definitely handle this for you! S…", links:["api_conversations","svc_llm"], note:"manual-mode only, customer spoke last"}],
-        [{id:"t_cmp", label:"Composer · type + send", kind:"composer", links:["api_whatsapp"], note:"manual reply stored as outbound/human"}]
+      thread:{title:"Thread", rows:[
+        [{id:"t_hdr", label:"Dark header — back · name → profile · AI pill", kind:"headerBack", t1:"Johnny Lee", t2:"Lagbot handling", pill:"AI On", av:"JL", nav:"customer", links:["db_conversations"], note:"AI pill flips active↔manual + logs human_interventions · tap name → customer profile"}],
+        [{id:"t_b1", label:"Inbound bubble (live via Realtime)", kind:"bubbleIn", t1:"Is this auto reply?", tm:"5:05 PM", links:["ch_realtime","db_conversations"]}],
+        [{id:"t_b2", label:"Nova reply — 'Generated by Lagbot'", kind:"bubbleOut", t1:"Nope, real person here. I'm Nova — what's the project about?", tm:"5:05 PM", cap:"Generated by Lagbot", links:["agent_nova","svc_pipeline","svc_llm"]}],
+        [{id:"t_dv", label:"Date divider", kind:"divider", t1:"Today", links:[]}],
+        [{id:"t_vc", label:"Voice note bubble + transcript chip", kind:"bubbleIn", t1:"🎤 Voice note — transcript shown in chip", tm:"12:59 PM", links:["svc_pipeline"]}],
+        [{id:"t_rc", label:"Receipt image bubble", kind:"receipt", t1:"receipt.jpg", tm:"2:49 PM", links:["agent_receipt","svc_llm","db_business"], note:"vision verify vs bank_details ±5% — never auto-confirms"}],
+        [{id:"t_sug", label:"Lagbot Suggests strip — 3 chips fill the composer", kind:"suggest", t1:"Lagbot suggests", t2:"David's still in Benin but I can definitely handle this for you…", links:["api_conversations","agent_reply"], note:"manual mode only · customer spoke last"}],
+        [{id:"t_cmp", label:"Composer — sending flips chat to manual", kind:"composer", links:["api_whatsapp"], note:"optimistic bubble · logs human_interventions"}]
+      ]},
+      customer:{title:"Customer", rows:[
+        [{id:"cs_h", label:"Customer profile sheet", kind:"headerBack", t1:"Johnny Lee", t2:"Customer profile", av:"JL", links:["db_conversations"]}],
+        [{id:"cs_st", label:"Stats — total spent · messages · first seen", kind:"kv", links:["db_conversations","db_sales"]}],
+        [{id:"cs_dt", label:"Details — phone · email · address (extracted from chat)", kind:"list", links:["db_conversations"]}],
+        [{id:"cs_hs", label:"History — per-day timeline cards", kind:"list", links:["db_conversations"], note:"tap a day → read that day's full thread"}]
       ]}
     }},
 
     page_inventory:{start:"stock", screens:{
       stock:{title:"Inventory", rows:[
-        [{id:"i_hero", label:"Inventory hero · total / low / value", kind:"heroDark", t2:"Stock", t1:"Inventory", ico:"⤴ ＋ ⌕", stats:[["Total","1"],["Low stock","1!"],["Value","₦750k"]], links:["db_products"]}],
-        [{id:"i_imp", label:"⤴ Import file → Product page", kind:"linkrow", t1:"⤴ Import file", nav:"page:page_product", links:["api_import"]},
-         {id:"i_add", label:"＋ Add product → editor", kind:"linkrow", t1:"＋ Add product", nav:"page:page_product", links:["db_products"]}],
-        [{id:"i_bs", label:"Best seller bar", kind:"bestSeller", t1:"Closet Installation", t2:"₦150,000", links:["db_products","db_sales"]}],
+        [{id:"i_hero", label:"Hero — ⤴ import · ＋ add · ⌕ search", kind:"heroDark", t2:"Stock", t1:"Inventory", ico:"⤴ ＋ ⌕", stats:[["Total","1"],["Low stock","1!"],["Value","₦750k"]], links:["db_products"]}],
+        [{id:"i_imp", label:"⤴ icon → import flow", kind:"linkrow", t1:"⤴ Import file", nav:"import", links:["api_import"]},
+         {id:"i_add", label:"＋ icon → product editor", kind:"linkrow", t1:"＋ Add product", nav:"editor", links:["db_products"]}],
+        [{id:"i_bs", label:"Best seller bar (only when month has sales)", kind:"bestSeller", t1:"Closet Installation", t2:"₦150,000", links:["db_products","db_sales"]}],
         [{id:"i_p", label:"Category pills", kind:"pillsT", t1:"All,Others", links:["db_products"]}],
-        [{id:"i_s", label:"Needs Reorder section", kind:"section", t1:"Needs reorder", b:"1", links:["db_products"]}],
-        [{id:"i_pc", label:"Product card · Closet Installation (low)", kind:"productCard", t1:"Closet Installation", t2:"₦150,000", cat:"Others", q:"5", nav:"page:page_product", links:["db_products"], note:"≤2 stock fires stock_low → routing + push"}],
-        [{id:"i_tabs", label:"Tab bar · Inventory active", kind:"tabbar", t1:"inventory", links:["page_dashboard","page_chats","page_sales","page_wallet"]}]
+        [{id:"i_s1", label:"Needs Reorder section", kind:"section", t1:"Needs reorder", b:"1", links:["db_products"]}],
+        [{id:"i_pc", label:"Product row → detail sheet", kind:"productCard", t1:"Closet Installation", t2:"₦150,000", cat:"Others", q:"2", nav:"detail", links:["db_products"]}],
+        [{id:"i_s2", label:"In Stock section", kind:"section", t1:"In stock", links:["db_products"]}],
+        [{id:"i_e", label:"Empty state", kind:"empty", t1:"No products yet", t2:"Tap the + button to add your first product.", links:["db_products"]}],
+        [{id:"i_tabs", label:"Floating dock · Inventory active", kind:"tabbar", t1:"inventory", links:["page_dashboard","page_chats","page_sales","page_wallet"]}]
+      ]},
+      detail:{title:"Product sheet", rows:[
+        [{id:"pd_h", label:"Detail sheet — dark header + image frame", kind:"headerBack", t1:"Closet Installation", t2:"Others", av:"▣", links:["db_products"]}],
+        [{id:"pd_kv", label:"Stat row — stock · price · status", kind:"kv", links:["db_products"]}],
+        [{id:"pd_e", label:"Edit Product → editor", kind:"cta", t1:"Edit Product", nav:"editor", links:["db_products"]}],
+        [{id:"pd_d", label:"Delete product", kind:"ctaLine", t1:"Delete product", links:["db_products"], note:"soft delete — sets active=false, never hard-deletes"}]
+      ]},
+      editor:{title:"Editor", rows:[
+        [{id:"p_h", label:"Header — Add product / Edit product", kind:"headerBack", t1:"Add product", t2:"Catalogue", av:"＋", links:["db_products"]}],
+        [{id:"p_ph", label:"Photo tile", kind:"hatch", links:[], note:"⚠ photo upload — 'coming soon' alert, still stubbed"}],
+        [{id:"p_n", label:"Product name input", kind:"input", links:["db_products"]}],
+        [{id:"p_cat", label:"Category tiles", kind:"pillsT", t1:"Shoes,Clothing,Accessories,Others", links:["db_products"]}],
+        [{id:"p_var", label:"Sizes + colors chips — comma commits", kind:"pillsT", t1:"S,M,L,Walnut,Oak", links:["db_products"]}],
+        [{id:"p_pr", label:"Price input (min ₦100)", kind:"input", links:["db_products"]},
+         {id:"p_st", label:"Stock stepper − / +", kind:"input", links:["db_products"]}],
+        [{id:"p_de", label:"Description (optional)", kind:"input", links:["db_products"]}],
+        [{id:"p_sv", label:"Save → back to Inventory", kind:"cta", t1:"Add Product", nav:"stock", links:["db_products"], note:"validates name · category · price ≥ ₦100"}]
+      ]},
+      import:{title:"Import", rows:[
+        [{id:"im_h", label:"Header — phases: pick → preview → importing → done", kind:"headerBack", t1:"Import inventory", t2:"CSV · Excel · PDF", av:"⤴", links:["api_import"]}],
+        [{id:"im_c", label:"CSV format row", kind:"choice", t1:"CSV", t2:"Spreadsheet exports — most stock apps", links:["api_import"]}],
+        [{id:"im_x", label:"Excel format row", kind:"choice", t1:"Excel", t2:".xlsx files straight from your laptop", links:["api_import"]}],
+        [{id:"im_p", label:"PDF format row — AI extracts rows", kind:"choice", t1:"PDF", t2:"Price lists & catalogues — Claude reads them", links:["api_import","agent_import"]}],
+        [{id:"im_t", label:"Need a template? → CSV template modal", kind:"linkrow", t1:"ℹ Need a template?", links:[]}],
+        [{id:"im_s", label:"Preview phase", kind:"section", t1:"Preview", r:"tap rows to deselect", links:["api_import"]}],
+        [{id:"im_l", label:"Parsed rows table + skipped-row errors", kind:"list", links:["api_import"]}],
+        [{id:"im_b", label:"Import N → progress bar → done screen", kind:"cta", t1:"Import 24 products", nav:"stock", links:["db_products"], note:"inserts happen from the app, then 'Go to Inventory'"}]
       ]}
     }},
 
     page_sales:{start:"sales", screens:{
-      sales:{title:"Your Sales", rows:[
+      sales:{title:"Sales", rows:[
         [{id:"s_t", label:"Page title", kind:"pageTitle", t2:"Sales", t1:"Your Sales", links:[]}],
         [{id:"s_c", label:"Subtitle", kind:"caption", t1:"Pipeline and payments. Mark what is done, push what needs a team.", links:[]}],
-        [{id:"s_seg", label:"Segment Sales | Teams → Teams", kind:"seg2", t1:"Sales,Teams", on:0, nav:"teams", links:[]}],
-        [{id:"s_rev", label:"Revenue hero · 24H", kind:"heroDark", t2:"Revenue", t1:"₦0", pl:"24H", lines:["Once Lagbot logs your first sale, the trend appears here."], links:["db_sales","db_metrics"]}],
-        [{id:"s_set", label:"Settlement section", kind:"section", t1:"Settlement", links:["db_business"]}],
-        [{id:"s_man", label:"Manual settlement card", kind:"choice", t1:"Manual", t2:"You confirm each payment", links:["api_sales"]},
-         {id:"s_auto", label:"Auto settlement card (selected)", kind:"choiceOn", t1:"Auto", t2:"Wallet credit settles it", links:["db_business"], note:"matching wallet payment auto-completes the sale"}],
-        [{id:"s_cc", label:"Settlement explainer", kind:"caption", t1:"When the matching payment lands in your Lagbot wallet, the sale moves to Completed automatically.", links:[]}],
-        [{id:"s_p", label:"Pending section", kind:"section", t1:"Pending", r:"waiting for payment", links:["db_sales"]}],
-        [{id:"s_pe", label:"Pending empty state", kind:"empty", t1:"No pending sales.", t2:"When Lagbot confirms an order with a customer, it will land here.", links:["db_sales","svc_pipeline"], note:"detectSale writes pending_sales (10s poll here)"}],
-        [{id:"s_cf", label:"Confirm Sale action (on pending card)", kind:"cta", t1:"Confirm sale", links:["api_sales"], note:"THE only stock decrement — idempotent"}],
-        [{id:"s_cm", label:"Completed section", kind:"section", t1:"Completed", r:"24H", links:["db_sales"]}],
+        [{id:"s_seg", label:"Segment Sales | Teams — badges show counts", kind:"seg2", t1:"Sales,Teams", on:0, nav:"teams", links:[]}],
+        [{id:"s_rev", label:"Revenue hero — period pill cycles 24H→7D→1M→2M→6M · ±Δ% pill · bar chart", kind:"heroDark", t2:"Revenue", t1:"₦0", pl:"24H", lines:["Once Lagbot logs your first sale, the trend appears here."], links:["db_sales"]}],
+        [{id:"s_set", label:"Settlement section", kind:"section", t1:"Settlement", links:[]}],
+        [{id:"s_man", label:"Manual settlement card (default)", kind:"choiceOn", t1:"Manual", t2:"You confirm each payment", links:[], note:"choice stored locally on the phone"},
+         {id:"s_auto", label:"Auto settlement card", kind:"choice", t1:"Auto", t2:"Wallet credit settles it", links:["api_wallet"]}],
+        [{id:"s_p", label:"Pending section", kind:"section", t1:"Pending", r:"tap to confirm", links:["db_sales"]}],
+        [{id:"s_pe", label:"Pending empty state", kind:"empty", t1:"No pending sales.", t2:"When Lagbot confirms an order with a customer, it will land here.", links:["db_sales","agent_sale"], note:"Sale Detector writes pending_sales · 10s poll here"}],
+        [{id:"s_l1", label:"Pending sale card → detail sheet", kind:"ledger", t1:"Mrs. Adekoya", t2:"Steel security door · 3h ago", amt:"+₦62,000", tag:"Pending", nav:"pending", links:["db_sales"]}],
+        [{id:"s_cm", label:"Completed section (manual + receipt-verified merged)", kind:"section", t1:"Completed", r:"24H", links:["db_sales"]}],
         [{id:"s_ce", label:"Completed empty state", kind:"empty", t1:"No completed sales yet.", t2:"Pending sales move here the moment they are settled.", links:["db_sales"]}],
-        [{id:"s_tabs", label:"Tab bar · Sales active", kind:"tabbar", t1:"sales", links:["page_dashboard","page_chats","page_inventory","page_wallet"]}]
+        [{id:"s_tabs", label:"Floating dock · Sales active", kind:"tabbar", t1:"sales", links:["page_dashboard","page_chats","page_inventory","page_wallet"]}]
       ]},
-      teams:{title:"Your Team", rows:[
+      pending:{title:"Sale sheet", rows:[
+        [{id:"sp_h", label:"Pending detail sheet", kind:"headerBack", t1:"Mrs. Adekoya", t2:"Pending sale", av:"MA", links:["db_sales"]}],
+        [{id:"sp_kv", label:"Product · amount · delivery address · notes", kind:"kv", links:["db_sales"]}],
+        [{id:"sp_lk", label:"Link a product — AI-detected pre-filled", kind:"bar", links:["db_products","agent_sale"]}],
+        [{id:"sp_cf", label:"Confirm Sale", kind:"cta", t1:"Confirm Sale", links:["api_sales"], note:"THE only stock decrement — idempotent"}],
+        [{id:"sp_pt", label:"Push to Team (on confirmed sales)", kind:"ctaLine", t1:"Push to Team", links:["api_whatsapp","db_team"], note:"team picker sheet — sends sale info via WhatsApp"}]
+      ]},
+      teams:{title:"Teams", rows:[
         [{id:"tm_t", label:"Page title", kind:"pageTitle", t2:"Sales", t1:"Your Team", links:[]}],
         [{id:"tm_c", label:"Subtitle", kind:"caption", t1:"Assign contacts to roles. Lagbot hands off the right details automatically.", links:[]}],
-        [{id:"tm_seg", label:"Segment Sales | Teams → Sales", kind:"seg2", t1:"Sales,Teams", on:1, nav:"sales", links:[]}],
+        [{id:"tm_seg", label:"Segment back to Sales", kind:"seg2", t1:"Sales,Teams", on:1, nav:"sales", links:[]}],
         [{id:"tm_r", label:"Roster section", kind:"section", t1:"Roster", r:"your team", links:["db_team"]}],
         [{id:"tm_e", label:"Roster empty state", kind:"empty", t1:"No team members yet.", t2:"Add a driver, admin, or sales agent so Lagbot can route customers.", links:["db_team"]}],
-        [{id:"tm_add", label:"+ Add team member CTA", kind:"cta", t1:"＋ Add team member", links:["db_team"]}],
+        [{id:"tm_add", label:"Add member sheet — name · 5 role chips · WhatsApp number", kind:"cta", t1:"＋ Add team member", links:["db_team"]}],
         [{id:"tm_rr", label:"Routing Rules section", kind:"section", t1:"Routing rules", b:"2", bi:1, r:"auto handoff", links:["db_team"]}],
-        [{id:"tm_r1", label:"Rule · order ready → driver", kind:"ruleCard", t1:"Order ready for delivery", t2:"Send address + preferred time to", role:"Delivery driver", tpl:"\"Hey {team_member}, delivery for {custo…\"", links:["db_team","api_routing","svc_routing"]}],
-        [{id:"tm_r2", label:"Rule · refund → manager", kind:"ruleCard", t1:"Customer requests refund", t2:"Push conversation to", role:"Manager", amber:0, tpl:"\"{team_member}, refund request from {c…\"", links:["db_team","api_routing","svc_routing"]}],
-        [{id:"tm_nr", label:"+ New Rule", kind:"ctaLine", t1:"＋ New rule", links:["api_routing"]}],
-        [{id:"tm_h", label:"Rules hint", kind:"caption", t1:"Tap a rule to edit it. The chosen role confirms the handoff on WhatsApp; Lagbot relays their reply back to your customer.", links:["svc_routing"]}],
+        [{id:"tm_re", label:"Rules empty state", kind:"empty", t1:"No routing rules yet.", t2:"Add one so Lagbot pushes customer details to the right role automatically.", links:["db_team"]}],
+        [{id:"tm_r1", label:"Rule row (sentence style) → editor", kind:"ruleCard", t1:"Order ready for delivery", t2:"Send address + preferred time to", role:"Delivery driver", tpl:"\"Hey {team_member}, delivery for {custo…\"", nav:"rule", links:["db_team","api_routing","svc_routing"], note:"Active/Paused chip toggles · X deletes"}],
+        [{id:"tm_nr", label:"+ New rule → editor", kind:"ctaLine", t1:"＋ New rule", nav:"rule", links:["api_routing"]}],
+        [{id:"tm_h", label:"Rules hint", kind:"caption", t1:"Tap a rule to edit it. The chosen role confirms the handoff on WhatsApp; Lagbot relays their reply to your customer.", links:["svc_routing"]}],
         [{id:"tm_cn", label:"Connectors section", kind:"section", t1:"Connectors", r:"logistics partners", links:[]}],
-        [{id:"tm_c1", label:"Connector · inDrive", kind:"connector", t1:"inDrive", t2:"Driver dispatch · negotiated fares", links:[], note:"mocked — not wired (Phase 2)"}],
-        [{id:"tm_c2", label:"Connector · Glovo", kind:"connector", t1:"Glovo", t2:"Same-day courier · Lagos + Abuja", links:[], note:"mocked — not wired (Phase 2)"}],
-        [{id:"tm_c3", label:"Connector · Bolt", kind:"connector", t1:"Bolt", t2:"Driver dispatch · curb-to-curb", links:[], note:"mocked — not wired (Phase 2)"}],
-        [{id:"tm_tabs", label:"Tab bar · Sales active", kind:"tabbar", t1:"sales", links:["page_dashboard","page_chats","page_inventory","page_wallet"]}]
+        [{id:"tm_c1", label:"Connector · inDrive", kind:"connector", t1:"inDrive", t2:"Driver dispatch · negotiated fares", links:[], note:"'Coming soon' alert — not wired"}],
+        [{id:"tm_c2", label:"Connector · Glovo", kind:"connector", t1:"Glovo", t2:"Same-day courier · Lagos + Abuja", links:[], note:"'Coming soon' alert — not wired"}],
+        [{id:"tm_c3", label:"Connector · Bolt", kind:"connector", t1:"Bolt", t2:"Driver dispatch · curb-to-curb", links:[], note:"'Coming soon' alert — not wired"}],
+        [{id:"tm_tabs", label:"Floating dock · Sales active", kind:"tabbar", t1:"sales", links:["page_dashboard","page_chats","page_inventory","page_wallet"]}]
+      ]},
+      rule:{title:"Rule editor", rows:[
+        [{id:"rl_h", label:"Rule editor sheet", kind:"headerBack", t1:"New rule", t2:"Routing", av:"⚡", links:["api_routing"]}],
+        [{id:"rl_ev", label:"WHEN THIS HAPPENS — 8 event chips", kind:"pillsT", t1:"Order ready,Paid,Refund,Escalation,Quote,Low stock,New enquiry,After-hours", links:["svc_routing"]}],
+        [{id:"rl_ro", label:"ROUTE TO ROLE — or a specific person", kind:"pillsT", t1:"Driver,Sales agent,Manager,Team lead,Employee", links:["db_team"]}],
+        [{id:"rl_ms", label:"Message template + {placeholder} chips", kind:"input", links:["svc_routing"], note:"{customer} {address} {time} {amount} {order} {team_member}"}],
+        [{id:"rl_sv", label:"Save rule", kind:"cta", t1:"Save rule", nav:"teams", links:["api_routing"]}]
       ]}
     }},
 
     page_wallet:{start:"wallet", screens:{
-      wallet:{title:"Lagbot Wallet", rows:[
+      wallet:{title:"Active", rows:[
         [{id:"w_t", label:"Page title", kind:"pageTitle", t2:"Wallet", t1:"Lagbot Wallet", links:[]}],
-        [{id:"w_c", label:"Subtitle", kind:"caption", t1:"Customer payments collect here. Withdraw to your bank any time.", links:[]}],
-        [{id:"w_b", label:"Balance card · ₦508,000 / settles ₦18,000", kind:"balanceCard", t1:"₦508,000", t2:"₦18,000", sub:"Last from Mrs. Adekoya, 3h ago.", payk:"Pays out to", payn:"David Shodunke", payb:"Access Bank · ····4848", links:["api_wallet","db_business"], note:"⚠ demo ledger shows to real users — App Review risk · GET /wallet is a stub"}],
-        [{id:"w_wd", label:"Withdraw to bank CTA → sheet", kind:"cta", t1:"↓ Withdraw to bank", nav:"withdraw", links:["api_wallet"], note:"⚠ POST /api/wallet/withdraw — route does not exist"}],
-        [{id:"w_tax", label:"Tax · month summary + export", kind:"taxCard", t2:"Tax · this month", t1:"You've earned ₦262,000 this month.", sub:"71% goods sold, 17% services, 11% refunds.", lk:"Export ledger", links:["db_sales"], note:"CSV export stubbed"}],
-        [{id:"w_l", label:"Ledger section", kind:"section", t1:"Ledger", r:"8 transactions", links:["api_wallet"]}],
-        [{id:"w_l1", label:"Ledger · Mrs. Adekoya +62k", kind:"ledger", t1:"Mrs. Adekoya", t2:"Steel security door · 3h ago", amt:"+₦62,000", tag:"Settled", cat:"Goods", links:["api_wallet"]}],
-        [{id:"w_l2", label:"Ledger · Tunde Bakare pending", kind:"ledger", t1:"Tunde Bakare", t2:"Installation deposit · 6h ago", amt:"+₦18,000", tag:"Pending", cat:"Services", links:["api_wallet"]}],
-        [{id:"w_l3", label:"Ledger · withdrawal −80k", kind:"ledger", t1:"Anonymous", t2:"Withdrawal to Wema · 5 Jun", amt:"−₦80,000", tag:"Settled", links:["api_wallet"]}],
-        [{id:"w_tabs", label:"Tab bar · Wallet active", kind:"tabbar", t1:"wallet", links:["page_dashboard","page_chats","page_inventory","page_sales"]}]
+        [{id:"w_c", label:"Subtitle", kind:"caption", t1:"Customer payments collect here.", links:[]}],
+        [{id:"w_b", label:"Balance hero — Available | Tokens earned/day · coin burst on first open", kind:"heroDark", t2:"Balance", t1:"₦0", stats:[["Available","₦0"],["Tokens / day","+0"]], lines:["₦1,000 held ≈ 1 free token every day","Bonus tokens never expire — they bank up"], nav:"page:page_settings:usage", links:["api_wallet","db_tokens"]}],
+        [{id:"w_wd", label:"Withdraw to bank → modal (alert if ₦0)", kind:"cta", t1:"↓ Withdraw to bank", nav:"withdraw", links:["api_wallet"]}],
+        [{id:"w_to", label:"Payout destination caption", kind:"caption", t1:"To David Shodunke · Access Bank ••••4848", links:["db_business"]}],
+        [{id:"w_mo", label:"This month summary + Export button", kind:"bar", links:["db_sales"], note:"FIRS-ready CSV export — 'coming soon' alert"}],
+        [{id:"w_l", label:"Ledger section — filter all · settled · pending", kind:"section", t1:"Ledger", r:"tax-tagged", links:["api_wallet"]}],
+        [{id:"w_le", label:"Ledger empty state", kind:"empty", t1:"Your first customer payment will land here.", t2:"Lagbot tags it for you automatically.", links:["api_wallet"]}],
+        [{id:"w_l1", label:"Ledger card — 3D wheel tilt on scroll · tax category", kind:"ledger", t1:"Mrs. Adekoya", t2:"Steel security door · 3h ago", amt:"+₦62,000", cat:"Goods", links:["api_wallet","agent_receipt"], note:"⚠ demo rows show until the real Paystack wallet is live"}],
+        [{id:"w_tabs", label:"Floating dock · Wallet active", kind:"tabbar", t1:"wallet", links:["page_dashboard","page_chats","page_inventory","page_sales"]}]
+      ]},
+      setup:{title:"Setup mode", rows:[
+        [{id:"ws_t", label:"Setup mode — shown until bank details exist", kind:"pageTitle", t2:"Wallet", t1:"Get set up", links:[]}],
+        [{id:"ws_h", label:"Preview hero", kind:"heroDark", t2:"Preview", t1:"₦0.00", lines:["Ready when you are."], links:[]}],
+        [{id:"ws_c", label:"Lead copy", kind:"caption", t1:"Your AI-powered business finance. Lagbot tags every payment for your taxes, so when your accountant asks, the answer is ready.", links:[]}],
+        [{id:"ws_1", label:"How it works · 1", kind:"empty", t1:"1 · Connect your bank", t2:"Add your account in Settings. It's the destination for withdrawals.", nav:"page:page_settings:bank", links:["db_business"]}],
+        [{id:"ws_2", label:"How it works · 2", kind:"empty", t1:"2 · Verify with Paystack", t2:"Under a minute. Bank-grade KYC.", links:["ext_paystack"], note:"Paystack integration — Phase 2/3"}],
+        [{id:"ws_3", label:"How it works · 3", kind:"empty", t1:"3 · Start receiving", t2:"Payments land here, tagged for tax. Withdraw any time.", links:["api_wallet"]}],
+        [{id:"ws_b", label:"Add bank account CTA → Settings ▸ Bank", kind:"cta", t1:"Add bank account", nav:"page:page_settings:bank", links:["db_business"]}],
+        [{id:"ws_f", label:"Trust footer", kind:"caption", t1:"Powered by Paystack. Naira-first. Bank-grade encryption.", links:["ext_paystack"]}]
       ]},
       withdraw:{title:"Withdraw", rows:[
-        [{id:"ww_h", label:"Header · back to wallet", kind:"headerBack", t1:"Withdraw to bank", t2:"Lagbot Wallet", av:"₦", links:["api_wallet"]}],
-        [{id:"ww_b", label:"Available balance", kind:"darkStat", t2:"Available", t1:"₦508,000", links:["api_wallet"]}],
-        [{id:"ww_a", label:"Amount input", kind:"input", links:[]}],
-        [{id:"ww_k", label:"Destination bank line", kind:"caption", t1:"To: Access Bank ····4848 · David Shodunke", links:["db_business"]}],
-        [{id:"ww_c", label:"Confirm withdrawal", kind:"cta", t1:"Confirm withdrawal", links:["api_wallet"], note:"⚠ endpoint missing — fails today (Phase 3 / Paystack)"}],
-        [{id:"ww_n", label:"Settlement note", kind:"caption", t1:"Settles to your bank within 24h once the route exists.", links:["ext_paystack"]}]
+        [{id:"ww_h", label:"Withdraw modal", kind:"headerBack", t1:"How much to your bank?", t2:"Withdraw", av:"₦", links:["api_wallet"]}],
+        [{id:"ww_bk", label:"Bank line", kind:"caption", t1:"Access Bank · ****4848", links:["db_business"]}],
+        [{id:"ww_a", label:"₦ amount input + MAX button", kind:"input", links:["api_wallet"]}],
+        [{id:"ww_cf", label:"Confirm — 'Withdraw ₦X' → 'Sending…'", kind:"cta", t1:"Withdraw ₦0", links:["api_wallet"], note:"⚠ POST /api/wallet/withdraw — backend route still missing"}],
+        [{id:"ww_fp", label:"Fine print", kind:"caption", t1:"No fees. Payouts land in your bank within minutes.", links:[]}]
       ]}
     }},
 
     page_auth:{start:"welcome", screens:{
       welcome:{title:"Welcome", rows:[
-        [{id:"a_h", label:"Brand hero", kind:"heroDark", t2:"Welcome", t1:"Lagbot", lines:["AI that sells on your WhatsApp."], links:[]}],
-        [{id:"a_g", label:"Get started → signup", kind:"cta", t1:"Get started", nav:"signup", links:[]}],
-        [{id:"a_l", label:"Log in → login", kind:"ctaLine", t1:"Log in", nav:"login", links:[]}]
+        [{id:"a_car", label:"3-slide hero carousel + indicator dots", kind:"hatch", links:[]}],
+        [{id:"a_t", label:"Animated slide title", kind:"pageTitle", t2:"Welcome", t1:"Your 24/7 WhatsApp assistant", links:[]}],
+        [{id:"a_g", label:"Get Started → signup", kind:"cta", t1:"Get Started", nav:"signup", links:[]}],
+        [{id:"a_so", label:"Google · Apple → straight to onboarding", kind:"ctaLine", t1:"Continue with Google · Apple", links:["sb_auth"], note:"OAuth PKCE"}],
+        [{id:"a_l", label:"Log in link", kind:"linkrow", t1:"Already have an account? Log in", nav:"login", links:[]}],
+        [{id:"a_tm", label:"Terms line", kind:"caption", t1:"By tapping Get Started you agree to Lagbot Terms and Privacy Policy", links:[]}]
       ]},
       login:{title:"Log in", rows:[
-        [{id:"lg_t", label:"Title", kind:"pageTitle", t2:"Auth", t1:"Log in", links:[]}],
+        [{id:"lg_t", label:"Title", kind:"pageTitle", t2:"Auth", t1:"Log In", links:[]}],
         [{id:"lg_e", label:"Email input", kind:"input", links:["sb_auth"]}],
-        [{id:"lg_p", label:"Password input", kind:"input", links:["sb_auth"]}],
-        [{id:"lg_f", label:"Forgot password link", kind:"linkrow", t1:"Forgot password?", links:[], note:"⚠ no-op — unified gap #4"}],
-        [{id:"lg_b", label:"Log in → Dashboard", kind:"cta", t1:"Log in", nav:"page:page_dashboard", links:["sb_auth"]}],
-        [{id:"lg_g", label:"Google / Apple OAuth", kind:"ctaLine", t1:"Continue with Google · Apple", links:["sb_auth"], note:"OAuth PKCE → routes to Onboarding"}]
+        [{id:"lg_p", label:"Password input + eye toggle", kind:"input", links:["sb_auth"]}],
+        [{id:"lg_f", label:"Forgot password? — sends reset email", kind:"linkrow", t1:"Forgot password?", links:["sb_auth"], note:"now wired — Supabase reset link (old gap fixed)"}],
+        [{id:"lg_b", label:"Log In → app", kind:"cta", t1:"Log In", nav:"page:page_dashboard", links:["sb_auth"]}],
+        [{id:"lg_s", label:"Or continue with", kind:"ctaLine", t1:"Google · Apple", links:["sb_auth"]}]
       ]},
       signup:{title:"Sign up", rows:[
-        [{id:"su_t", label:"Title", kind:"pageTitle", t2:"Auth", t1:"Create account", links:[]}],
+        [{id:"su_t", label:"Title", kind:"pageTitle", t2:"Auth", t1:"Create your Account", links:[]}],
+        [{id:"su_n", label:"First name", kind:"input", links:["sb_auth"]},
+         {id:"su_l", label:"Last name", kind:"input", links:["sb_auth"]}],
         [{id:"su_e", label:"Email input", kind:"input", links:["sb_auth"]}],
-        [{id:"su_p", label:"Password input", kind:"input", links:["sb_auth"]}],
-        [{id:"su_b", label:"Continue → verify OTP", kind:"cta", t1:"Continue", nav:"otp", links:["sb_auth","api_account"]}]
+        [{id:"su_p", label:"Password + live checklist", kind:"input", links:["sb_auth"]}],
+        [{id:"su_c", label:"Checklist", kind:"caption", t1:"6 chars · 1 uppercase · 1 number/symbol", links:[]}],
+        [{id:"su_b", label:"Next → verify code", kind:"cta", t1:"Next", nav:"verify", links:["sb_auth"]}]
       ]},
-      otp:{title:"Verify", rows:[
-        [{id:"ot_t", label:"Title", kind:"pageTitle", t2:"Auth", t1:"Verify your email", links:[]}],
-        [{id:"ot_c", label:"Helper text", kind:"caption", t1:"We sent a 6-digit code to your email.", links:[]}],
-        [{id:"ot_o", label:"OTP boxes", kind:"otp", links:["sb_auth"]}],
-        [{id:"ot_r", label:"Resend code (45s)", kind:"linkrow", t1:"Resend code (45s)", links:["sb_auth"]}],
-        [{id:"ot_b", label:"Verify → Onboarding", kind:"cta", t1:"Verify", nav:"page:page_onboarding", links:["sb_auth"]}]
+      verify:{title:"Verify", rows:[
+        [{id:"vf_t", label:"Title", kind:"pageTitle", t2:"Auth", t1:"Enter the 6-digit code", links:[]}],
+        [{id:"vf_c", label:"Sent-to line + Change Email sheet", kind:"caption", t1:"Sent to you****@gmail.com · Change Email", links:["sb_auth"]}],
+        [{id:"vf_o", label:"OTP boxes — paste-aware, auto-advance", kind:"otp", links:["sb_auth"]}],
+        [{id:"vf_r", label:"Resend (45s cooldown)", kind:"linkrow", t1:"Didn't get it? Resend code", links:["sb_auth"]}],
+        [{id:"vf_b", label:"Verify → Onboarding", kind:"cta", t1:"Verify", nav:"page:page_onboarding", links:["sb_auth"]}]
       ]}
     }},
 
-    page_onboarding:{start:"wizard", screens:{
-      wizard:{title:"Setup wizard", rows:[
-        [{id:"ob_t", label:"Title", kind:"pageTitle", t2:"Onboarding", t1:"Set up your business", links:[]}],
-        [{id:"ob_s", label:"Step pills 1–6", kind:"pillsT", t1:"1,2,3,4,5,6", links:[]}],
-        [{id:"ob_n", label:"Business name input", kind:"input", links:["db_business"]}],
-        [{id:"ob_ty", label:"Business type cards", kind:"pillsT", t1:"Retail,Services,Food,Other", links:["db_business"]}],
-        [{id:"ob_to", label:"Tone cards", kind:"pillsT", t1:"Friendly,Formal,Playful", links:["db_business"]}],
-        [{id:"ob_c", label:"Continue → setup steps", kind:"cta", t1:"Continue", nav:"setup", links:["db_business"]}]
+    page_onboarding:{start:"intro", screens:{
+      intro:{title:"Intro", rows:[
+        [{id:"ob_i", label:"Illustration", kind:"hatch", links:[]}],
+        [{id:"ob_t", label:"Title", kind:"pageTitle", t2:"Onboarding", t1:"Let's set up your Lagbot profile!", links:[]}],
+        [{id:"ob_c", label:"Subtitle", kind:"caption", t1:"We'll ask you a few questions to build a personalized Assistant.", links:[]}],
+        [{id:"ob_b", label:"Let's go → wizard", kind:"cta", t1:"Let's go", nav:"name", links:[]}]
       ]},
-      setup:{title:"Finish setup", rows:[
-        [{id:"st_t", label:"Title", kind:"pageTitle", t2:"Onboarding", t1:"Finish setup", links:[]}],
-        [{id:"st_p", label:"Add first product → editor", kind:"empty", t1:"Add your first product", t2:"Name, price and stock — Nova quotes from this.", nav:"page:page_product", links:["db_products"]}],
-        [{id:"st_nv", label:"Configure Nova · name + brain", kind:"empty", t1:"Configure Nova", t2:"Assistant name, language, what she can promise.", links:["db_business","api_ai"]}],
-        [{id:"st_sk", label:"Activate starter skills (max 3)", kind:"toggles", links:["db_skills"]}],
-        [{id:"st_qr", label:"WhatsApp pairing code", kind:"code", t1:"L4G·B0T", links:["api_whatsapp","svc_evolution"], note:"status poll every 3s ×60"}],
-        [{id:"st_d", label:"Go to Dashboard →", kind:"cta", t1:"Go to Dashboard →", nav:"page:page_dashboard", links:[]}]
-      ]}
-    }},
-
-    page_product:{start:"editor", screens:{
-      editor:{title:"Product editor", rows:[
-        [{id:"p_h", label:"Header · back", kind:"headerBack", t1:"New product", t2:"Inventory", av:"▣", links:["db_products"]}],
-        [{id:"p_ph", label:"Photo picker", kind:"hatch", links:[], note:"⚠ image picker stubbed — does nothing"}],
-        [{id:"p_n", label:"Name input", kind:"input", links:["db_products"]}],
-        [{id:"p_pr", label:"Price input", kind:"input", links:["db_products"]},
-         {id:"p_st", label:"Stock input", kind:"input", links:["db_products"]}],
-        [{id:"p_ch", label:"Sizes / colors chips", kind:"pillsT", t1:"S,M,L,Walnut,Oak", links:["db_products"]}],
-        [{id:"p_sv", label:"Save product (Supabase direct)", kind:"cta", t1:"Save product", links:["db_products"]}],
-        [{id:"p_im", label:"Import from file → import screen", kind:"ctaLine", t1:"⤴ Import from file", nav:"import", links:["api_import"]}]
+      name:{title:"1 · Name", rows:[
+        [{id:"on_s", label:"Step pills", kind:"pillsT", t1:"●,○,○,○", links:[]}],
+        [{id:"on_t", label:"Question", kind:"pageTitle", t2:"Setup wizard", t1:"What is the name of your business?", links:[]}],
+        [{id:"on_i", label:"Business name input (centered, auto-focus)", kind:"input", links:["db_business"]}],
+        [{id:"on_b", label:"Next", kind:"cta", t1:"Next", nav:"type", links:["db_business"]}]
       ]},
-      import:{title:"Import", rows:[
-        [{id:"im_h", label:"Header · back", kind:"headerBack", t1:"Import products", t2:"CSV · Excel · PDF", av:"⤴", links:["api_import"]}],
-        [{id:"im_d", label:"Drop zone · CSV / Excel / PDF", kind:"hatch", links:["api_import"], note:"FormData upload, per-biz 10/min limit"}],
-        [{id:"im_c", label:"Parser note", kind:"caption", t1:"Claude (Haiku) extracts rows — preview only, nothing saved yet.", links:["svc_llm","ext_anthropic"]}],
-        [{id:"im_l", label:"Parsed preview rows", kind:"list", links:["api_import"]}],
-        [{id:"im_b", label:"Import all → insert client-side", kind:"cta", t1:"Import 24 products", links:["db_products"], note:"insert happens from the app, not the backend"}]
+      type:{title:"2 · Type", rows:[
+        [{id:"oy_s", label:"Step pills", kind:"pillsT", t1:"●,●,○,○", links:[]}],
+        [{id:"oy_t", label:"Question", kind:"pageTitle", t2:"Setup wizard", t1:"What type of business do you run?", links:[]}],
+        [{id:"oy_o", label:"Choice cards ×5 — auto-advances on pick", kind:"pillsT", t1:"Retail Shop,Food & Beverages,Fashion & Beauty,Services,Others", nav:"tone", links:["db_business"]}]
+      ]},
+      tone:{title:"3 · Tone", rows:[
+        [{id:"oo_s", label:"Step pills", kind:"pillsT", t1:"●,●,●,○", links:[]}],
+        [{id:"oo_t", label:"Question", kind:"pageTitle", t2:"Setup wizard", t1:"How should Lagbot talk to customers?", links:[]}],
+        [{id:"oo_o", label:"Tone cards — auto-advances on pick", kind:"pillsT", t1:"Friendly,Professional,Sales-Focused", nav:"wa", links:["db_business"]}]
+      ]},
+      wa:{title:"4 · WhatsApp", rows:[
+        [{id:"ow_t", label:"Landing title", kind:"pageTitle", t2:"Setup wizard", t1:"Connect your WhatsApp", links:[]}],
+        [{id:"ow_c", label:"Subtitle", kind:"caption", t1:"Lagbot will read and reply to your incoming messages automatically.", links:[]}],
+        [{id:"ow_lm", label:"Learn More → info page", kind:"linkrow", t1:"Learn More", nav:"wainfo", links:[]}],
+        [{id:"ow_b", label:"Connect WhatsApp → phone step", kind:"cta", t1:"Connect WhatsApp", nav:"phone", links:[]}],
+        [{id:"ow_sk", label:"Skip — straight to the app", kind:"linkrow", t1:"I'll connect WhatsApp later", nav:"page:page_dashboard", links:[]}]
+      ]},
+      phone:{title:"5 · Phone", rows:[
+        [{id:"op_t", label:"Title", kind:"pageTitle", t2:"Setup wizard", t1:"Enter your Business Phone Number", links:[]}],
+        [{id:"op_cc", label:"+234 country box (Nigeria only)", kind:"input", links:[]},
+         {id:"op_n", label:"11-digit number input", kind:"input", links:["db_business"]}],
+        [{id:"op_b", label:"Continue → pairing", kind:"cta", t1:"Continue", nav:"pairing", links:["db_business"]}]
+      ]},
+      pairing:{title:"6 · Pairing", rows:[
+        [{id:"og_t", label:"Title", kind:"pageTitle", t2:"Setup wizard", t1:"Open WhatsApp & enter this code", links:[]}],
+        [{id:"og_c", label:"Pairing code — slot-machine reveal + copy", kind:"code", t1:"XXXX-XXXX", links:["api_whatsapp","svc_evolution"]}],
+        [{id:"og_s", label:"Expiry + polling status", kind:"caption", t1:"Expires in 2:40 · Waiting for WhatsApp…", links:["api_whatsapp"], note:"polls status every 3s · code lasts 160s"}],
+        [{id:"og_d", label:"Auto-continues once linked", kind:"ctaLine", t1:"Moves on automatically once linked", nav:"page:page_dashboard", links:[]}]
+      ]},
+      wainfo:{title:"How it works", rows:[
+        [{id:"oi_h", label:"Info page", kind:"headerBack", t1:"How Lagbot connects to WhatsApp", t2:"A short, honest look", av:"ⓘ", links:[]}],
+        [{id:"oi_l", label:"4 sections — linked device · what it reads · where messages live · you stay in control", kind:"list", links:[]}],
+        [{id:"oi_f", label:"Footnote", kind:"caption", t1:"Lagbot is independent and not affiliated with WhatsApp or Meta.", links:[]}]
+      ]},
+      product:{title:"Products 2/4", rows:[
+        [{id:"oa_s", label:"Progress bar", kind:"pillsT", t1:"Step 2 of 4", links:[]}],
+        [{id:"oa_t", label:"Title", kind:"pageTitle", t2:"Onboarding", t1:"Add products", links:[]}],
+        [{id:"oa_n", label:"Product name input", kind:"input", links:["db_products"]}],
+        [{id:"oa_p", label:"Price ₦ input", kind:"input", links:["db_products"]},
+         {id:"oa_q", label:"Stock qty input", kind:"input", links:["db_products"]}],
+        [{id:"oa_a", label:"Add Product — repeatable", kind:"cta", t1:"Add Product", links:["db_products"]}],
+        [{id:"oa_k", label:"Continue → / Skip this step", kind:"ctaLine", t1:"Continue →", nav:"nova", links:[]}]
+      ]},
+      nova:{title:"Nova 3/4", rows:[
+        [{id:"ov_s", label:"Progress bar", kind:"pillsT", t1:"Step 3 of 4", links:[]}],
+        [{id:"ov_t", label:"Title", kind:"pageTitle", t2:"Onboarding", t1:"Configure Nova", links:[]}],
+        [{id:"ov_n", label:"AI name input — 'Nova'", kind:"input", links:["db_business"]}],
+        [{id:"ov_i", label:"Business instructions textarea", kind:"input", links:["db_business"], note:"feeds the AI system prompt"}],
+        [{id:"ov_b", label:"Save & Continue / Skip", kind:"cta", t1:"Save & Continue", nav:"skills", links:["db_business"]}]
+      ]},
+      skills:{title:"Skills 4/4", rows:[
+        [{id:"os_s", label:"Progress bar", kind:"pillsT", t1:"Step 4 of 4", links:[]}],
+        [{id:"os_t", label:"Title", kind:"pageTitle", t2:"Onboarding", t1:"Activate a skill", links:[]}],
+        [{id:"os_g", label:"Skill cards with toggles (max 3)", kind:"toggles", links:["db_skills"]}],
+        [{id:"os_b", label:"Continue → complete", kind:"cta", t1:"Continue →", nav:"complete", links:["db_skills"]}]
+      ]},
+      complete:{title:"Complete", rows:[
+        [{id:"oc_i", label:"Success check", kind:"empty", t1:"You're all set!", t2:"Nova is ready to start answering your customers.", links:[]}],
+        [{id:"oc_k", label:"Summary — WhatsApp · products · Nova · skills", kind:"kv", links:["db_business","db_products","db_skills"]}],
+        [{id:"oc_b", label:"Go to Dashboard →", kind:"cta", t1:"Go to Dashboard →", nav:"page:page_dashboard", links:[]}]
       ]}
     }},
 
     page_analytics:{start:"overview", screens:{
-      overview:{title:"Analytics", rows:[
-        [{id:"an_h", label:"Header · back (hidden tab)", kind:"headerBack", t1:"Analytics", t2:"Hidden tab · 30s poll", av:"📈", links:["db_metrics"]}],
+      overview:{title:"Overview", rows:[
+        [{id:"an_h", label:"Header (hidden tab — from Dashboard link)", kind:"headerBack", t1:"Analytics", t2:"Performance insights & metrics", av:"📈", links:["db_metrics"]}],
         [{id:"an_p", label:"Period pills", kind:"pillsT", t1:"7D,1M,2M,6M", links:["db_metrics"]}],
-        [{id:"an_rt", label:"Response time chart", kind:"chart", links:["db_metrics"]}],
-        [{id:"an_a", label:"AI accuracy 94%", kind:"darkStat", t2:"AI accuracy", t1:"94%", links:["db_metrics"], note:"RPC calculate_ai_accuracy"},
-         {id:"an_s", label:"Satisfaction 4.6/5", kind:"darkStat", t2:"Satisfaction", t1:"4.6/5", links:["db_metrics"]}],
-        [{id:"an_i", label:"Human interventions card", kind:"empty", t1:"Human interventions", t2:"Times you took over from Nova this period.", links:["db_metrics","db_conversations"]}],
-        [{id:"an_tc", label:"Top customers ranked", kind:"list", links:["db_conversations"]}]
+        [{id:"an_tr", label:"Response time trend", kind:"section", t1:"Response time trend", links:["db_metrics"]}],
+        [{id:"an_ch", label:"Bar chart — avg per day/week/month", kind:"chart", links:["db_metrics"]}],
+        [{id:"an_rt", label:"Average response time card → detail", kind:"bar", nav:"response", links:["db_metrics"], note:"shows avg · fastest · slowest"}],
+        [{id:"an_a", label:"AI accuracy", kind:"darkStat", t2:"AI accuracy", t1:"87%", links:["db_metrics"], note:"RPC calculate_ai_accuracy"},
+         {id:"an_s", label:"Satisfaction", kind:"darkStat", t2:"Satisfaction", t1:"—/5", links:["db_metrics"]}],
+        [{id:"an_i", label:"Manual overrides card", kind:"empty", t1:"Manual overrides", t2:"Times you took over from Nova · % of conversations.", links:["db_metrics","db_conversations"]}],
+        [{id:"an_tc", label:"Most active customers → detail", kind:"bar", nav:"customers", links:["db_conversations"], note:"top 3 preview · '+X more'"}]
+      ]},
+      response:{title:"Response times", rows:[
+        [{id:"rt_h", label:"Detail header", kind:"headerBack", t1:"Response Times", t2:"Slowest first", av:"⏱", links:["db_metrics"]}],
+        [{id:"rt_k", label:"Summary — avg · fastest · slowest", kind:"kv", links:["db_metrics"]}],
+        [{id:"rt_l", label:"Per-conversation rows + model badge", kind:"list", links:["db_metrics","db_conversations"], note:"green ≤5s · amber ≤15s · red >15s"}]
+      ]},
+      customers:{title:"Top customers", rows:[
+        [{id:"tc_h", label:"Detail header", kind:"headerBack", t1:"Top Customers", t2:"Ranked by message volume", av:"👥", links:["db_conversations"]}],
+        [{id:"tc_l", label:"Ranked rows — #1, #2… · msgs count · last active", kind:"list", links:["db_conversations"]}]
       ]}
     }},
 
     page_skills:{start:"skills", screens:{
       skills:{title:"Skills", rows:[
-        [{id:"k_h", label:"Header · back (hidden tab)", kind:"headerBack", t1:"Skills", t2:"Max 3 active", av:"⚡", links:["db_skills"]}],
-        [{id:"k_m", label:"Active 2 / 3 meter", kind:"meterCard", links:["db_skills"]}],
-        [{id:"k_t", label:"Skill toggle rows (optimistic)", kind:"toggles", links:["db_skills"]}],
-        [{id:"k_l", label:"Locked · Upgrade card", kind:"empty", t1:"Locked skills", t2:"Upgrade to unlock more.", links:[], note:"⚠ empty Pressable — no action wired"}]
+        [{id:"k_h", label:"Header — cycling eyebrow (Configure · Teach · Train…)", kind:"headerBack", t1:"Skills", t2:"Choose what Lagbot does for you.", av:"⚡", links:["db_skills"]}],
+        [{id:"k_m", label:"Active hero — X / 3 + progress bar", kind:"meterCard", links:["db_skills"]}],
+        [{id:"k_s", label:"Available skills section", kind:"section", t1:"Available skills", r:"20 tokens/day each", links:["db_skills"]}],
+        [{id:"k_t", label:"Skill rows — switch toggles, max 3", kind:"toggles", links:["db_skills"], note:"optimistic — reverts on error"}],
+        [{id:"k_l", label:"Locked + rare skills — ₦ prices, UPGRADE / UNLOCK", kind:"empty", t1:"Locked skills", t2:"Standard ₦ packs + rare ₦50,000 one-time unlocks.", links:["api_wallet"], note:"purchase flow not live — Phase 2"}]
       ]}
     }},
 
     page_settings:{start:"hub", screens:{
-      hub:{title:"Settings hub", rows:[
-        [{id:"g_h", label:"Header · back", kind:"headerBack", t1:"Settings", t2:"Hub + 9 sub-pages", av:"⚙", links:["db_business"]}],
-        [{id:"g_p", label:"Profile · save + refresh", kind:"bar", links:["db_business","api_ai"]}],
-        [{id:"g_wa", label:"WhatsApp · pairing → poll → disconnect", kind:"toggleCard", links:["api_whatsapp","svc_evolution"]}],
-        [{id:"g_b", label:"Bank details", kind:"input", links:["db_business"], note:"used by receipt verification ±5%"},
-         {id:"g_pe", label:"Persona + tone", kind:"input", links:["db_business","api_ai"]}],
-        [{id:"g_bi", label:"Business info · hours", kind:"empty", t1:"Business info", t2:"Hours, address, what Nova may promise.", links:["db_business","api_ai"]}],
-        [{id:"g_tk", label:"Tokens usage meter", kind:"meterCard", links:["db_tokens"]}],
-        [{id:"g_st", label:"Token store → packs", kind:"empty", t1:"Token store", t2:"₦4k · ₦18.75k · ₦70k packs.", nav:"store", links:["api_wallet"], note:"⚠ purchase/init endpoint missing"}],
-        [{id:"g_pw", label:"Password change", kind:"input", links:["sb_auth"]},
-         {id:"g_so", label:"Sign out", kind:"ctaLine", t1:"Sign out", links:["sb_auth"]}],
-        [{id:"g_bl", label:"Blocked contacts picker", kind:"list", links:["db_business","db_conversations"]}],
-        [{id:"g_dl", label:"Delete account · Danger Zone", kind:"cta", t1:"Delete account", links:["api_account"], note:"App Store 5.1.1(v) — Evolution delete → CASCADE → auth.admin.deleteUser"}]
+      hub:{title:"Hub", rows:[
+        [{id:"g_h", label:"Header", kind:"headerBack", t1:"Settings", t2:"Hub + 9 sub-sections", av:"⚙", links:["db_business"]}],
+        [{id:"g_acc", label:"Account hero — 'Signed in as David' → profile", kind:"bar", nav:"profile", links:["db_business"]}],
+        [{id:"g_s1", label:"CONNECTORS section", kind:"section", t1:"Connectors", links:[]}],
+        [{id:"g_wa", label:"WhatsApp row — status dot · Disconnect / connect", kind:"linkrow", t1:"WhatsApp — not connected", or:1, nav:"whatsapp", links:["api_whatsapp"]}],
+        [{id:"g_bk", label:"Bank Details row", kind:"linkrow", t1:"Bank Details — add your payout account", nav:"bank", links:["db_business"]}],
+        [{id:"g_s2", label:"PREFERENCES section", kind:"section", t1:"Preferences", links:[]}],
+        [{id:"g_pe", label:"Lagbot Persona row", kind:"linkrow", t1:"Lagbot Persona — customise how the AI sounds", nav:"persona", links:["db_business"]}],
+        [{id:"g_bi", label:"Business Info row", kind:"linkrow", t1:"Business Info — what Lagbot knows · your hours", nav:"bizinfo", links:["db_business"]}],
+        [{id:"g_s3", label:"APP section", kind:"section", t1:"App", links:[]}],
+        [{id:"g_ap", label:"Appearance — dark mode switch", kind:"toggleCard", links:[], note:"local only, no persistence"}],
+        [{id:"g_tk", label:"Tokens row → usage + store", kind:"linkrow", t1:"Tokens — usage, daily allowance and store", nav:"usage", links:["db_tokens"]}],
+        [{id:"g_nt", label:"Notifications row", kind:"linkrow", t1:"Notifications — push alerts for paused chats", nav:"notifications", links:["db_business"]}],
+        [{id:"g_pv", label:"Privacy & Security row", kind:"linkrow", t1:"Privacy & Security — password and account", nav:"privacy", links:["sb_auth"]}],
+        [{id:"g_bl", label:"Blocked Contacts row", kind:"linkrow", t1:"Blocked Contacts — numbers Lagbot won't reply to", nav:"blocked", links:["db_business"]}],
+        [{id:"g_so", label:"Sign out → confirm modal", kind:"ctaLine", t1:"Sign out", links:["sb_auth"]}]
       ]},
-      store:{title:"Token store", rows:[
-        [{id:"ts_h", label:"Header · back", kind:"headerBack", t1:"Token store", t2:"Buy Nova credits", av:"⚡", links:["db_tokens"]}],
-        [{id:"ts_g", label:"Pack grid · ₦4k / ₦18.75k / ₦70k", kind:"pillsT", t1:"₦4k,₦18.75k,₦70k", links:["api_wallet","ext_paystack"], note:"Paystack checkout — Phase 2"}],
-        [{id:"ts_b", label:"Buy tokens", kind:"cta", t1:"Buy tokens", links:["api_wallet","ext_paystack"], note:"⚠ purchase/init route missing — unified gap #1"}],
-        [{id:"ts_c", label:"Buckets note", kind:"caption", t1:"Spend order: free → rolled → bonus → purchased. 500 free/day, Lagos-midnight refill.", links:["db_tokens","svc_token"]}]
-      ]}
-    }},
-
-    page_admins:{start:"roster", screens:{
-      roster:{title:"Admins", rows:[
-        [{id:"m_h", label:"Header · back (hidden tab)", kind:"headerBack", t1:"Admins", t2:"Hidden tab", av:"👥", links:["db_team"]}],
-        [{id:"m_s1", label:"Total members stat", kind:"darkStat", t2:"Total", t1:"0", links:["db_team"]},
-         {id:"m_s2", label:"Roles stat", kind:"darkStat", t2:"Roles", t1:"3", links:["db_team"]}],
-        [{id:"m_a", label:"+ Add member", kind:"cta", t1:"＋ Add member", links:["db_team"]}],
-        [{id:"m_l", label:"Member rows + delete", kind:"list", links:["db_team"], note:"⚠ same team_members table as Sales ▸ Teams — two UIs, one table"}]
+      profile:{title:"Profile", rows:[
+        [{id:"pf_h", label:"Header", kind:"headerBack", t1:"Profile Settings", t2:"Manage your account information", av:"👤", links:["db_business"]}],
+        [{id:"pf_p", label:"Initials avatar (photo upload future)", kind:"hatch", links:[]}],
+        [{id:"pf_n", label:"Your Name input", kind:"input", links:["sb_auth"]}],
+        [{id:"pf_e", label:"Email — read-only", kind:"input", links:["sb_auth"], note:"changing email needs a verification flow that doesn't exist yet"}],
+        [{id:"pf_ph", label:"+234 phone input", kind:"input", links:["db_business"]},
+         {id:"pf_ad", label:"Business address", kind:"input", links:["db_business"]}],
+        [{id:"pf_sv", label:"Save Changes / Cancel", kind:"cta", t1:"Save Changes", links:["db_business","api_ai"]}]
+      ]},
+      persona:{title:"Persona", rows:[
+        [{id:"pe_h", label:"Header", kind:"headerBack", t1:"Lagbot Persona", t2:"Shape how Lagbot sounds", av:"🤖", links:["db_business"]}],
+        [{id:"pe_n", label:"Business name + inline ✓ confirm", kind:"input", links:["db_business","api_ai"]}],
+        [{id:"pe_t", label:"Conversation tone — 3 illustrated cards", kind:"pillsT", t1:"Friendly,Professional,Sales-Focused", links:["db_business"]}],
+        [{id:"pe_pv", label:"Customer preview — live chat mock", kind:"suggest", t1:"Preview", t2:"Hi there 👋 Welcome to Nikea Prime. How can I help you today?", links:["db_business"]}],
+        [{id:"pe_g", label:"Greeting message textarea + AI suggestion chips", kind:"input", links:["db_business","svc_llm"]}],
+        [{id:"pe_sv", label:"Save Changes → flips to 'Saved ✓'", kind:"cta", t1:"Save Changes", links:["db_business","api_ai"]}]
+      ]},
+      bizinfo:{title:"Business info", rows:[
+        [{id:"bz_h", label:"Header", kind:"headerBack", t1:"Business Info", t2:"What Lagbot knows — and when you're open", av:"🧠", links:["db_business"]}],
+        [{id:"bz_b", label:"'This is Lagbot's brain' hero", kind:"darkStat", t2:"This is Lagbot's brain", t1:"Trains every reply", links:["svc_llm"]}],
+        [{id:"bz_1", label:"Assistant name input", kind:"input", links:["db_business"]},
+         {id:"bz_2", label:"Industry + location inputs", kind:"input", links:["db_business"]}],
+        [{id:"bz_a", label:"About your business textarea + 4 tips", kind:"input", links:["db_business"], note:"what you sell · delivery · returns · anything else"}],
+        [{id:"bz_hr", label:"Operating hours — per-day rows · 'Open now' pill", kind:"kv", links:["db_business"]}],
+        [{id:"bz_sv", label:"Save Changes", kind:"cta", t1:"Save Changes", links:["db_business","api_ai"]}]
+      ]},
+      bank:{title:"Bank details", rows:[
+        [{id:"bk_h", label:"Header", kind:"headerBack", t1:"Bank Details", t2:"Your payout destination", av:"🏦", links:["db_business"]}],
+        [{id:"bk_w", label:"'Withdrawals only' hero", kind:"darkStat", t2:"Withdrawals only", t1:"Customers don't pay here", links:["db_business"], note:"wallet collects payments; this is where it pays out"}],
+        [{id:"bk_1", label:"Bank name input", kind:"input", links:["db_business"]}],
+        [{id:"bk_2", label:"Account number (10 digits)", kind:"input", links:["db_business"]},
+         {id:"bk_3", label:"Account name", kind:"input", links:["db_business"]}],
+        [{id:"bk_t", label:"Trust tile", kind:"caption", t1:"Stored encrypted. Sent exactly as entered — double-check before saving.", links:[]}],
+        [{id:"bk_sv", label:"Save bank details → returns to Wallet if it sent you here", kind:"cta", t1:"Save bank details", links:["db_business","api_ai"], note:"receipt verification compares amounts vs these details ±5%"}]
+      ]},
+      whatsapp:{title:"WhatsApp", rows:[
+        [{id:"wc_h", label:"Header — 'One number, every customer'", kind:"headerBack", t1:"WhatsApp", t2:"Pair your number", av:"💬", links:["api_whatsapp"]}],
+        [{id:"wc_p", label:"WhatsApp number input (country code, no +)", kind:"input", links:["api_whatsapp"]}],
+        [{id:"wc_c", label:"Pairing code — slot-machine reveal + copy", kind:"code", t1:"XXXX-XXXX", links:["api_whatsapp","svc_evolution"]}],
+        [{id:"wc_e", label:"Expiry — 160s countdown · polls every 3s", kind:"caption", t1:"Expires in 160s · WhatsApp → Settings → Linked Devices", links:["api_whatsapp"]}],
+        [{id:"wc_b", label:"Get pairing code / Get new code", kind:"cta", t1:"Get pairing code", links:["api_whatsapp","svc_evolution"]}]
+      ]},
+      notifications:{title:"Notifications", rows:[
+        [{id:"nt_h", label:"Header", kind:"headerBack", t1:"Notifications", t2:"Manage push alerts", av:"🔔", links:["db_business"]}],
+        [{id:"nt_t", label:"Push notifications switch", kind:"toggleCard", links:["db_business","ch_push"], note:"off clears the push token"}]
+      ]},
+      usage:{title:"Tokens", rows:[
+        [{id:"u_h", label:"Header", kind:"headerBack", t1:"Tokens", t2:"Usage, daily allowance and store", av:"⚡", links:["db_tokens"]}],
+        [{id:"u_b", label:"Available balance hero", kind:"darkStat", t2:"Available", t1:"500", links:["db_tokens"]}],
+        [{id:"u_m", label:"Free tokens today meter + refill countdown", kind:"meterCard", links:["db_tokens","svc_token"]}],
+        [{id:"u_k", label:"Breakdown — free · rolled · bonus · purchased", kind:"kv", links:["db_tokens"]}],
+        [{id:"u_s", label:"Token store section", kind:"section", t1:"Token store", links:[]}],
+        [{id:"u_p", label:"Packs — Starter 5k · Growth 25k · Scale 100k", kind:"pillsT", t1:"Starter ₦4k,Growth ₦18.75k,Scale ₦70k", links:["api_wallet","ext_paystack"]}],
+        [{id:"u_py", label:"Payment sheet — Card | Bank transfer", kind:"seg2", t1:"Card,Bank transfer", on:0, links:["ext_paystack"]}],
+        [{id:"u_go", label:"Continue to Paystack", kind:"cta", t1:"Continue to Paystack", links:["api_wallet","ext_paystack"], note:"⚠ purchase/init endpoint not live — 'Checkout not connected yet'"}],
+        [{id:"u_f", label:"Footnote", kind:"caption", t1:"Purchased tokens never expire. Payments handled securely by Paystack.", links:[]}]
+      ]},
+      privacy:{title:"Privacy", rows:[
+        [{id:"pv_h", label:"Header", kind:"headerBack", t1:"Privacy & Security", t2:"Password and account", av:"🔒", links:["sb_auth"]}],
+        [{id:"pv_1", label:"Current password", kind:"input", links:["sb_auth"]}],
+        [{id:"pv_2", label:"New password", kind:"input", links:["sb_auth"]},
+         {id:"pv_3", label:"Confirm new password", kind:"input", links:["sb_auth"]}],
+        [{id:"pv_sv", label:"Save Changes", kind:"cta", t1:"Save Changes", links:["sb_auth"]}],
+        [{id:"pv_dz", label:"Danger Zone — Delete Account", kind:"ctaLine", t1:"Delete Account", links:["db_business","sb_auth"], note:"⚠ deletes the business row directly from the phone — backend /api/account/delete (full App-Store delete) is NOT wired here"}]
+      ]},
+      blocked:{title:"Blocked", rows:[
+        [{id:"bl_h", label:"Header", kind:"headerBack", t1:"Blocked Contacts", t2:"Lagbot won't reply to this list", av:"🚫", links:["db_business"]}],
+        [{id:"bl_e", label:"Empty state", kind:"empty", t1:"No one blocked yet", t2:"Tap 'Add contact' below to keep numbers out of Lagbot's reply loop.", links:["db_business"]}],
+        [{id:"bl_l", label:"Blocked rows + Unblock chips", kind:"list", links:["db_business"]}],
+        [{id:"bl_a", label:"Add contact → picker (recent chats + device contacts)", kind:"cta", t1:"Add contact to block list", links:["db_business","db_conversations"]}]
       ]}
     }}
   }
@@ -1771,32 +1950,27 @@ const GAP_KB = {
     fix:"Needs POST /api/wallet/purchase/init plus Paystack checkout — Phase 2. Until then the Buy button should explain it's coming soon.",
     recs:[]
   },
-  page_auth:{
-    what:"'Forgot password?' does nothing when tapped (unified gap #4).",
-    fix:"Wire it to Supabase's resetPasswordForEmail — a small job, roughly an hour of work, and it already has the connection to Supabase Auth on this map.",
-    recs:[]
-  },
-  page_product:{
-    what:"The photo picker on the product editor is stubbed — tapping it does nothing, so products can't have pictures.",
+  page_inventory:{
+    what:"The photo tile on the product editor is stubbed — tapping it shows a 'coming soon' alert, so products can't have pictures.",
     fix:"Wire expo-image-picker to a Supabase Storage bucket and save the image URL on the product row. Nova can then send product photos to customers.",
     recs:[
       {kind:"node", node:{id:"db_storage", label:"Supabase Storage", sub:"product photos bucket", type:"db", layer:"bridge", status:"planned"}, reason:"Somewhere to actually keep the product photos."},
-      {kind:"edge", from:"page_product", to:"db_storage", label:"upload product photo", status:"planned", reason:"The editor saves the picked image here."}
+      {kind:"edge", from:"page_inventory", to:"db_storage", label:"upload product photo (editor)", status:"planned", reason:"The product editor saves the picked image here."}
     ]
   },
+  api_account:{
+    what:"The app's Delete Account button doesn't call this route — it deletes the business row directly from the phone and signs out, leaving the auth user and the WhatsApp (Evolution) instance behind.",
+    fix:"Wire the Privacy & Security screen to POST /api/account/delete so deletion is App Store 5.1.1(v) compliant — that route removes the Evolution instance, cascades all tenant tables, and deletes the auth user.",
+    recs:[]
+  },
   page_skills:{
-    what:"The 'Locked skills · Upgrade' card is an empty button — no action is wired to it.",
-    fix:"Point it at the Token Store, or hide it until paid plans exist. A dead button looks broken to users.",
+    what:"Locked and rare skills now show ₦ prices with UPGRADE / UNLOCK buttons (rare = ₦50,000 one-time) — but the purchase flow behind them isn't live yet.",
+    fix:"Hook the unlock buttons into the Paystack purchase flow once it ships (Phase 2). Until then they lead nowhere.",
     recs:[]
   },
   svc_token:{
     what:"Token charging is calculated on every turn, but enforcement is OFF — users never actually run out, so tokens are decorative right now.",
     fix:"Only flip enforcement on after the purchase flow exists. Otherwise users hit zero with no way to buy more and Nova just stops talking to their customers.",
-    recs:[]
-  },
-  page_admins:{
-    what:"This screen edits the same team_members table as Sales ▸ Teams — two different UIs for one table will drift apart.",
-    fix:"Consolidate into one screen (keep Sales ▸ Teams, retire Admins, or make Admins a thin link to it).",
     recs:[]
   },
   svc_dead:{
@@ -1993,7 +2167,7 @@ function deleteNode(id){
   Object.values(state.wireframes).forEach(wf=>{
     Object.values(wf.screens||{}).forEach(sc=>(sc.rows||[]).forEach(row=>row.forEach(el=>{
       if(Array.isArray(el.links)) el.links=el.links.filter(l=>l!==id);
-      if(el.nav==="page:"+id) delete el.nav;
+      if(el.nav&&el.nav.indexOf("page:"+id)===0) delete el.nav;
     })));
   });
   delete state.wireframes[id];
@@ -2233,7 +2407,7 @@ function kindHTML(el){
       return `<div><span class="ractive">● Active</span><span class="rwhen">When</span><span class="rchip">${esc(el.t1||"")}</span></div><div class="rwhen" style="margin-top:5px">${esc(el.t2||"")} <span class="rchip${amber?" amber":""}">${esc(el.role||"")}</span></div>${el.tpl?`<div class="rtpl">${esc(el.tpl)}</div>`:""}`;
     }
     case "connector": return `<div class="conrow"><div class="cic">◌</div><div class="cmid"><div class="cn">${esc(el.t1||"")}</div><div class="cd">${esc(el.t2||"")}</div></div><span class="cbtn">⚡ Connect</span></div>`;
-    case "balanceCard": return `<div class="dk-eyebrow">Balance</div><div class="sk-flex" style="align-items:baseline;position:relative;z-index:1"><div class="dk-big" style="flex:1;min-width:0">${esc(el.t1||"")}</div><div style="flex:none;text-align:right"><div style="font-family:var(--mono);font-size:11px;font-weight:800;color:var(--paper)">${esc(el.t2||"")}</div><div style="font-family:var(--mono);font-size:5.5px;letter-spacing:.14em;color:rgba(241,234,217,.55);text-transform:uppercase;margin-top:1px">Settles tomorrow</div></div></div>${el.sub?`<div class="dk-line">${esc(el.sub)}</div>`:""}<div class="dk-rule"></div><div class="dk-kv"><span class="k">${esc(el.payk||"Pays out to")}</span><span class="vv"><b>${esc(el.payn||"")}</b><s>${esc(el.payb||"")}</s></span></div>`;
+    case "balanceCard": return `<div class="dk-eyebrow">Balance</div><div class="sk-flex" style="align-items:baseline;position:relative;z-index:1"><div class="dk-big" style="flex:1;min-width:0">${esc(el.t1||"")}</div>${el.t2?`<div style="flex:none;text-align:right"><div style="font-family:var(--mono);font-size:11px;font-weight:800;color:var(--paper)">${esc(el.t2)}</div>${el.t2sub?`<div style="font-family:var(--mono);font-size:5.5px;letter-spacing:.14em;color:rgba(241,234,217,.55);text-transform:uppercase;margin-top:1px">${esc(el.t2sub)}</div>`:""}</div>`:""}</div>${el.sub?`<div class="dk-line">${esc(el.sub)}</div>`:""}${el.payn?`<div class="dk-rule"></div><div class="dk-kv"><span class="k">${esc(el.payk||"Pays out to")}</span><span class="vv"><b>${esc(el.payn)}</b><s>${esc(el.payb||"")}</s></span></div>`:""}`;
     case "taxCard": return `<div class="dk-eyebrow">${esc(el.t2||"")}</div><div style="font-size:9.5px;font-weight:700;color:var(--paper);position:relative;z-index:1;line-height:1.35">${esc(el.t1||"")}</div>${el.sub?`<div class="dk-line">${esc(el.sub)}</div>`:""}${el.lk?`<div class="dk-link">▤ ${esc(el.lk)}</div>`:""}`;
     case "ledger":{
       const pos=String(el.amt||"").trim().charAt(0)==="+";
@@ -2304,16 +2478,26 @@ function paintActiveEl(){
 
 function navTitle(el){
   if(!el.nav) return "";
-  if(el.nav.indexOf("page:")===0){ const n=nodeById(el.nav.slice(5)); return n?n.label:el.nav.slice(5); }
+  if(el.nav.indexOf("page:")===0){
+    const parts=el.nav.slice(5).split(":");
+    const n=nodeById(parts[0]);
+    if(!n) return parts[0];
+    if(parts[1]){
+      const wf2=state.wireframes[parts[0]];
+      const sc2=wf2&&wf2.screens&&wf2.screens[parts[1]];
+      return n.label+(sc2?" ▸ "+(sc2.title||parts[1]):"");
+    }
+    return n.label;
+  }
   const wf=state.wireframes[curWF]; const sc=wf&&wf.screens&&wf.screens[el.nav];
   return sc?(sc.title||el.nav):el.nav;
 }
 function doNav(el){
   activeEl=null; clearFocus(); paintActiveEl();
   if(el.nav.indexOf("page:")===0){
-    const pid=el.nav.slice(5);
-    if(!nodeById(pid)){ toast("Target page is no longer on the map","warn"); return; }
-    openDrawer(pid);
+    const parts=el.nav.slice(5).split(":");
+    if(!nodeById(parts[0])){ toast("Target page is no longer on the map","warn"); return; }
+    openDrawer(parts[0], parts[1]);
     return;
   }
   goScreen(el.nav);
@@ -2521,18 +2705,37 @@ $("logSwitch").onclick=()=>{ currentEditor(true); openLog(); };
 /* merge newly-shipped default nodes/edges into a previously saved map */
 function mergeNewDefaults(s){
   s.meta=s.meta||{};
-  const REV=2;
-  if((s.meta.mergeRev||0)>=REV) return;
   const d=defaultState();
-  const have=new Set(s.nodes.map(n=>n.id));
-  const isNew=id=>/^(agent_|svc_redis$|svc_server$|svc_cors$|svc_errors$|svc_jobs$|svc_saleshelp$|svc_dead$|api_health$|ext_droplet$|ext_github$|ext_codemagic$)/.test(id);
-  d.nodes.forEach(n=>{ if(isNew(n.id)&&!have.has(n.id)) s.nodes.push(clone(n)); });
-  const haveE=new Set(s.edges.map(e=>e.id));
-  d.edges.forEach(e=>{
-    if(!/^(ag|d)\d+$/.test(e.id)||haveE.has(e.id)) return;
-    if(s.nodes.some(x=>x.id===e.from)&&s.nodes.some(x=>x.id===e.to)) s.edges.push(clone(e));
-  });
-  s.meta.mergeRev=REV;
+  if((s.meta.mergeRev||0)<2){
+    const have=new Set(s.nodes.map(n=>n.id));
+    const isNew=id=>/^(agent_|svc_redis$|svc_server$|svc_cors$|svc_errors$|svc_jobs$|svc_saleshelp$|svc_dead$|api_health$|ext_droplet$|ext_github$|ext_codemagic$)/.test(id);
+    d.nodes.forEach(n=>{ if(isNew(n.id)&&!have.has(n.id)) s.nodes.push(clone(n)); });
+    const haveE=new Set(s.edges.map(e=>e.id));
+    d.edges.forEach(e=>{
+      if(!/^(ag|d)\d+$/.test(e.id)||haveE.has(e.id)) return;
+      if(s.nodes.some(x=>x.id===e.from)&&s.nodes.some(x=>x.id===e.to)) s.edges.push(clone(e));
+    });
+  }
+  if((s.meta.mergeRev||0)<3){
+    /* rev 3 — wireframes rebuilt from the app code @ aef6e84 */
+    s.wireframes = clone(d.wireframes);
+    ["page_product","page_admins"].forEach(id=>{
+      s.nodes=s.nodes.filter(n=>n.id!==id);
+      s.edges=s.edges.filter(e=>e.from!==id&&e.to!==id);
+    });
+    const e47=s.edges.find(e=>e.id==="e47"); if(e47){ e47.from="page_inventory"; e47.label="upload file → parsed preview (import flow)"; }
+    s.edges=s.edges.filter(e=>e.id!=="e65");
+    const e64=s.edges.find(e=>e.id==="e64"); if(e64) e64.label="read · insert · update · soft delete";
+    const e50=s.edges.find(e=>e.id==="e50"); if(e50){ e50.status="gap"; e50.label="delete account — NOT wired (app deletes business directly)"; }
+    const d18=d.edges.find(x=>x.id==="d18");
+    if(d18&&!s.edges.some(x=>x.id==="d18")&&s.nodes.some(n=>n.id===d18.from)&&s.nodes.some(n=>n.id===d18.to)) s.edges.push(clone(d18));
+    d.nodes.filter(n=>n.type==="page"||n.type==="client").forEach(dn=>{ const n=s.nodes.find(x=>x.id===dn.id); if(n){ n.label=dn.label; n.sub=dn.sub; } });
+    s.changelog=Array.isArray(s.changelog)?s.changelog:[];
+    const ts=new Date();
+    const stamp=ts.getFullYear()+"-"+String(ts.getMonth()+1).padStart(2,"0")+"-"+String(ts.getDate()).padStart(2,"0")+" "+String(ts.getHours()).padStart(2,"0")+":"+String(ts.getMinutes()).padStart(2,"0")+":"+String(ts.getSeconds()).padStart(2,"0");
+    s.changelog.push({at:stamp, by:"System", msg:"Wireframes rebuilt from app code @aef6e84 — flows added (onboarding steps, editor/import inside Inventory); Admins page removed (now redirects to Sales ▸ Teams)"});
+  }
+  s.meta.mergeRev=3;
 }
 
 /* ════════════════════════════ Circuit — the AI prompt bar ════════════════════════════ */
@@ -2867,6 +3070,25 @@ $("syncOff").onclick=()=>{
   setDot(hasStore?"Saved":"Session only", hasStore?"ok":"warn");
   closeModals();
 };
+
+/* ════════════════════════════ organiser — snap everything into clean lanes ════════════════════════════ */
+function organiseMap(){
+  if(!confirm("Tidy the map? Every node snaps back into its lane in flow order — connections stay exactly as they are.")) return;
+  const lanes={ext:{x:30,gap:150}, svc:{x:330,gap:115}, agents:{x:330,gap:95}, bridge:{x:640,gap:84}, pages:{x:985,gap:144}};
+  const startY={ext:-460, svc:-460, bridge:-118, pages:-118};
+  const groups={};
+  LAYERS.forEach(L=>{ groups[L.id]=state.nodes.filter(n=>n.layer===L.id).sort((a,b)=>a.y-b.y||a.x-b.x); });
+  ["ext","svc","bridge","pages"].forEach(lid=>{
+    (groups[lid]||[]).forEach((n,i)=>{ n.x=lanes[lid].x; n.y=startY[lid]+i*lanes[lid].gap; });
+  });
+  /* agents band sits below the services lane */
+  const svcG=groups.svc||[];
+  const svcEnd=svcG.length ? startY.svc+(svcG.length-1)*lanes.svc.gap+NODE_H : 0;
+  (groups.agents||[]).forEach((n,i)=>{ n.x=lanes.agents.x; n.y=svcEnd+100+i*lanes.agents.gap; });
+  logChange("Organised the map into clean lanes");
+  rebuild(); fitView(); autosave(); toast("Map organised — everything back in its lane");
+}
+$("btnOrganise").onclick=organiseMap;
 
 /* ════════════════════════════ search ════════════════════════════ */
 $("search").addEventListener("input",ev=>{ searchQ=ev.target.value.trim().toLowerCase(); refreshClasses(); });
