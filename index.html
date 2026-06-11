@@ -1,0 +1,2979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lagbot · System Circuit — Backend ⇄ Frontend Map</title>
+<style>
+:root{
+  --bg:#0B110E;
+  --pane:#101813;
+  --pane2:#15211A;
+  --pane3:#1B2A21;
+  --line:#24332B;
+  --line-soft:#1B2620;
+  --cream:#EDE5D3;
+  --cream-dim:#A8A797;
+  --mute:#65756B;
+  --ext:#8E9AA8;
+  --svc:#4FA97E;
+  --api:#7CC49C;
+  --db:#4A968F;
+  --chan:#AC92DA;
+  --page:#E8853D;
+  --warn:#D9A23F;
+  --danger:#D96B5B;
+  --current:#F2A95C;
+  --paper:#F1EAD9;
+  --paper2:#F7F1E2;
+  --paper-line:#D8CDB2;
+  --ink:#2B2C26;
+  --ink-soft:#8C8470;
+  --bar:#CFC4A9;
+  --radius:10px;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --serif:Georgia,"Times New Roman",serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  color:var(--cream);
+  font-family:var(--sans);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+:focus-visible{outline:2px solid var(--current);outline-offset:2px;border-radius:4px}
+
+/* ───────────────────────── top bar ───────────────────────── */
+#topbar{
+  position:fixed;inset:0 0 auto 0;height:54px;z-index:60;
+  display:flex;align-items:center;gap:14px;padding:0 14px;
+  background:linear-gradient(180deg,rgba(11,17,14,.96),rgba(11,17,14,.88));
+  border-bottom:1px solid var(--line);
+  backdrop-filter:blur(6px);
+}
+#wordmark{display:flex;align-items:baseline;gap:9px;white-space:nowrap}
+#wordmark .lb{font-family:var(--serif);font-style:italic;font-size:19px;color:var(--cream);letter-spacing:.2px}
+#wordmark .sc{font-family:var(--mono);font-size:8.5px;letter-spacing:.24em;color:var(--svc);text-transform:uppercase;padding-top:2px}
+#saveDot{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+#saveDot.ok{color:var(--svc)}
+#saveDot.warn{color:var(--warn)}
+#searchWrap{flex:1;display:flex;justify-content:center;min-width:0}
+#search{
+  width:min(330px,100%);height:30px;padding:0 12px;
+  background:var(--pane);border:1px solid var(--line);border-radius:15px;
+  color:var(--cream);font-family:var(--mono);font-size:11px;letter-spacing:.04em;
+}
+#search::placeholder{color:var(--mute)}
+#search:focus{border-color:var(--svc);outline:none}
+#tools{display:flex;gap:6px;align-items:center;overflow-x:auto;scrollbar-width:none}
+#tools::-webkit-scrollbar{display:none}
+.tbtn{
+  height:30px;padding:0 11px;border-radius:7px;white-space:nowrap;
+  background:transparent;border:1px solid var(--line);color:var(--cream-dim);
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+  transition:border-color .15s,color .15s,background .15s;
+}
+.tbtn:hover{border-color:var(--svc);color:var(--cream)}
+.tbtn.primary{border-color:var(--svc);color:#0B110E;background:var(--svc);font-weight:600}
+.tbtn.primary:hover{background:var(--api)}
+.tbtn.active{border-color:var(--current);color:var(--current);background:rgba(242,169,92,.08)}
+.tbtn.danger:hover{border-color:var(--danger);color:var(--danger)}
+
+/* ───────────────────────── canvas ───────────────────────── */
+#stage{position:fixed;inset:54px 0 0 0}
+#map{width:100%;height:100%;display:block;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+#map.panning{cursor:grabbing}
+#map.connecting{cursor:crosshair}
+
+.layer-label{font-family:var(--mono);font-size:10px;letter-spacing:.34em;fill:var(--mute);text-transform:uppercase}
+.layer-sub{font-family:var(--mono);font-size:8px;letter-spacing:.18em;fill:#46544B}
+
+.edge .hit{stroke:transparent;stroke-width:16;fill:none;cursor:pointer}
+.edge .line{stroke:#3C4B42;stroke-width:1.3;fill:none;opacity:.55;transition:opacity .18s,stroke .18s}
+.edge:hover .line{stroke:#6E8E7D;opacity:.95;stroke-width:1.8}
+.edge.gap .line, .edge.planned .line{stroke:var(--warn);stroke-dasharray:3 5;opacity:.5}
+.edge.selected .line{stroke:var(--current);opacity:1;stroke-width:2.2}
+.edge.lit .line{
+  stroke:var(--current);opacity:1;stroke-width:2.2;
+  stroke-dasharray:7 7;animation:flow 1.1s linear infinite;
+  filter:drop-shadow(0 0 5px rgba(242,169,92,.55));
+}
+.edge.lit.gap .line{stroke:var(--warn)}
+.edge.dim .line{opacity:.07}
+.edge.dim .hit{pointer-events:none}
+@keyframes flow{to{stroke-dashoffset:-14}}
+@media (prefers-reduced-motion:reduce){.edge.lit .line{animation:none}}
+
+.node{cursor:pointer}
+.node .body{fill:var(--pane2);stroke-width:1.2;transition:filter .15s}
+.node .accent{rx:1.5}
+.node .title{font-family:var(--sans);font-size:12.5px;font-weight:600;fill:var(--cream)}
+.node .sub{font-family:var(--mono);font-size:9px;letter-spacing:.02em;fill:#90A095}
+.node .chip{font-family:var(--mono);font-size:7.5px;letter-spacing:.16em;text-transform:uppercase}
+.node .wfmark{font-family:var(--mono);font-size:8px;letter-spacing:.1em;fill:var(--page);opacity:.85}
+.node .gapmark{font-family:var(--mono);font-size:8px;fill:var(--warn)}
+.node:hover .body{filter:brightness(1.18)}
+.node.selected .body{filter:drop-shadow(0 0 7px rgba(242,169,92,.4))}
+.node.lit .body{filter:drop-shadow(0 0 8px rgba(242,169,92,.35))}
+.node.dim{opacity:.13;pointer-events:none}
+.node.dragging{cursor:grabbing}
+
+#ghost{stroke:var(--current);stroke-width:1.6;stroke-dasharray:5 5;fill:none;pointer-events:none}
+
+/* ───────────────────────── legend ───────────────────────── */
+#legend{
+  position:fixed;left:14px;bottom:14px;z-index:40;
+  background:rgba(16,24,19,.92);border:1px solid var(--line);border-radius:var(--radius);
+  padding:11px 13px;backdrop-filter:blur(4px);max-width:230px;
+}
+#legend h4{font-family:var(--mono);font-size:8.5px;letter-spacing:.26em;color:var(--mute);text-transform:uppercase;margin-bottom:8px}
+.lg-row{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:10.5px;color:var(--cream-dim)}
+.lg-swatch{width:9px;height:9px;border-radius:3px;flex:none}
+.lg-line{width:18px;height:0;border-top:2px dashed var(--warn);flex:none}
+#legend .hint{margin-top:9px;padding-top:8px;border-top:1px solid var(--line-soft);font-size:9.5px;line-height:1.5;color:var(--mute)}
+
+/* ───────────────────────── trace bar ───────────────────────── */
+#traceBar{
+  position:fixed;left:50%;bottom:74px;transform:translateX(-50%) translateY(8px);
+  z-index:55;max-width:min(720px,92vw);
+  background:rgba(16,24,19,.96);border:1px solid var(--current);border-radius:12px;
+  padding:9px 14px;display:none;align-items:center;gap:12px;
+  box-shadow:0 6px 28px rgba(0,0,0,.45);opacity:0;transition:opacity .2s,transform .2s;
+}
+#traceBar.show{display:flex;opacity:1;transform:translateX(-50%) translateY(0)}
+#traceBar .tlabel{font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;color:var(--current);text-transform:uppercase;flex:none}
+#traceBar .tpath{font-size:11.5px;color:var(--cream);line-height:1.45;min-width:0}
+#traceBar .tpath b{color:var(--current);font-weight:600}
+#traceBar .tnote{color:var(--warn)}
+#traceBar button{flex:none;background:none;border:1px solid var(--line);color:var(--cream-dim);border-radius:6px;font-family:var(--mono);font-size:9px;letter-spacing:.1em;padding:4px 9px;text-transform:uppercase}
+#traceBar button:hover{border-color:var(--current);color:var(--current)}
+
+/* ───────────────────────── inspector panel ───────────────────────── */
+#panel{
+  position:fixed;top:54px;right:0;bottom:0;width:302px;z-index:50;
+  background:var(--pane);border-left:1px solid var(--line);
+  display:flex;flex-direction:column;
+  transform:translateX(0);transition:transform .22s ease;
+}
+#panel.hidden{transform:translateX(100%)}
+#panelToggle{
+  position:fixed;top:64px;right:312px;z-index:51;width:26px;height:26px;
+  background:var(--pane);border:1px solid var(--line);border-radius:6px;
+  color:var(--cream-dim);font-size:12px;line-height:1;transition:right .22s ease;
+}
+#panelToggle.out{right:10px}
+#panelHead{padding:14px 16px 10px;border-bottom:1px solid var(--line-soft)}
+#panelHead .eyebrow{font-family:var(--mono);font-size:8.5px;letter-spacing:.26em;color:var(--mute);text-transform:uppercase}
+#panelHead h3{font-family:var(--serif);font-style:italic;font-size:17px;font-weight:500;margin-top:4px;line-height:1.25;word-break:break-word}
+#panelBody{flex:1;overflow-y:auto;padding:14px 16px 22px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.fgroup{margin-bottom:13px}
+.fgroup label{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);margin-bottom:5px}
+.fgroup input[type=text],.fgroup select,.fgroup textarea{
+  width:100%;background:var(--pane2);border:1px solid var(--line);border-radius:7px;
+  color:var(--cream);font-size:12px;padding:8px 9px;
+}
+.fgroup textarea{resize:vertical;min-height:54px;line-height:1.45}
+.fgroup input:focus,.fgroup select:focus,.fgroup textarea:focus{border-color:var(--svc);outline:none}
+.btnrow{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px}
+.pbtn{
+  flex:1;min-width:0;padding:8px 10px;border-radius:7px;border:1px solid var(--line);
+  background:var(--pane2);color:var(--cream);font-size:11px;font-weight:600;letter-spacing:.02em;
+}
+.pbtn:hover{border-color:var(--svc)}
+.pbtn.accent{background:var(--svc);border-color:var(--svc);color:#0B110E}
+.pbtn.accent:hover{background:var(--api)}
+.pbtn.orange{background:var(--page);border-color:var(--page);color:#1d1208}
+.pbtn.orange:hover{filter:brightness(1.08)}
+.pbtn.ghost-danger{background:transparent;color:var(--danger);border-color:rgba(217,107,91,.4)}
+.pbtn.ghost-danger:hover{border-color:var(--danger)}
+.conn-list{margin-top:2px}
+.conn-item{
+  display:flex;align-items:center;gap:8px;padding:7px 8px;margin-bottom:5px;
+  background:var(--pane2);border:1px solid var(--line-soft);border-radius:7px;
+  font-size:10.5px;color:var(--cream-dim);cursor:pointer;line-height:1.35;
+}
+.conn-item:hover{border-color:var(--svc);color:var(--cream)}
+.conn-item .dir{font-family:var(--mono);color:var(--mute);flex:none}
+.conn-item .gapflag{color:var(--warn);font-family:var(--mono);font-size:9px;flex:none}
+.kvline{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--cream-dim);padding:5px 0;border-bottom:1px dashed var(--line-soft)}
+.kvline b{color:var(--cream);font-weight:600;text-align:right}
+.note{font-size:10.5px;line-height:1.55;color:var(--mute)}
+.note b{color:var(--cream-dim)}
+.warnbox{margin:10px 0;padding:9px 11px;border:1px dashed var(--warn);border-radius:8px;color:var(--warn);font-size:10.5px;line-height:1.5}
+.statline{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase}
+.statline .dot{width:7px;height:7px;border-radius:50%}
+hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
+
+/* ───────────────────────── wireframe drawer ───────────────────────── */
+#drawer{
+  position:fixed;top:54px;right:0;bottom:0;width:min(442px,100vw);z-index:56;
+  background:var(--pane);border-left:1px solid var(--line);
+  transform:translateX(102%);transition:transform .26s cubic-bezier(.3,.8,.3,1);
+  display:flex;flex-direction:column;box-shadow:-12px 0 36px rgba(0,0,0,.4);
+}
+#drawer.open{transform:translateX(0)}
+#drawerHead{padding:13px 16px 11px;border-bottom:1px solid var(--line-soft);display:flex;align-items:flex-start;gap:10px}
+#drawerHead .dh-meta{flex:1;min-width:0}
+#drawerHead .eyebrow{font-family:var(--mono);font-size:8.5px;letter-spacing:.26em;color:var(--page);text-transform:uppercase}
+#drawerHead h3{font-family:var(--serif);font-style:italic;font-size:18px;font-weight:500;margin-top:3px}
+#drawerHead .dh-sub{font-size:10px;color:var(--mute);margin-top:3px;line-height:1.4}
+.dhbtn{flex:none;height:28px;padding:0 10px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--cream-dim);font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase}
+.dhbtn:hover{border-color:var(--page);color:var(--page)}
+.dhbtn.on{border-color:var(--page);color:var(--page);background:rgba(232,133,61,.08)}
+#drawerBody{flex:1;overflow-y:auto;padding:18px 16px 26px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#drawerHint{font-size:10px;color:var(--mute);text-align:center;margin-bottom:13px;line-height:1.5}
+#drawerHint b{color:var(--current);font-weight:600}
+
+/* phone frame — lo-fi paper */
+.wf-phone{
+  width:100%;max-width:340px;margin:0 auto;background:var(--paper);
+  border:1px solid var(--paper-line);border-radius:32px;
+  padding:14px 13px 18px;box-shadow:0 14px 38px rgba(0,0,0,.5), inset 0 0 0 5px #E4DAC2;
+  color:var(--ink);
+}
+.wf-notch{width:84px;height:7px;background:#D6CBAF;border-radius:4px;margin:2px auto 13px}
+.wf-stack{display:flex;flex-direction:column;gap:9px}
+.wf-row{display:flex;gap:9px}
+.wf-row>.wf-el{flex:1;min-width:0}
+
+.wf-el{
+  position:relative;border:1.5px solid var(--ink);border-radius:9px;background:var(--paper2);
+  padding:9px 10px 10px;cursor:pointer;transition:transform .12s,box-shadow .12s;
+}
+.wf-el:hover{transform:translateY(-1px);box-shadow:0 3px 0 rgba(43,44,38,.18)}
+.wf-el.active{border-color:var(--page);box-shadow:0 0 0 2.5px rgba(232,133,61,.35),0 4px 14px rgba(232,133,61,.25)}
+.wf-el.nolink{opacity:.82}
+.wf-el .cap{
+  display:block;font-family:var(--mono);font-size:7.5px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.wf-el .cap .ed{color:var(--page);margin-left:4px}
+.wf-el .gapdot{position:absolute;top:7px;right:9px;font-size:9px;color:#B07F22;font-family:var(--mono)}
+
+/* skeleton primitives */
+.skb{height:7px;border-radius:4px;background:var(--bar)}
+.skb.w90{width:90%}.skb.w70{width:70%}.skb.w55{width:55%}.skb.w40{width:40%}.skb.w25{width:25%}
+.skb+.skb{margin-top:6px}
+.sk-big{height:15px;width:58%;border-radius:5px;background:#BBAE8E;margin-bottom:7px}
+.sk-circle{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--ink);background:var(--paper);flex:none}
+.sk-listrow{display:flex;align-items:center;gap:8px;padding:5px 0}
+.sk-listrow+.sk-listrow{border-top:1px dashed #D2C6A8}
+.sk-listrow .lines{flex:1}
+.sk-pill{display:inline-block;padding:3px 9px;border:1.5px solid var(--ink);border-radius:20px;font-family:var(--mono);font-size:7.5px;letter-spacing:.08em;color:var(--ink);background:var(--paper)}
+.sk-pill.on{background:var(--ink);color:var(--paper)}
+.sk-pills{display:flex;gap:5px;flex-wrap:wrap}
+.sk-btn{
+  border:1.5px solid var(--ink);border-radius:9px;background:var(--ink);color:var(--paper);
+  text-align:center;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  padding:8px 6px;
+}
+.sk-btn.outline{background:var(--paper);color:var(--ink)}
+.sk-input{border:1.5px solid var(--ink);border-radius:7px;background:var(--paper);height:26px;display:flex;align-items:center;padding:0 8px}
+.sk-input .skb{margin:0}
+.sk-toggle{width:34px;height:18px;border:1.5px solid var(--ink);border-radius:12px;position:relative;flex:none;background:var(--paper)}
+.sk-toggle::after{content:"";position:absolute;top:1.5px;width:11px;height:11px;border-radius:50%;background:var(--ink)}
+.sk-toggle.on{background:var(--ink)}
+.sk-toggle.on::after{right:2px;background:var(--paper)}
+.sk-toggle.off::after{left:2px}
+.sk-flex{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sk-meter{height:11px;border:1.5px solid var(--ink);border-radius:7px;overflow:hidden;background:var(--paper)}
+.sk-meter i{display:block;height:100%;background:repeating-linear-gradient(-45deg,var(--ink) 0 4px,transparent 4px 8px)}
+.sk-chart{height:54px;position:relative}
+.sk-chart svg{width:100%;height:100%}
+.sk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.sk-cell{border:1.5px solid var(--ink);border-radius:8px;height:44px;background:var(--paper);display:flex;align-items:center;justify-content:center}
+.sk-cell .skb{width:55%;margin:0}
+.sk-otp{display:flex;gap:5px;justify-content:center}
+.sk-otp i{width:26px;height:32px;border:1.5px solid var(--ink);border-radius:6px;background:var(--paper)}
+.sk-code{
+  border:1.5px dashed var(--ink);border-radius:9px;background:var(--paper);
+  font-family:var(--mono);font-size:14px;letter-spacing:.28em;text-align:center;padding:10px 4px;color:var(--ink)
+}
+.sk-hatch{height:58px;border:1.5px solid var(--ink);border-radius:8px;background:repeating-linear-gradient(-45deg,transparent 0 7px,#DDD2B6 7px 9px)}
+.sk-seg{display:flex;border:1.5px solid var(--ink);border-radius:9px;overflow:hidden}
+.sk-seg i{flex:1;padding:6px 4px;text-align:center;font-family:var(--mono);font-size:8px;letter-spacing:.1em;color:var(--ink)}
+.sk-seg i.on{background:var(--ink);color:var(--paper)}
+.sk-kv{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px dashed #D2C6A8;font-family:var(--mono);font-size:8px;color:var(--ink)}
+.sk-kv:last-child{border-bottom:none}
+.sk-kv .skb{margin:0}
+
+/* ───────────────── v2 · app-accurate lo-fi primitives ───────────────── */
+/* flow strip — screens of the open page */
+#wfFlow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;max-width:340px;margin:0 auto 12px;justify-content:center}
+#wfFlow .fchip{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-dim);border:1px solid var(--line);border-radius:14px;padding:4px 10px;background:transparent;cursor:pointer}
+#wfFlow .fchip:hover{border-color:var(--page);color:var(--page)}
+#wfFlow .fchip.on{border-color:var(--page);color:var(--page);background:rgba(232,133,61,.08)}
+#wfFlow .fchip.add{border-style:dashed}
+#wfFlow .farrow{color:var(--mute);font-size:10px}
+#traceBar .tgo{color:var(--page);font-family:var(--mono);font-size:9px;letter-spacing:.06em}
+
+/* caps only visible while editing; nav + gap markers */
+.wf-stack:not(.editing) .wf-el .cap{display:none}
+.wf-el .navmark{position:absolute;top:6px;right:8px;font-size:10px;color:var(--page);font-family:var(--mono);opacity:.9;z-index:2}
+.wf-el.hasnav .gapdot{right:24px}
+.wf-stack.editing .wf-el .navmark,.wf-stack.editing .wf-el .gapdot{top:20px}
+
+/* flat elements — sit on the page background, not in a card */
+.wf-el.flat{background:transparent;border-color:transparent;padding:4px 4px}
+.wf-el.flat:hover{transform:none;box-shadow:none;background:rgba(43,44,38,.06);border-radius:7px}
+.wf-el.flat.active{border-color:var(--page);background:rgba(232,133,61,.07)}
+
+/* dark card — the app's hero/stat cards */
+.wf-el.dk{background:var(--ink);border-color:var(--ink);color:var(--paper);border-radius:15px;overflow:hidden}
+.wf-el.dk::after{content:"";position:absolute;top:7px;right:7px;width:88px;height:54px;pointer-events:none;opacity:.85;border-radius:8px;background-image:radial-gradient(rgba(232,133,61,.65) 1.1px,transparent 1.3px);background-size:9px 9px}
+.wf-el.dk .skb{background:#76725F}
+.wf-el.dk.active{border-color:var(--page)}
+.dk-eyebrow{font-family:var(--mono);font-size:6.5px;letter-spacing:.22em;color:var(--page);text-transform:uppercase;margin-bottom:3px;position:relative;z-index:1}
+.dk-big{font-weight:800;font-size:20px;color:var(--paper);letter-spacing:.2px;position:relative;z-index:1}
+.dk-big.sm{font-size:15px}
+.dk-line{font-size:8px;color:rgba(241,234,217,.62);margin-top:4px;position:relative;z-index:1;font-style:italic}
+.dk-stats{display:flex;margin-top:9px;position:relative;z-index:1}
+.dk-stat{flex:1;min-width:0}
+.dk-stat+.dk-stat{border-left:1px solid rgba(241,234,217,.16);padding-left:10px}
+.dk-stat .l{font-family:var(--mono);font-size:6px;letter-spacing:.16em;color:rgba(241,234,217,.55);text-transform:uppercase}
+.dk-stat .v{font-size:14px;font-weight:800;margin-top:2px;color:var(--paper)}
+.dk-stat .v.or{color:var(--page)}
+.dk-ico{position:absolute;top:9px;right:10px;display:flex;gap:8px;font-size:10px;color:rgba(241,234,217,.85);z-index:2}
+.dk-rule{border-top:1px solid rgba(241,234,217,.15);margin:8px 0 7px;position:relative;z-index:1}
+.dk-kv{display:flex;justify-content:space-between;align-items:baseline;position:relative;z-index:1}
+.dk-kv .k{font-family:var(--mono);font-size:6.5px;letter-spacing:.16em;color:var(--page);text-transform:uppercase}
+.dk-kv .vv{text-align:right}
+.dk-kv .vv b{display:block;font-size:9px;color:var(--paper)}
+.dk-kv .vv s{display:block;font-size:7px;color:rgba(241,234,217,.55);text-decoration:none}
+.dk-link{font-family:var(--mono);font-size:7px;letter-spacing:.14em;color:var(--page);text-transform:uppercase;margin-top:7px;position:relative;z-index:1}
+
+/* page titles + captions + section labels */
+.pgt-eyebrow{font-family:var(--mono);font-size:6.5px;letter-spacing:.22em;color:var(--page);text-transform:uppercase}
+.pgt{font-weight:800;font-size:18px;color:var(--ink);letter-spacing:-.2px;margin-top:1px}
+.pgt-ico{position:absolute;top:9px;right:8px;display:flex;gap:9px;font-size:11px;color:var(--ink)}
+.cap2{font-size:8.5px;line-height:1.45;color:var(--ink-soft)}
+.cap2 b{color:var(--ink)}
+.sec{display:flex;align-items:center;gap:6px;min-height:15px}
+.sec .t{font-family:var(--mono);font-size:7.5px;letter-spacing:.2em;color:var(--page);text-transform:uppercase;font-weight:700}
+.sec .badge{min-width:14px;height:14px;border-radius:7px;background:var(--page);color:var(--paper);font-size:8px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;font-family:var(--mono)}
+.sec .badge.ink{background:var(--ink)}
+.sec .r{margin-left:auto;font-size:7.5px;font-style:italic;color:var(--ink-soft)}
+.warncaps{font-family:var(--mono);font-size:7px;letter-spacing:.22em;color:#B0432F;text-align:center;text-transform:uppercase}
+
+/* accent left bar on cards (chat list items) */
+.wf-el.lbar{border-left-width:4px}
+.wf-el.lbar.or{border-left-color:var(--page)}
+.wf-el.lbar.gr{border-left-color:#4FA97E}
+
+/* chat list card */
+.ccard{display:flex;gap:8px;align-items:flex-start}
+.cav{width:25px;height:25px;border-radius:8px;background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:7.5px;display:flex;align-items:center;justify-content:center;flex:none;border:1.5px solid var(--page)}
+.cbody{flex:1;min-width:0}
+.cname{display:flex;align-items:baseline;gap:6px;font-size:9.5px;font-weight:700;color:var(--ink)}
+.cname .dt{font-size:6.5px;color:var(--ink-soft);font-weight:400;font-family:var(--mono)}
+.cprev{font-size:8.5px;color:#5d5b50;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctag{font-family:var(--mono);font-size:6px;letter-spacing:.08em;border:1.2px solid #4FA97E;border-radius:9px;padding:2px 6px;color:#3d7c5e;flex:none;align-self:center}
+.cbadge{width:13px;height:13px;border-radius:7px;background:var(--page);color:var(--paper);font-size:7.5px;display:flex;align-items:center;justify-content:center;flex:none;align-self:center;font-weight:700}
+
+/* bottom tab bar */
+.wf-el.tabwrap{padding:0;border-color:transparent;background:transparent}
+.wf-el.tabwrap:hover{transform:none;box-shadow:none}
+.wf-el.tabwrap.active .wtabs{box-shadow:0 0 0 2.5px rgba(232,133,61,.4)}
+.wtabs{display:flex;background:var(--ink);border-radius:12px;padding:8px 4px 6px}
+.wtab{flex:1;text-align:center;font-family:var(--mono);font-size:5.5px;letter-spacing:.04em;color:rgba(241,234,217,.5);text-transform:uppercase}
+.wtab i{display:block;width:12px;height:12px;border:1.5px solid currentColor;border-radius:4px;margin:0 auto 3px}
+.wtab.on{color:var(--page)}
+
+/* big orange CTA + outline variant */
+.cta{border-radius:22px;background:var(--page);color:#1d1208;text-align:center;font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;padding:10px 6px;font-weight:700}
+.cta.line{background:var(--paper);border:1.5px dashed var(--page);color:var(--page)}
+
+/* dark header with back (sub-screens) */
+.wf-el.hdr{background:var(--ink);border-color:var(--ink);color:var(--paper);border-radius:13px}
+.hback{display:flex;align-items:center;gap:8px}
+.hback .bk{font-size:12px;color:var(--paper)}
+.hback .hav{width:24px;height:24px;border-radius:7px;border:1.5px solid var(--page);color:var(--paper);font-family:var(--mono);font-size:7.5px;display:flex;align-items:center;justify-content:center;flex:none}
+.hback .hmid{flex:1;min-width:0}
+.hback .hn{font-size:9.5px;font-weight:700;color:var(--paper)}
+.hback .hs{font-size:6.5px;color:rgba(241,234,217,.65);margin-top:1px}
+.hback .hs::before{content:"● ";color:#4FA97E;font-size:6px}
+.hback .hpill{border:1.2px solid rgba(241,234,217,.55);border-radius:11px;padding:3px 8px;font-family:var(--mono);font-size:6.5px;color:var(--paper);flex:none}
+
+/* chat bubbles v2 */
+.wf-el.bubL,.wf-el.bubR{max-width:80%;border-radius:13px 13px 13px 4px}
+.wf-el.bubR{margin-left:auto;border-radius:13px 13px 4px 13px;background:var(--page);border-color:var(--page)}
+.wf-row>.wf-el.bubL,.wf-row>.wf-el.bubR{flex:none;width:80%}
+.wf-el.bubR .skb{background:rgba(29,18,8,.42)}
+.btxt{font-size:8.5px;line-height:1.4;color:var(--ink)}
+.wf-el.bubR .btxt{color:#2a1505;font-weight:600}
+.btm{font-size:6px;color:var(--ink-soft);text-align:right;margin-top:3px;font-family:var(--mono)}
+.wf-el.bubR .btm{color:rgba(29,18,8,.6)}
+.bcap{font-size:6.5px;font-style:italic;color:var(--ink-soft);text-align:right;margin-top:2px}
+.divider{display:flex;align-items:center;gap:8px;min-height:12px}
+.divider::before,.divider::after{content:"";flex:1;border-top:1px dashed #CFC4A9}
+.divider span{font-family:var(--mono);font-size:6.5px;letter-spacing:.2em;color:var(--ink-soft)}
+.rcpt{height:44px;border:1.5px dashed var(--ink);border-radius:8px;background:repeating-linear-gradient(-45deg,transparent 0 7px,#E6DCC4 7px 9px);margin-top:4px;display:flex;align-items:center;justify-content:center;font-size:6.5px;font-family:var(--mono);letter-spacing:.12em;color:var(--ink-soft)}
+
+/* suggest bar + ledger rows + rule + connector + product + empty + tiles */
+.sug{display:flex;align-items:center;gap:7px}
+.sug .sp{color:var(--page);font-size:10px;flex:none}
+.sug .st{font-family:var(--mono);font-size:6.5px;letter-spacing:.16em;color:var(--page);text-transform:uppercase;flex:none}
+.sug .sx{flex:1;min-width:0;font-size:8px;color:#5d5b50;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lrow{display:flex;align-items:center;gap:8px}
+.lrow .lav{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--ink);background:var(--paper);font-family:var(--mono);font-size:7px;display:flex;align-items:center;justify-content:center;flex:none}
+.lrow .lmid{flex:1;min-width:0}
+.lrow .ln{font-size:9px;font-weight:700;color:var(--ink)}
+.lrow .ld{font-size:7.5px;color:var(--ink-soft);margin-top:1px}
+.lrow .lr{text-align:right;flex:none}
+.lrow .amt{font-size:9px;font-weight:800;font-family:var(--mono)}
+.lrow .amt.pos{color:#3d7c5e}
+.lrow .ltag{display:inline-block;margin-top:2px;border:1.2px solid #4FA97E;border-radius:8px;font-family:var(--mono);font-size:5.5px;letter-spacing:.08em;padding:1.5px 5px;color:#3d7c5e}
+.lrow .ltag.pend{border-color:#B07F22;color:#9a7119}
+.lrow .lcat{display:block;font-family:var(--mono);font-size:5.5px;letter-spacing:.12em;color:var(--ink-soft);margin-top:2px}
+.rwhen{font-size:8.5px;font-style:italic;color:#5d5b50}
+.rchip{display:inline-block;border:1.4px solid var(--ink);border-radius:11px;padding:2.5px 8px;font-family:var(--mono);font-size:6.5px;color:var(--ink);background:var(--paper);font-style:normal;margin-left:3px}
+.rchip.amber{border-color:#C49334;color:#8a6516;background:#F3E8CE}
+.ractive{float:right;font-family:var(--mono);font-size:6px;letter-spacing:.1em;color:#3d7c5e;border:1.2px solid #4FA97E;border-radius:9px;padding:2px 6px}
+.rtpl{font-size:7.5px;color:var(--ink-soft);font-style:italic;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conrow{display:flex;align-items:center;gap:8px}
+.conrow .cic{width:24px;height:24px;border-radius:7px;border:1.5px solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:9px;flex:none;background:var(--paper)}
+.conrow .cmid{flex:1;min-width:0}
+.conrow .cn{font-size:9px;font-weight:700}
+.conrow .cd{font-size:7px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conrow .cbtn{border:1.4px solid var(--page);color:var(--page);border-radius:11px;font-family:var(--mono);font-size:6px;letter-spacing:.1em;padding:3px 8px;flex:none}
+.pcard{display:flex;gap:8px;align-items:center}
+.pic{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--page);background:#F6EBDD;display:flex;align-items:center;justify-content:center;color:var(--page);font-size:11px;flex:none}
+.pmid{flex:1;min-width:0}
+.pcat{font-family:var(--mono);font-size:5.5px;letter-spacing:.16em;color:var(--page);text-transform:uppercase}
+.pn{font-size:9.5px;font-weight:700}
+.pp{font-size:8px;color:var(--page);margin-top:1px;font-family:var(--mono)}
+.pqty{text-align:right;flex:none}
+.pqty .q{font-size:14px;font-weight:800;color:#B07F22}
+.pqty .ql{font-family:var(--mono);font-size:5.5px;letter-spacing:.08em;color:#B07F22}
+.pqty .ql::before{content:"● ";font-size:5px}
+.empty{display:flex;gap:8px;align-items:flex-start}
+.empty .eic{width:24px;height:24px;border-radius:7px;border:1.5px solid var(--ink);flex:none;background:var(--paper)}
+.empty .eb{font-size:8.5px;font-weight:700;color:var(--ink)}
+.empty .es{font-size:7.5px;color:var(--ink-soft);margin-top:2px;line-height:1.4}
+.tiles{display:flex;gap:7px}
+.tiles .tcol{flex:1;min-width:0}
+.tile{aspect-ratio:1;border-radius:10px;background:var(--ink);position:relative;border:1.5px solid var(--ink)}
+.tile::after{content:"";position:absolute;inset:30%;border:1.5px solid var(--page);border-radius:6px}
+.tile::before{content:"";position:absolute;top:5px;right:5px;width:26px;height:18px;border-radius:4px;background-image:radial-gradient(rgba(232,133,61,.6) 1px,transparent 1.2px);background-size:7px 7px}
+.tilecap{font-size:6px;text-align:center;margin-top:3px;color:var(--ink);font-weight:600}
+.robo{width:26px;height:26px;border-radius:8px;border:1.5px solid var(--page);position:relative;flex:none}
+.robo::after{content:"";position:absolute;left:5px;top:8px;width:5px;height:5px;border-radius:50%;background:var(--page);box-shadow:9px 0 0 var(--page)}
+.choice .chk{margin-left:auto;width:14px;height:14px;border-radius:50%;background:var(--page);color:var(--paper);font-size:8px;display:flex;align-items:center;justify-content:center;flex:none}
+
+/* element inspector inside drawer (edit mode) */
+#elInspector{
+  margin:16px auto 0;max-width:340px;background:var(--pane2);
+  border:1px solid var(--line);border-radius:11px;padding:13px 14px;
+}
+#elInspector h4{font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--page);margin-bottom:10px}
+.linkchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.linkchip{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:14px;
+  border:1px solid var(--line);background:var(--pane3);font-size:10px;color:var(--cream-dim)
+}
+.linkchip .sw{width:7px;height:7px;border-radius:2px}
+.linkchip button{background:none;border:none;color:var(--mute);font-size:11px;line-height:1;padding:0}
+.linkchip button:hover{color:var(--danger)}
+.addElBtn{
+  width:100%;max-width:340px;margin:12px auto 0;display:block;
+  border:1.5px dashed var(--line);background:transparent;color:var(--cream-dim);
+  border-radius:10px;padding:10px;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+}
+.addElBtn:hover{border-color:var(--page);color:var(--page)}
+
+/* ───────────────────────── modal / help / toast ───────────────────────── */
+#scrim{position:fixed;inset:0;background:rgba(5,8,6,.6);z-index:70;display:none;backdrop-filter:blur(2px)}
+#scrim.show{display:block}
+.modal{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:71;
+  width:min(460px,92vw);max-height:82vh;overflow-y:auto;
+  background:var(--pane);border:1px solid var(--line);border-radius:14px;padding:20px;display:none;
+}
+.modal.show{display:block}
+.modal h3{font-family:var(--serif);font-style:italic;font-size:19px;margin-bottom:4px}
+.modal .eyebrow{font-family:var(--mono);font-size:8.5px;letter-spacing:.26em;color:var(--svc);text-transform:uppercase}
+.modal .mclose{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--mute);font-size:17px}
+.modal .mclose:hover{color:var(--cream)}
+.helpgrid{margin-top:13px}
+.helpgrid .hrow{display:flex;gap:12px;padding:7px 0;border-bottom:1px dashed var(--line-soft);font-size:11.5px;color:var(--cream-dim);line-height:1.5}
+.helpgrid .hrow b{flex:none;width:128px;color:var(--cream);font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.04em;padding-top:1px}
+#toast{
+  position:fixed;top:66px;left:50%;transform:translateX(-50%);z-index:80;
+  background:var(--pane3);border:1px solid var(--svc);color:var(--cream);
+  font-size:11.5px;padding:8px 16px;border-radius:9px;opacity:0;pointer-events:none;
+  transition:opacity .2s;max-width:88vw;text-align:center;
+}
+#toast.show{opacity:1}
+#toast.warn{border-color:var(--warn)}
+
+/* ───────────────────────── AI prompt bar ───────────────────────── */
+#aiBar{
+  position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:58;
+  display:flex;gap:8px;align-items:center;width:min(620px,92vw);
+  background:rgba(16,24,19,.97);border:1px solid var(--line);border-radius:15px;
+  padding:8px 10px;backdrop-filter:blur(8px);box-shadow:0 10px 34px rgba(0,0,0,.5);
+}
+#aiBar .spark{flex:none;font-size:14px;color:var(--current);padding-left:4px}
+#aiInput{
+  flex:1;min-width:0;height:30px;background:transparent;border:none;outline:none;
+  color:var(--cream);font-family:var(--mono);font-size:11.5px;letter-spacing:.02em;
+}
+#aiInput::placeholder{color:var(--mute)}
+#aiAsk{
+  flex:none;height:28px;padding:0 13px;border-radius:9px;border:1px solid var(--current);
+  background:rgba(242,169,92,.1);color:var(--current);
+  font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+}
+#aiAsk:hover{background:var(--current);color:#0B110E}
+#aiAsk:disabled{opacity:.4;pointer-events:none}
+#aiCfg{flex:none;height:28px;width:30px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--cream-dim);font-size:12px}
+#aiCfg:hover{border-color:var(--current);color:var(--current)}
+#aiMode{flex:none;font-family:var(--mono);font-size:7px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+#aiMode.claude{color:var(--svc)}
+
+#aiPanel{
+  position:fixed;left:50%;bottom:64px;transform:translateX(-50%);z-index:57;
+  width:min(620px,92vw);max-height:52vh;overflow-y:auto;display:none;
+  background:rgba(13,19,15,.98);border:1px solid var(--line);border-radius:14px;
+  padding:0;box-shadow:0 14px 44px rgba(0,0,0,.55);
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent;
+}
+#aiPanel.open{display:block}
+#aiPanelHead{
+  position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;
+  padding:10px 14px;background:rgba(13,19,15,.98);border-bottom:1px solid var(--line-soft);
+}
+#aiPanelHead .t{font-family:var(--mono);font-size:8.5px;letter-spacing:.24em;color:var(--current);text-transform:uppercase;flex:1}
+#aiPanelHead button{
+  background:none;border:1px solid var(--line);color:var(--cream-dim);border-radius:6px;
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;padding:3px 9px;text-transform:uppercase;
+}
+#aiPanelHead button:hover{border-color:var(--current);color:var(--current)}
+#aiMsgs{padding:13px 14px}
+.ai-msg{margin-bottom:11px;font-size:12px;line-height:1.55;color:var(--cream-dim)}
+.ai-msg.you{color:var(--cream)}
+.ai-msg .who{font-family:var(--mono);font-size:7.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--mute);display:block;margin-bottom:3px}
+.ai-msg.ai .who{color:var(--current)}
+.ai-msg b{color:var(--cream)}
+.ai-msg .nlink{color:var(--api);cursor:pointer;border-bottom:1px dashed rgba(124,196,156,.4)}
+.ai-msg .nlink:hover{color:var(--cream)}
+.ai-msg ul{margin:5px 0 5px 16px}
+.ai-msg li{margin:3px 0}
+.ai-think{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--mute);text-transform:uppercase;animation:aipulse 1.2s ease-in-out infinite}
+@keyframes aipulse{50%{opacity:.35}}
+
+.ai-prop{
+  margin:9px 0;padding:10px 12px;border:1px dashed var(--current);border-radius:10px;
+  background:rgba(242,169,92,.05);
+}
+.ai-prop.node-prop{border-color:#5EA2E8;background:rgba(94,162,232,.06)}
+.ai-prop .ptag{font-family:var(--mono);font-size:7px;letter-spacing:.22em;text-transform:uppercase;color:var(--current)}
+.ai-prop.node-prop .ptag{color:#5EA2E8}
+.ai-prop .ptitle{font-size:12px;font-weight:600;color:var(--cream);margin-top:3px}
+.ai-prop .ppath{font-family:var(--mono);font-size:9px;color:var(--cream-dim);margin-top:4px;line-height:1.5}
+.ai-prop .preason{font-size:10.5px;color:var(--mute);margin-top:4px;line-height:1.5}
+.ai-prop .pwarn{font-size:9.5px;color:var(--warn);margin-top:4px}
+.ai-prop .pbtns{display:flex;gap:6px;margin-top:8px}
+.ai-prop .pbtns button{
+  padding:5px 12px;border-radius:7px;font-family:var(--mono);font-size:8.5px;
+  letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--line);
+  background:transparent;color:var(--cream-dim);
+}
+.ai-prop .pbtns .ok{border-color:var(--svc);color:var(--svc)}
+.ai-prop .pbtns .ok:hover{background:var(--svc);color:#0B110E}
+.ai-prop .pbtns .no:hover{border-color:var(--danger);color:var(--danger)}
+.ai-prop.done{opacity:.45;border-style:solid}
+.ai-prop.done .pbtns{display:none}
+.ai-prop .pstate{font-family:var(--mono);font-size:8px;letter-spacing:.16em;text-transform:uppercase;margin-top:6px;display:none}
+.ai-prop.done .pstate{display:block;color:var(--svc)}
+.ai-prop.done.rejected .pstate{color:var(--danger)}
+
+/* change log modal rows */
+.logrow{display:flex;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line-soft);font-size:11px;color:var(--cream-dim);line-height:1.5}
+.logrow .lt{flex:none;width:104px;font-family:var(--mono);font-size:9px;color:var(--mute);padding-top:1px}
+.logrow .lb{flex:none;max-width:80px;color:var(--current);font-weight:600;font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.logrow .lm{flex:1;min-width:0}
+
+/* gap report block in inspector */
+.gapreport{margin:4px 0 14px;padding:11px 12px;border:1px dashed var(--warn);border-radius:10px;background:rgba(217,162,63,.05)}
+.gapreport h5{font-family:var(--mono);font-size:8px;letter-spacing:.24em;text-transform:uppercase;color:var(--warn);margin-bottom:7px}
+.gapreport .gr-sec{font-family:var(--mono);font-size:7.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);margin:9px 0 4px}
+.gapreport .gr-item{font-size:11px;line-height:1.55;color:var(--cream-dim);margin:4px 0}
+.gapreport .gr-item b{color:var(--cream)}
+.gapreport .gr-fix{font-size:11px;line-height:1.55;color:var(--cream-dim)}
+.gapreport .gr-fix b{color:var(--svc)}
+.gapreport .gr-add{
+  display:inline-block;margin:4px 6px 2px 0;padding:4px 9px;border-radius:8px;
+  border:1px solid var(--svc);background:transparent;color:var(--svc);
+  font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+}
+.gapreport .gr-add:hover{background:var(--svc);color:#0B110E}
+.gapreport .gr-add:disabled{opacity:.4;border-color:var(--line);color:var(--mute);pointer-events:none}
+
+@media (max-width:760px){
+  #wordmark .sc{display:none}
+  #saveDot{display:none}
+  #searchWrap{display:none}
+  #panel{width:100vw}
+  #panelToggle{right:auto;left:10px}
+  #panelToggle.out{left:10px}
+  #legend{display:none}
+  #aiMode{display:none}
+}
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <div id="wordmark"><span class="lb">Lagbot</span><span class="sc">System Circuit</span></div>
+  <span id="saveDot">—</span>
+  <div id="searchWrap"><input id="search" type="text" placeholder="search nodes… (dims everything else)" autocomplete="off"></div>
+  <nav id="tools">
+    <button class="tbtn primary" id="btnAddNode">+ Node</button>
+    <button class="tbtn" id="btnConnect">⌁ Connect</button>
+    <button class="tbtn" id="btnFit">⌖ Fit</button>
+    <button class="tbtn" id="btnZoomOut">−</button>
+    <button class="tbtn" id="btnZoomIn">+</button>
+    <button class="tbtn" id="btnExport">⤓ Export</button>
+    <button class="tbtn" id="btnImport">⤒ Import</button>
+    <button class="tbtn danger" id="btnReset">↺ Reset</button>
+    <button class="tbtn" id="btnSync">☁ Sync</button>
+    <button class="tbtn" id="btnLog">≡ Log</button>
+    <button class="tbtn" id="btnHelp">?</button>
+  </nav>
+  <input type="file" id="fileImport" accept="application/json" style="display:none">
+</header>
+
+<div id="stage">
+  <svg id="map" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,1.2 L9,5 L0,8.8" fill="none" stroke="#3C4B42" stroke-width="1.6"/>
+      </marker>
+      <marker id="arrLit" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+        <path d="M0,1.2 L9,5 L0,8.8" fill="none" stroke="#F2A95C" stroke-width="1.8"/>
+      </marker>
+      <marker id="arrWarn" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,1.2 L9,5 L0,8.8" fill="none" stroke="#D9A23F" stroke-width="1.6"/>
+      </marker>
+      <pattern id="dots" width="26" height="26" patternUnits="userSpaceOnUse">
+        <circle cx="1" cy="1" r="1" fill="#16221B"/>
+      </pattern>
+    </defs>
+    <g id="viewport">
+      <rect x="-4000" y="-4000" width="12000" height="12000" fill="url(#dots)" id="gridbg"/>
+      <g id="layerLabels"></g>
+      <g id="edgesG"></g>
+      <g id="nodesG"></g>
+      <path id="ghost" d="" visibility="hidden"/>
+    </g>
+  </svg>
+</div>
+
+<aside id="legend">
+  <h4>Legend</h4>
+  <div class="lg-row"><span class="lg-swatch" style="background:#8E9AA8"></span>External system</div>
+  <div class="lg-row"><span class="lg-swatch" style="background:#4FA97E"></span>Backend service</div>
+  <div class="lg-row"><span class="lg-swatch" style="background:#7CC49C"></span>REST API surface</div>
+  <div class="lg-row"><span class="lg-swatch" style="background:#4A968F"></span>Supabase data</div>
+  <div class="lg-row"><span class="lg-swatch" style="background:#AC92DA"></span>Live channel (push / realtime)</div>
+  <div class="lg-row"><span class="lg-swatch" style="background:#E8853D"></span>Frontend page</div>
+  <div class="lg-row"><span class="lg-swatch" style="background:#D9A05B"></span>App core (Expo client)</div>
+  <div class="lg-row"><span class="lg-swatch" style="background:#5EA2E8"></span>AI agent (Claude-powered)</div>
+  <div class="lg-row"><span class="lg-line"></span>Gap / planned (not live yet)</div>
+  <div class="hint">Click a node to spotlight it · drag to move · double-click an orange page to open its wireframe.</div>
+</aside>
+
+<div id="traceBar" role="status">
+  <span class="tlabel">Trace</span>
+  <div class="tpath" id="tracePath"></div>
+  <button id="traceClear">Clear</button>
+</div>
+
+<div id="aiPanel" role="log" aria-label="AI assistant conversation">
+  <div id="aiPanelHead">
+    <span class="t">✦ Circuit</span>
+    <button id="aiChatClear" title="Clear the conversation">Clear</button>
+    <button id="aiPanelClose" title="Close">✕</button>
+  </div>
+  <div id="aiMsgs"></div>
+</div>
+<div id="aiBar">
+  <span class="spark">✦</span>
+  <input id="aiInput" type="text" placeholder="ask the map — find issues, suggest connections, explain a flow…" autocomplete="off">
+  <span id="aiMode">offline brain</span>
+  <button id="aiAsk">Ask</button>
+  <button id="aiCfg" title="AI settings">⚙</button>
+</div>
+
+<div class="modal" id="aiKeyModal">
+  <button class="mclose" data-close>✕</button>
+  <div class="eyebrow">AI assistant settings</div>
+  <h3>Circuit — the map's AI</h3>
+  <div class="helpgrid" style="margin-top:10px">
+    <div class="hrow" style="border-bottom:none;display:block">
+      <div class="note" style="margin-bottom:12px">
+        Without a key, the bar uses a <b>built-in offline brain</b> — it can list issues, find unwired pieces, and suggest connections from its knowledge of this map.
+        Paste an Anthropic API key to switch on <b>Claude mode</b> for real reasoning about your system.
+        The key is stored only in this browser, never inside the file.
+      </div>
+      <div class="fgroup"><label>Anthropic API key</label><input type="text" id="aiKeyInput" placeholder="sk-ant-…" autocomplete="off"></div>
+      <div class="fgroup"><label>Model</label><select id="aiModelSel">
+        <option value="claude-opus-4-8">Opus 4.8 — smartest (recommended)</option>
+        <option value="claude-sonnet-4-6">Sonnet 4.6 — fast + smart</option>
+        <option value="claude-haiku-4-5">Haiku 4.5 — cheapest</option>
+      </select></div>
+      <div class="note" style="margin-bottom:12px">Circuit's personality &amp; instructions live in <b>lagbot-map-ai.md</b> next to this file — edit that file to change how it thinks. Suggested connections always wait for your approval before being drawn.</div>
+      <div class="btnrow">
+        <button class="pbtn accent" id="aiKeySave">Save</button>
+        <button class="pbtn ghost-danger" id="aiKeyClear">Remove key</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="logModal">
+  <button class="mclose" data-close>✕</button>
+  <div class="eyebrow">Change log</div>
+  <h3>Who changed what</h3>
+  <div class="note" style="margin-top:6px;margin-bottom:4px">Every addition, removal and approval is signed with a name, date and time. The map's AI reads this log too, so it always knows what changed.</div>
+  <div style="display:flex;align-items:center;gap:8px;margin:10px 0 6px">
+    <span class="note">Logging changes as <b id="logEditor" style="color:var(--current)">—</b></span>
+    <button class="pbtn" id="logSwitch" style="flex:none;padding:5px 10px;font-size:10px">Switch name</button>
+  </div>
+  <div id="logBody" style="margin-top:8px"></div>
+</div>
+
+<div class="modal" id="syncModal">
+  <button class="mclose" data-close>✕</button>
+  <div class="eyebrow">Team sync</div>
+  <h3>Share this map with your team</h3>
+  <div class="helpgrid" style="margin-top:10px">
+    <div class="hrow" style="border-bottom:none;display:block">
+      <div class="note" style="margin-bottom:12px">
+        Connect a <b>Supabase</b> project and everyone who opens this file sees the same map, live —
+        every change syncs within a second, signed with the editor's name.
+        One-time setup: create a free project at supabase.com, run the SQL from
+        <b>lagbot-map-team-sync.sql</b> (next to this file) in its SQL editor, then paste the
+        project's URL and anon key below.
+      </div>
+      <div class="fgroup"><label>Supabase project URL</label><input type="text" id="sbUrlInput" placeholder="https://xxxx.supabase.co" autocomplete="off"></div>
+      <div class="fgroup"><label>Anon (public) key</label><input type="text" id="sbKeyInput" placeholder="eyJ…" autocomplete="off"></div>
+      <div class="note" style="margin-bottom:12px">⚠ If the team already has a shared map in this project, connecting will <b>replace</b> what's on this screen with the shared version. Use ⤓ Export first if you want a backup.</div>
+      <div class="note" id="syncStatus" style="margin-bottom:12px;color:var(--warn)"></div>
+      <div class="btnrow">
+        <button class="pbtn accent" id="syncSave">Save &amp; connect</button>
+        <button class="pbtn ghost-danger" id="syncOff">Disconnect</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="text/markdown" id="aiPersonaMD">
+# Circuit — Lagbot System Map AI
+
+## Who you are
+You are Circuit, the resident analyst of the Lagbot system map. Lagbot is a WhatsApp sales
+assistant for Nigerian small businesses: customers chat on WhatsApp, an AI persona called
+Nova replies, and the business owner manages everything from an Expo/React Native app.
+Your user is David — the founder, non-technical. Speak plain English, short sentences,
+no jargon without a one-line explanation. Naira (₦) is the currency.
+
+## What you know
+The map has five lanes, left to right:
+1. EXTERNAL — WhatsApp network, Anthropic API (Claude), Paystack (planned).
+2. BACKEND SERVICES — Node/Express: Evolution API (WhatsApp engine), Webhook Handler,
+   Message Pipeline (the brain), LLM Service, Nova Rules, Token Service, Routing Engine,
+   Auth Middleware, ngrok ingress (gap: temporary).
+3. AI AGENTS — Claude-powered workers: Nova (front of house), Sale Detector, Receipt Vision,
+   Smart Reply Writer, Import Parser; planned: Handoff Router, Insights Agent.
+4. API SURFACE + DATA — 33 REST routes, Supabase tables (RLS), Expo Push, Supabase Realtime.
+5. FRONTEND PAGES — every app screen, each with a tappable wireframe.
+
+Message flow: WhatsApp → Evolution → Webhook → Pipeline → (agents + LLM Service → Claude)
+→ reply back out via Evolution. Pipeline also writes conversations/sales/metrics, fires
+team alerts via Routing Engine, and pushes owner notifications.
+
+Known weak spots: wallet endpoints missing (withdraw, token purchase — Phase 2/3 Paystack),
+demo wallet ledger shown to real users (App Review risk), forgot-password is a no-op,
+photo picker stubbed, token enforcement OFF, ngrok must become api.lagbot.app, dormant
+unused routes, Admins screen duplicates Sales▸Teams.
+
+## Your tasks
+1. Answer questions about how the system fits together, tracing real paths through the map.
+2. Find issues: gaps, missing connections, orphan nodes, risky stubs, inconsistencies.
+3. Suggest new connections (edges) and new nodes — especially AI agents — when they would
+   genuinely improve the architecture. Less is more; never spam suggestions.
+4. NEVER draw anything yourself. Every suggestion is a proposal David approves or rejects.
+
+## Rules for proposals
+- Use exact node ids from the map data you are given.
+- For each proposed edge, explain where the line goes (which lanes it crosses) and why.
+- Mark anything not yet buildable as status "planned".
+- Maximum 4 proposals per answer. Skip proposals that already exist on the map.
+</script>
+
+<button id="panelToggle" title="Collapse panel">›</button>
+<aside id="panel">
+  <div id="panelHead">
+    <div class="eyebrow" id="panelEyebrow">Inspector</div>
+    <h3 id="panelTitle">System overview</h3>
+  </div>
+  <div id="panelBody"></div>
+</aside>
+
+<aside id="drawer" aria-label="Wireframe viewer">
+  <div id="drawerHead">
+    <div class="dh-meta">
+      <div class="eyebrow">Lo-fi wireframe</div>
+      <h3 id="drawerTitle">—</h3>
+      <div class="dh-sub" id="drawerSub"></div>
+    </div>
+    <button class="dhbtn" id="drawerEdit">✎ Edit</button>
+    <button class="dhbtn" id="drawerClose">✕</button>
+  </div>
+  <div id="drawerBody">
+    <div id="drawerHint">Tap any element to <b>trace its backend path</b> on the map.</div>
+    <div id="wfFlow"></div>
+    <div class="wf-phone"><div class="wf-notch"></div><div class="wf-stack" id="wfStack"></div></div>
+    <button class="addElBtn" id="btnAddEl" style="display:none">+ Add element to this screen</button>
+    <div id="elInspector" style="display:none"></div>
+  </div>
+</aside>
+
+<div id="scrim"></div>
+<div class="modal" id="helpModal">
+  <button class="mclose" data-close>✕</button>
+  <div class="eyebrow">How this map works</div>
+  <h3>Lagbot · System Circuit</h3>
+  <div class="helpgrid">
+    <div class="hrow"><b>Click node</b><span>Spotlights it with everything wired to it; the inspector opens for editing.</span></div>
+    <div class="hrow"><b>Drag node</b><span>Moves it — connections follow. Layout saves automatically.</span></div>
+    <div class="hrow"><b>Double-click page</b><span>Opens its app wireframe. Tap an element to light its circuit — <b>↗</b> what it calls forward, <b>↘</b> what feeds it back from the backend. Elements marked <b>⇢</b>: tap twice to follow the flow to the next screen or page. Chips above the phone switch screens; ‹ goes back.</span></div>
+    <div class="hrow"><b>+ Node</b><span>Adds a new branch: pick a name, type and layer, then drag into place.</span></div>
+    <div class="hrow"><b>⌁ Connect</b><span>Click a source node, then a target node, to draw a new connection. Esc cancels.</span></div>
+    <div class="hrow"><b>Click a line</b><span>Selects the connection — relabel, flag as gap/planned, or delete it.</span></div>
+    <div class="hrow"><b>⚠ Gap report</b><span>Select any flagged node — the inspector explains what's missing, recommends additions you can add with one tap, and how to fix it.</span></div>
+    <div class="hrow"><b>✦ AI bar</b><span>Ask the map anything from the bar at the bottom. The offline brain works instantly; add an Anthropic API key in ⚙ for Claude-powered reasoning. Suggested lines and nodes always wait for your approval before being drawn.</span></div>
+    <div class="hrow"><b>≡ Log</b><span>Every change is signed — the first change each session asks for your name, then logs who · what · date · time. View or switch name via ≡ Log.</span></div>
+    <div class="hrow"><b>☁ Sync</b><span>Connect a Supabase project to share one live map with your whole team — changes sync within a second, signed with each editor's name. One-time setup SQL is in lagbot-map-team-sync.sql.</span></div>
+    <div class="hrow"><b>Edit wireframe</b><span>✎ turns on edit mode: add screens with the ＋ chip, tap the current chip to rename it (✕ deletes it), then tap any element to edit its text, set where tapping it twice navigates, and rewire which backend nodes it links to.</span></div>
+    <div class="hrow"><b>Search</b><span>Type to dim everything except matching nodes.</span></div>
+    <div class="hrow"><b>Keys</b><span>F fit · + / − zoom · Del removes selection · Esc closes / cancels.</span></div>
+    <div class="hrow"><b>Saving</b><span>Every change persists automatically. Export / Import moves the whole map as JSON; Reset restores the original Lagbot map.</span></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+/* ════════════════════════ DEFAULT DATA — Lagbot map (from frontend-map.md + backend-map.md @ 2f4eafe / 64f0b48) ════════════════════════ */
+const NODE_W = 224, NODE_H = 58;
+const STORE_KEY = "lagbot:sysmap:v2";
+
+const TYPES = {
+  external:{label:"External", color:"#8E9AA8"},
+  service:{label:"Service", color:"#4FA97E"},
+  api:{label:"REST API", color:"#7CC49C"},
+  db:{label:"Supabase", color:"#4A968F"},
+  channel:{label:"Channel", color:"#AC92DA"},
+  client:{label:"App Core", color:"#D9A05B"},
+  page:{label:"Page", color:"#E8853D"},
+  agent:{label:"AI Agent", color:"#5EA2E8"}
+};
+const LAYERS = [
+  {id:"ext", name:"External Systems", sub:"WhatsApp · Anthropic · Paystack"},
+  {id:"svc", name:"Backend Services", sub:"Node/Express · port 18790 · via ngrok"},
+  {id:"agents", name:"AI Agents", sub:"Claude-powered workers · Nova + crew"},
+  {id:"bridge", name:"API Surface + Data Layer", sub:"33 REST routes · Supabase (RLS) · live channels"},
+  {id:"pages", name:"Frontend Pages", sub:"Expo / React Native · Expo Router"}
+];
+
+function defaultState(){ return {
+  meta:{name:"Lagbot — Backend ⇄ Frontend Circuit", v:1},
+  nodes:[
+    /* ── external ── */
+    {id:"ext_whatsapp", label:"WhatsApp Network", sub:"customers message here", type:"external", layer:"ext", x:30, y:330},
+    {id:"ext_anthropic", label:"Anthropic API", sub:"Haiku 4.5 · Sonnet 4.5", type:"external", layer:"ext", x:30, y:805},
+    {id:"ext_paystack", label:"Paystack", sub:"payments — Phase 2/3", type:"external", layer:"ext", x:30, y:655, status:"planned"},
+    /* ── backend services ── */
+    {id:"svc_evolution", label:"Evolution API", sub:"WhatsApp engine · docker + Baileys", type:"service", layer:"svc", x:330, y:290},
+    {id:"svc_webhook", label:"Webhook Handler", sub:"secret check · dedupe · JID normalize", type:"service", layer:"svc", x:330, y:440},
+    {id:"svc_pipeline", label:"Message Pipeline", sub:"the brain — 20-step orchestration", type:"service", layer:"svc", x:330, y:590},
+    {id:"svc_llm", label:"LLM Service", sub:"prompt assembly · all Claude calls", type:"service", layer:"svc", x:330, y:805},
+    {id:"svc_nova", label:"Nova Rules", sub:"abuse tiers · forced handoff", type:"service", layer:"svc", x:330, y:955},
+    {id:"svc_token", label:"Token Service", sub:"30/10 per turn · 500 free/day · enforcement OFF", type:"service", layer:"svc", x:330, y:1105},
+    {id:"svc_routing", label:"Routing Engine", sub:"team alerts via WhatsApp", type:"service", layer:"svc", x:330, y:1255},
+    /* ── REST API surface ── */
+    {id:"api_whatsapp", label:"WhatsApp API", sub:"/api/whatsapp/* — pair · status · send", type:"api", layer:"bridge", x:640, y:60},
+    {id:"api_ai", label:"AI + Config API", sub:"/api/ai/pause·resume · /settings/refresh", type:"api", layer:"bridge", x:640, y:144},
+    {id:"api_conversations", label:"Conversations API", sub:"archive · smart-replies", type:"api", layer:"bridge", x:640, y:228},
+    {id:"api_sales", label:"Sales API", sub:"/api/sales/:id/confirm — stock decrement", type:"api", layer:"bridge", x:640, y:312},
+    {id:"api_routing", label:"Routing Rules API", sub:"POST · PATCH · DELETE /routing-rules", type:"api", layer:"bridge", x:640, y:396},
+    {id:"api_import", label:"Product Import API", sub:"CSV · Excel · PDF → Haiku parse", type:"api", layer:"bridge", x:640, y:480},
+    {id:"api_account", label:"Auth + Account API", sub:"signup · me · delete (5.1.1v)", type:"api", layer:"bridge", x:640, y:564},
+    {id:"api_wallet", label:"Wallet + Tokens API", sub:"GET stub · withdraw + purchase missing", type:"api", layer:"bridge", x:640, y:648, status:"gap"},
+    /* ── live channels ── */
+    {id:"ch_push", label:"Expo Push", sub:"deep-linked owner alerts", type:"channel", layer:"bridge", x:640, y:766},
+    {id:"ch_realtime", label:"Supabase Realtime", sub:"messages INSERT stream", type:"channel", layer:"bridge", x:640, y:850},
+    /* ── Supabase data ── */
+    {id:"sb_auth", label:"Supabase Auth", sub:"JWT · OTP · OAuth PKCE", type:"db", layer:"bridge", x:640, y:968},
+    {id:"db_business", label:"DB · Business + Config", sub:"businesses · business_config · wa_connections", type:"db", layer:"bridge", x:640, y:1052},
+    {id:"db_conversations", label:"DB · Conversations", sub:"conversations · messages · state · interventions", type:"db", layer:"bridge", x:640, y:1136},
+    {id:"db_products", label:"DB · Products", sub:"soft delete · decrement_product_stock RPC", type:"db", layer:"bridge", x:640, y:1220},
+    {id:"db_sales", label:"DB · Sales", sub:"pending_sales · confirmed_sales", type:"db", layer:"bridge", x:640, y:1304},
+    {id:"db_tokens", label:"DB · Tokens", sub:"state · ledger · config", type:"db", layer:"bridge", x:640, y:1388},
+    {id:"db_team", label:"DB · Team + Routing", sub:"team_members · routing_rules", type:"db", layer:"bridge", x:640, y:1472},
+    {id:"db_skills", label:"DB · Skills", sub:"skills · user_skills (max 3)", type:"db", layer:"bridge", x:640, y:1556},
+    {id:"db_metrics", label:"DB · Metrics", sub:"response time · accuracy · daily stats", type:"db", layer:"bridge", x:640, y:1640},
+    /* ── frontend pages ── */
+    {id:"page_auth", label:"Welcome + Auth", sub:"splash · login · signup · OTP", type:"page", layer:"pages", x:985, y:60, wf:true},
+    {id:"page_onboarding", label:"Onboarding", sub:"6-step wizard + 4 setup steps", type:"page", layer:"pages", x:985, y:204, wf:true},
+    {id:"page_dashboard", label:"Dashboard", sub:"revenue · tokens · Lagbot toggle", type:"page", layer:"pages", x:985, y:348, wf:true},
+    {id:"page_chats", label:"Chats", sub:"list + thread · realtime", type:"page", layer:"pages", x:985, y:492, wf:true},
+    {id:"page_inventory", label:"Inventory", sub:"products · low stock", type:"page", layer:"pages", x:985, y:636, wf:true},
+    {id:"page_product", label:"Product Editor + Import", sub:"new/edit · CSV/Excel/PDF import", type:"page", layer:"pages", x:985, y:780, wf:true},
+    {id:"page_sales", label:"Sales + Teams", sub:"confirm sales · roster · routing", type:"page", layer:"pages", x:985, y:924, wf:true},
+    {id:"page_wallet", label:"Wallet", sub:"balance · withdraw · ledger", type:"page", layer:"pages", x:985, y:1068, wf:true},
+    {id:"page_analytics", label:"Analytics", sub:"response time · accuracy · top customers", type:"page", layer:"pages", x:985, y:1212, wf:true},
+    {id:"page_skills", label:"Skills", sub:"toggle skills (max 3)", type:"page", layer:"pages", x:985, y:1356, wf:true},
+    {id:"page_settings", label:"Settings", sub:"hub + 9 sub-pages", type:"page", layer:"pages", x:985, y:1500, wf:true},
+    {id:"page_admins", label:"Admins", sub:"team roster (same table as Sales→Teams)", type:"page", layer:"pages", x:985, y:1644, wf:true},
+    {id:"cl_core", label:"App Core · Expo client", sub:"AuthGate · AppContext · api.ts · database.ts · oauth.ts · cache.ts", type:"client", layer:"pages", x:985, y:-118},
+    {id:"svc_ingress", label:"Ingress · ngrok tunnel", sub:"prod entry — swap to api.lagbot.app", type:"service", layer:"svc", x:330, y:140, status:"gap"},
+    {id:"svc_guard", label:"Auth Middleware", sub:"requireAuth · requireBusiness → req.businessId", type:"service", layer:"svc", x:330, y:1405},
+    {id:"api_dormant", label:"Dormant Routes", sub:"auth/login·me · dashboard/* · stats · /whatsapp/qr", type:"api", layer:"bridge", x:640, y:1724, status:"gap"},
+    /* ── deployment / infrastructure ── */
+    {id:"ext_droplet", label:"DigitalOcean Droplet", sub:"157.245.44.32 · pm2 + docker host", type:"external", layer:"ext", x:30, y:-160},
+    {id:"ext_github", label:"GitHub Actions", sub:"deploy on push to main (backend/**)", type:"external", layer:"ext", x:30, y:-310},
+    {id:"ext_codemagic", label:"Codemagic / EAS", sub:"iOS app builds — store lane", type:"external", layer:"ext", x:30, y:-460},
+    {id:"svc_redis", label:"Redis", sub:"docker · Evolution session store", type:"service", layer:"svc", x:30, y:-10},
+    {id:"svc_server", label:"Express Server", sub:"server.js · pm2 · port 18790 · 33 routes", type:"service", layer:"svc", x:330, y:-10},
+    {id:"svc_cors", label:"CORS + Rate Limits", sub:"origin allowlist · 100/min/IP · 6/min pairing", type:"service", layer:"svc", x:330, y:-160},
+    {id:"svc_errors", label:"Error Handler + Logger", sub:"JSON logs · generic 500 · 404 catch-all", type:"service", layer:"svc", x:330, y:-310},
+    {id:"svc_jobs", label:"Startup + Cron Jobs", sub:"webhook re-register · auto-archive >7d idle", type:"service", layer:"svc", x:330, y:-460},
+    {id:"api_health", label:"Health + Status", sub:"/ · /api/status · /healthz — no auth", type:"api", layer:"bridge", x:640, y:-24},
+    {id:"svc_saleshelp", label:"Sales Helpers", sub:"pure line-item logic · shared with confirm", type:"service", layer:"svc", x:30, y:955},
+    {id:"svc_dead", label:"Dead Code", sub:"file-parser.js · SYSTEM_CORE.md · routes/", type:"service", layer:"svc", x:30, y:1105, status:"gap"},
+    /* ── AI agents ── */
+    {id:"agent_nova", label:"Nova · Front of House", sub:"the persona every customer talks to", type:"agent", layer:"agents", x:330, y:1560},
+    {id:"agent_sale", label:"Sale Detector", sub:"spots a deal closing → pending_sales", type:"agent", layer:"agents", x:330, y:1655},
+    {id:"agent_receipt", label:"Receipt Vision", sub:"reads payment receipts · ±5% vs bank", type:"agent", layer:"agents", x:330, y:1750},
+    {id:"agent_reply", label:"Smart Reply Writer", sub:"3 suggested replies in manual mode", type:"agent", layer:"agents", x:330, y:1845},
+    {id:"agent_import", label:"Import Parser", sub:"CSV / Excel / PDF → product rows", type:"agent", layer:"agents", x:330, y:1940},
+    {id:"agent_router", label:"Handoff Router", sub:"smart pick of right team member", type:"agent", layer:"agents", x:330, y:2035, status:"planned"},
+    {id:"agent_insight", label:"Insights Agent", sub:"weekly owner digest from metrics", type:"agent", layer:"agents", x:330, y:2130, status:"planned"}
+  ],
+  edges:[
+    /* backend internals */
+    {id:"e1", from:"ext_whatsapp", to:"svc_evolution", label:"customer messages in / replies out", dir:"both"},
+    {id:"e2", from:"svc_evolution", to:"svc_webhook", label:"webhooks: messages · connection · qr"},
+    {id:"e3", from:"svc_webhook", to:"svc_pipeline", label:"handleIncoming()"},
+    {id:"e4", from:"svc_pipeline", to:"svc_llm", label:"callHaiku · detectSale · receipt vision"},
+    {id:"e5", from:"svc_llm", to:"ext_anthropic", label:"x-api-key · prompt caching on"},
+    {id:"e6", from:"svc_pipeline", to:"svc_nova", label:"parseNovaOutput · enforceRules"},
+    {id:"e7", from:"svc_pipeline", to:"svc_token", label:"chargeForNovaTurn (1× per turn)"},
+    {id:"e8", from:"svc_token", to:"db_tokens", label:"ledger is source of truth"},
+    {id:"e9", from:"svc_pipeline", to:"svc_routing", label:"fire events: paid · complaint · stock_low…"},
+    {id:"e10", from:"svc_routing", to:"svc_evolution", label:"sendText → team member WhatsApp"},
+    {id:"e11", from:"svc_routing", to:"db_team", label:"read enabled routing_rules"},
+    {id:"e12", from:"svc_pipeline", to:"svc_evolution", label:"typing + send reply (per --- part)"},
+    {id:"e13", from:"svc_pipeline", to:"db_conversations", label:"store msgs · state · pipeline_stage"},
+    {id:"e14", from:"svc_pipeline", to:"db_sales", label:"pending_sales upsert (items[])"},
+    {id:"e15", from:"svc_pipeline", to:"db_metrics", label:"response time · accuracy · budget"},
+    {id:"e16", from:"svc_pipeline", to:"ch_push", label:"owner alerts (handoff · sale · tokens)"},
+    {id:"e17", from:"ch_push", to:"page_chats", label:"'{customer} needs you' deep link"},
+    {id:"e18", from:"ch_push", to:"page_sales", label:"🛒 new pending sale"},
+    {id:"e19", from:"ch_push", to:"page_inventory", label:"⚠ low stock"},
+    {id:"e20", from:"ch_push", to:"page_settings", label:"out of tokens → usage"},
+    {id:"e21", from:"db_conversations", to:"ch_realtime", label:"messages INSERT broadcast"},
+    {id:"e22", from:"ch_realtime", to:"page_chats", label:"live thread append + list refresh"},
+    /* API → services / data */
+    {id:"e23", from:"api_whatsapp", to:"svc_evolution", label:"pairing · status · send · disconnect"},
+    {id:"e24", from:"api_whatsapp", to:"db_business", label:"whatsapp_connections upsert"},
+    {id:"e25", from:"api_ai", to:"db_business", label:"auto_respond flag"},
+    {id:"e26", from:"api_ai", to:"svc_llm", label:"profile cache invalidate"},
+    {id:"e27", from:"api_conversations", to:"db_conversations", label:"archive · status"},
+    {id:"e28", from:"api_conversations", to:"svc_llm", label:"generateSmartReplies (last 12 msgs)"},
+    {id:"e29", from:"api_sales", to:"db_sales", label:"pending → confirmed (idempotent)"},
+    {id:"e30", from:"api_sales", to:"db_products", label:"decrement_product_stock RPC"},
+    {id:"e31", from:"api_sales", to:"svc_routing", label:"stock_low event at ≤2"},
+    {id:"e32", from:"api_sales", to:"ch_push", label:"low-stock alert"},
+    {id:"e33", from:"api_routing", to:"db_team", label:"rules CRUD"},
+    {id:"e34", from:"api_import", to:"svc_llm", label:"PDF text → product rows (Haiku)"},
+    {id:"e35", from:"api_account", to:"sb_auth", label:"signup · login · admin deleteUser"},
+    {id:"e36", from:"api_account", to:"db_business", label:"tenant delete (CASCADE)"},
+    {id:"e37", from:"api_account", to:"svc_evolution", label:"instance delete (best-effort)"},
+    {id:"e38", from:"api_wallet", to:"ext_paystack", label:"checkout + webhook — Phase 2", status:"planned"},
+    {id:"e39", from:"api_wallet", to:"db_tokens", label:"credit purchased bucket", status:"planned"},
+    /* pages → REST */
+    {id:"e40", from:"page_onboarding", to:"api_whatsapp", label:"pairing code + status poll (3s ×60)"},
+    {id:"e41", from:"page_dashboard", to:"api_ai", label:"Lagbot pause/resume toggle"},
+    {id:"e42", from:"page_chats", to:"api_whatsapp", label:"status poll 30s · composer send"},
+    {id:"e43", from:"page_chats", to:"api_conversations", label:"swipe archive · smart-reply chips"},
+    {id:"e44", from:"page_sales", to:"api_sales", label:"Confirm Sale (+linked product)"},
+    {id:"e45", from:"page_sales", to:"api_routing", label:"rule editor + default seeding"},
+    {id:"e46", from:"page_sales", to:"api_whatsapp", label:"Push to Team → send"},
+    {id:"e47", from:"page_product", to:"api_import", label:"upload file → parsed preview"},
+    {id:"e48", from:"page_settings", to:"api_whatsapp", label:"connect / disconnect"},
+    {id:"e49", from:"page_settings", to:"api_ai", label:"settings refresh on every save"},
+    {id:"e50", from:"page_settings", to:"api_account", label:"Danger Zone — delete account"},
+    {id:"e51", from:"page_settings", to:"api_wallet", label:"token purchase init", status:"gap"},
+    {id:"e52", from:"page_wallet", to:"api_wallet", label:"GET wallet · withdraw", status:"gap"},
+    /* pages → Supabase direct */
+    {id:"e53", from:"page_auth", to:"sb_auth", label:"signup · OTP verify · OAuth · login"},
+    {id:"e54", from:"page_settings", to:"sb_auth", label:"password change · sign out"},
+    {id:"e55", from:"page_onboarding", to:"db_business", label:"name · industry · tone · phone"},
+    {id:"e56", from:"page_onboarding", to:"db_products", label:"first products insert"},
+    {id:"e57", from:"page_onboarding", to:"db_skills", label:"activate starter skills"},
+    {id:"e58", from:"page_dashboard", to:"db_sales", label:"revenue 7D · pending count"},
+    {id:"e59", from:"page_dashboard", to:"db_tokens", label:"token balance + config"},
+    {id:"e60", from:"page_dashboard", to:"db_metrics", label:"message_count_realtime"},
+    {id:"e61", from:"page_dashboard", to:"db_conversations", label:"recent chats (3)"},
+    {id:"e62", from:"page_dashboard", to:"db_skills", label:"active skills grid"},
+    {id:"e63", from:"page_chats", to:"db_conversations", label:"list · thread · unread · handoff flip"},
+    {id:"e64", from:"page_inventory", to:"db_products", label:"products read + soft delete"},
+    {id:"e65", from:"page_product", to:"db_products", label:"insert / update rows"},
+    {id:"e66", from:"page_sales", to:"db_sales", label:"pending (10s poll) + confirmed reads"},
+    {id:"e67", from:"page_sales", to:"db_team", label:"roster CRUD"},
+    {id:"e68", from:"page_wallet", to:"db_business", label:"bank_details read"},
+    {id:"e69", from:"page_analytics", to:"db_metrics", label:"all metric tables + RPC accuracy"},
+    {id:"e70", from:"page_analytics", to:"db_conversations", label:"top customers aggregate"},
+    {id:"e71", from:"page_skills", to:"db_skills", label:"toggle skill (optimistic)"},
+    {id:"e72", from:"page_settings", to:"db_business", label:"profile · persona · hours · bank · blocked"},
+    {id:"e73", from:"page_settings", to:"db_tokens", label:"usage breakdown read"},
+    {id:"e74", from:"page_admins", to:"db_team", label:"roster CRUD (same table as Teams)"},
+    {id:"e75", from:"cl_core", to:"sb_auth", label:"AuthGate: session → route guard"},
+    {id:"e76", from:"cl_core", to:"db_business", label:"AppContext · 6 parallel loads on SIGNED_IN"},
+    {id:"e77", from:"cl_core", to:"ch_push", label:"push-token registration · deep links"},
+    {id:"e78", from:"cl_core", to:"svc_ingress", label:"every REST call enters here"},
+    {id:"e79", from:"svc_guard", to:"sb_auth", label:"auth.getUser(JWT)"},
+    {id:"e80", from:"svc_guard", to:"db_business", label:"owner lookup → businessId scope"},
+    /* AI agents */
+    {id:"ag1", from:"svc_pipeline", to:"agent_nova", label:"every customer turn → Nova"},
+    {id:"ag2", from:"agent_nova", to:"svc_llm", label:"persona prompt → Claude call"},
+    {id:"ag3", from:"svc_pipeline", to:"agent_sale", label:"scan turn for closing deal"},
+    {id:"ag4", from:"agent_sale", to:"db_sales", label:"writes pending_sales (items[])"},
+    {id:"ag5", from:"svc_pipeline", to:"agent_receipt", label:"image message → vision check"},
+    {id:"ag6", from:"agent_receipt", to:"db_business", label:"reads bank_details to compare"},
+    {id:"ag7", from:"agent_receipt", to:"svc_llm", label:"vision call · never auto-confirms"},
+    {id:"ag8", from:"api_conversations", to:"agent_reply", label:"smart-replies request"},
+    {id:"ag9", from:"agent_reply", to:"svc_llm", label:"last 12 msgs → 3 reply chips"},
+    {id:"ag10", from:"api_import", to:"agent_import", label:"uploaded file text"},
+    {id:"ag11", from:"agent_import", to:"svc_llm", label:"Haiku parse → product rows"},
+    {id:"ag12", from:"svc_routing", to:"agent_router", label:"event → best team member", status:"planned"},
+    {id:"ag13", from:"db_metrics", to:"agent_insight", label:"weekly metrics read", status:"planned"},
+    {id:"ag14", from:"agent_insight", to:"ch_push", label:"owner digest push", status:"planned"},
+    /* deployment / middleware / jobs */
+    {id:"d1", from:"ext_droplet", to:"svc_server", label:"hosts · pm2 cluster ×1"},
+    {id:"d2", from:"ext_droplet", to:"svc_evolution", label:"hosts · docker-compose"},
+    {id:"d3", from:"ext_droplet", to:"svc_redis", label:"hosts · docker"},
+    {id:"d4", from:"ext_github", to:"svc_server", label:"push to main → ssh → pm2 restart (~30s)"},
+    {id:"d5", from:"svc_ingress", to:"svc_server", label:"public URL → port 18790"},
+    {id:"d6", from:"svc_server", to:"svc_cors", label:"every request: CORS + rate limits first"},
+    {id:"d7", from:"svc_cors", to:"svc_guard", label:"then requireAuth → requireBusiness"},
+    {id:"d8", from:"svc_server", to:"svc_errors", label:"wraps every route · request logging"},
+    {id:"d9", from:"svc_server", to:"svc_jobs", label:"on boot + every 24h"},
+    {id:"d10", from:"svc_jobs", to:"svc_evolution", label:"re-register webhooks for connected"},
+    {id:"d11", from:"svc_jobs", to:"db_conversations", label:"auto-archive idle >7 days"},
+    {id:"d12", from:"svc_evolution", to:"svc_redis", label:"session cache"},
+    {id:"d13", from:"svc_server", to:"api_health", label:"no-auth: / · /api/status · /healthz"},
+    {id:"d14", from:"svc_server", to:"svc_webhook", label:"routes POST /webhook/evolution → handler"},
+    {id:"d15", from:"svc_pipeline", to:"svc_saleshelp", label:"normalize + resolve detected items[]"},
+    {id:"d16", from:"api_sales", to:"svc_saleshelp", label:"itemsForDecrement on confirm"},
+    {id:"d17", from:"ext_codemagic", to:"cl_core", label:"builds the iOS app binary"}
+  ],
+  wireframes:{
+    page_dashboard:{start:"home", screens:{
+      home:{title:"Home", rows:[
+        [{id:"d_hd", label:"Greeting · ⚙ gear → Settings · 🔔 bell", kind:"pageTitle", t1:"Hello, Nikea.", t2:"", ico:"⚙ 🔔", nav:"page:page_settings", links:["db_business"]}],
+        [{id:"d_rev", label:"Revenue Today hero (7-day trend)", kind:"heroDark", t2:"Revenue Today · last 7 days", t1:"₦0", links:["db_sales"]}],
+        [{id:"d_msg", label:"Messages stat (30s poll)", kind:"darkStat", t2:"Messages", t1:"199", links:["db_metrics"]},
+         {id:"d_pnd", label:"Pending sales stat → Sales", kind:"darkStat", t2:"Pending sales", t1:"0", nav:"page:page_sales", links:["db_sales"]}],
+        [{id:"d_tgl", label:"Lagbot switch · pause / resume Nova", kind:"lagbotCard", t1:"Lagbot", t2:"OFFLINE", links:["api_ai"], note:"optimistic toggle — reverts on failure"}],
+        [{id:"d_wrn", label:"WhatsApp not connected warning", kind:"warnText", t1:"WhatsApp not connected", nav:"page:page_settings", links:["api_whatsapp"]}],
+        [{id:"d_sk", label:"Active Skills header · Manage →", kind:"section", t1:"Active skills", r:"manage", nav:"page:page_skills", links:[]}],
+        [{id:"d_tiles", label:"Skill tiles ×3", kind:"skillTiles", t1:"Multi-Language,Price Quote,Sales Closer", links:["db_skills"]}],
+        [{id:"d_rc", label:"Recent Chats header · View all +12", kind:"section", t1:"Recent chats", r:"view all +12", nav:"page:page_chats", links:["db_conversations"]}],
+        [{id:"d_c1", label:"Chat row · Segscolors", kind:"chatCard", t1:"Segscolors Int'l Services", dt:"04 Jun", t2:"I'm ready anytime", bar:"or", nav:"page:page_chats", links:["db_conversations"]}],
+        [{id:"d_c2", label:"Chat row · Sales Arete Wood", kind:"chatCard", t1:"Sales Arete Wood Kronospan", dt:"04 Jun", t2:"Payment received, many thanks sir.", bar:"or", nav:"page:page_chats", links:["db_conversations"]}],
+        [{id:"d_tabs", label:"Tab bar · Home active", kind:"tabbar", t1:"home", links:["page_chats","page_inventory","page_sales","page_wallet"]}]
+      ]}
+    }},
+
+    page_chats:{start:"inbox", screens:{
+      inbox:{title:"Inbox", rows:[
+        [{id:"c_hero", label:"Inbox hero · today / unread / leads", kind:"heroDark", t2:"Conversations", t1:"Inbox", ico:"⌕", stats:[["Today","0"],["Unread","1!"],["Leads · 7d","5!"]], links:["db_conversations","db_metrics"]}],
+        [{id:"c_cw", label:"● Connect WhatsApp status line", kind:"linkrow", t1:"● Connect WhatsApp", or:1, nav:"page:page_settings", links:["api_whatsapp"]},
+         {id:"c_lp", label:"● Lagbot is paused status line", kind:"linkrow", t1:"● Lagbot is paused", links:["api_ai"]}],
+        [{id:"c_f", label:"Filter pills", kind:"pillsT", t1:"All,Lead,Quoted,Paid,Archive", links:["db_conversations"]}],
+        [{id:"c_s1", label:"Needs You section", kind:"section", t1:"Needs you", b:"2", links:["db_conversations"]}],
+        [{id:"c_jl", label:"Chat card · Johnny Lee → thread", kind:"chatCard", t1:"Johnny Lee", dt:"04 Jun", t2:"Anything you like.", bar:"or", nav:"thread", links:["db_conversations"]}],
+        [{id:"c_j", label:"Chat card · J (responded, 1 unread)", kind:"chatCard", t1:"J", dt:"03 Jun", t2:"I think those links got sent by mistake?", tag:"Responded", badge:"1", bar:"gr", nav:"thread", links:["db_conversations"]}],
+        [{id:"c_s2", label:"AI Handling section", kind:"section", t1:"AI handling", b:"4", bi:1, links:["db_conversations"]}],
+        [{id:"c_sg", label:"Chat card · Segscolors (AI)", kind:"chatCard", t1:"Segscolors Int'l Services", dt:"04 Jun", t2:"I'm ready anytime", bar:"or", nav:"thread", links:["db_conversations","ch_realtime"]}],
+        [{id:"c_tabs", label:"Tab bar · Chats active", kind:"tabbar", t1:"chats", links:["page_dashboard","page_inventory","page_sales","page_wallet"]}]
+      ]},
+      thread:{title:"Chat view", rows:[
+        [{id:"t_hdr", label:"Header · back · Johnny Lee · AI Off pill", kind:"headerBack", t1:"Johnny Lee", t2:"You handling", pill:"AI Off", av:"JL", links:["db_conversations"], note:"AI pill flips status + logs human_interventions"}],
+        [{id:"t_b1", label:"Incoming bubble (live)", kind:"bubbleIn", t1:"Is this auto reply?", tm:"5:05 PM", links:["ch_realtime","db_conversations"]}],
+        [{id:"t_b2", label:"Nova reply bubble · Generated by Lagbot", kind:"bubbleOut", t1:"Nope, real person here. I'm Nova, Nikea Prime Solutions's assistant. What's the project about?", tm:"5:05 PM", cap:"Generated by Lagbot", links:["svc_pipeline","svc_llm"]}],
+        [{id:"t_dv", label:"Date divider", kind:"divider", t1:"Thursday", links:[]}],
+        [{id:"t_b3", label:"Incoming bubble · address", kind:"bubbleIn", t1:"NO 5, LOPEZ CLOSE, OFF WOLE OGUNJIMI STREET, OPEBI, IKEJA…", tm:"12:59 PM", links:["ch_realtime"]}],
+        [{id:"t_rc", label:"Receipt image bubble", kind:"receipt", t1:"receipt.jpg", tm:"2:49 PM", links:["svc_llm","svc_pipeline","db_business"], note:"vision verify vs bank_details ±5% — never auto-confirms"}],
+        [{id:"t_sug", label:"Lagbot Suggests bar", kind:"suggest", t1:"Lagbot suggests", t2:"David's still in Benin but I can definitely handle this for you! S…", links:["api_conversations","svc_llm"], note:"manual-mode only, customer spoke last"}],
+        [{id:"t_cmp", label:"Composer · type + send", kind:"composer", links:["api_whatsapp"], note:"manual reply stored as outbound/human"}]
+      ]}
+    }},
+
+    page_inventory:{start:"stock", screens:{
+      stock:{title:"Inventory", rows:[
+        [{id:"i_hero", label:"Inventory hero · total / low / value", kind:"heroDark", t2:"Stock", t1:"Inventory", ico:"⤴ ＋ ⌕", stats:[["Total","1"],["Low stock","1!"],["Value","₦750k"]], links:["db_products"]}],
+        [{id:"i_imp", label:"⤴ Import file → Product page", kind:"linkrow", t1:"⤴ Import file", nav:"page:page_product", links:["api_import"]},
+         {id:"i_add", label:"＋ Add product → editor", kind:"linkrow", t1:"＋ Add product", nav:"page:page_product", links:["db_products"]}],
+        [{id:"i_bs", label:"Best seller bar", kind:"bestSeller", t1:"Closet Installation", t2:"₦150,000", links:["db_products","db_sales"]}],
+        [{id:"i_p", label:"Category pills", kind:"pillsT", t1:"All,Others", links:["db_products"]}],
+        [{id:"i_s", label:"Needs Reorder section", kind:"section", t1:"Needs reorder", b:"1", links:["db_products"]}],
+        [{id:"i_pc", label:"Product card · Closet Installation (low)", kind:"productCard", t1:"Closet Installation", t2:"₦150,000", cat:"Others", q:"5", nav:"page:page_product", links:["db_products"], note:"≤2 stock fires stock_low → routing + push"}],
+        [{id:"i_tabs", label:"Tab bar · Inventory active", kind:"tabbar", t1:"inventory", links:["page_dashboard","page_chats","page_sales","page_wallet"]}]
+      ]}
+    }},
+
+    page_sales:{start:"sales", screens:{
+      sales:{title:"Your Sales", rows:[
+        [{id:"s_t", label:"Page title", kind:"pageTitle", t2:"Sales", t1:"Your Sales", links:[]}],
+        [{id:"s_c", label:"Subtitle", kind:"caption", t1:"Pipeline and payments. Mark what is done, push what needs a team.", links:[]}],
+        [{id:"s_seg", label:"Segment Sales | Teams → Teams", kind:"seg2", t1:"Sales,Teams", on:0, nav:"teams", links:[]}],
+        [{id:"s_rev", label:"Revenue hero · 24H", kind:"heroDark", t2:"Revenue", t1:"₦0", pl:"24H", lines:["Once Lagbot logs your first sale, the trend appears here."], links:["db_sales","db_metrics"]}],
+        [{id:"s_set", label:"Settlement section", kind:"section", t1:"Settlement", links:["db_business"]}],
+        [{id:"s_man", label:"Manual settlement card", kind:"choice", t1:"Manual", t2:"You confirm each payment", links:["api_sales"]},
+         {id:"s_auto", label:"Auto settlement card (selected)", kind:"choiceOn", t1:"Auto", t2:"Wallet credit settles it", links:["db_business"], note:"matching wallet payment auto-completes the sale"}],
+        [{id:"s_cc", label:"Settlement explainer", kind:"caption", t1:"When the matching payment lands in your Lagbot wallet, the sale moves to Completed automatically.", links:[]}],
+        [{id:"s_p", label:"Pending section", kind:"section", t1:"Pending", r:"waiting for payment", links:["db_sales"]}],
+        [{id:"s_pe", label:"Pending empty state", kind:"empty", t1:"No pending sales.", t2:"When Lagbot confirms an order with a customer, it will land here.", links:["db_sales","svc_pipeline"], note:"detectSale writes pending_sales (10s poll here)"}],
+        [{id:"s_cf", label:"Confirm Sale action (on pending card)", kind:"cta", t1:"Confirm sale", links:["api_sales"], note:"THE only stock decrement — idempotent"}],
+        [{id:"s_cm", label:"Completed section", kind:"section", t1:"Completed", r:"24H", links:["db_sales"]}],
+        [{id:"s_ce", label:"Completed empty state", kind:"empty", t1:"No completed sales yet.", t2:"Pending sales move here the moment they are settled.", links:["db_sales"]}],
+        [{id:"s_tabs", label:"Tab bar · Sales active", kind:"tabbar", t1:"sales", links:["page_dashboard","page_chats","page_inventory","page_wallet"]}]
+      ]},
+      teams:{title:"Your Team", rows:[
+        [{id:"tm_t", label:"Page title", kind:"pageTitle", t2:"Sales", t1:"Your Team", links:[]}],
+        [{id:"tm_c", label:"Subtitle", kind:"caption", t1:"Assign contacts to roles. Lagbot hands off the right details automatically.", links:[]}],
+        [{id:"tm_seg", label:"Segment Sales | Teams → Sales", kind:"seg2", t1:"Sales,Teams", on:1, nav:"sales", links:[]}],
+        [{id:"tm_r", label:"Roster section", kind:"section", t1:"Roster", r:"your team", links:["db_team"]}],
+        [{id:"tm_e", label:"Roster empty state", kind:"empty", t1:"No team members yet.", t2:"Add a driver, admin, or sales agent so Lagbot can route customers.", links:["db_team"]}],
+        [{id:"tm_add", label:"+ Add team member CTA", kind:"cta", t1:"＋ Add team member", links:["db_team"]}],
+        [{id:"tm_rr", label:"Routing Rules section", kind:"section", t1:"Routing rules", b:"2", bi:1, r:"auto handoff", links:["db_team"]}],
+        [{id:"tm_r1", label:"Rule · order ready → driver", kind:"ruleCard", t1:"Order ready for delivery", t2:"Send address + preferred time to", role:"Delivery driver", tpl:"\"Hey {team_member}, delivery for {custo…\"", links:["db_team","api_routing","svc_routing"]}],
+        [{id:"tm_r2", label:"Rule · refund → manager", kind:"ruleCard", t1:"Customer requests refund", t2:"Push conversation to", role:"Manager", amber:0, tpl:"\"{team_member}, refund request from {c…\"", links:["db_team","api_routing","svc_routing"]}],
+        [{id:"tm_nr", label:"+ New Rule", kind:"ctaLine", t1:"＋ New rule", links:["api_routing"]}],
+        [{id:"tm_h", label:"Rules hint", kind:"caption", t1:"Tap a rule to edit it. The chosen role confirms the handoff on WhatsApp; Lagbot relays their reply back to your customer.", links:["svc_routing"]}],
+        [{id:"tm_cn", label:"Connectors section", kind:"section", t1:"Connectors", r:"logistics partners", links:[]}],
+        [{id:"tm_c1", label:"Connector · inDrive", kind:"connector", t1:"inDrive", t2:"Driver dispatch · negotiated fares", links:[], note:"mocked — not wired (Phase 2)"}],
+        [{id:"tm_c2", label:"Connector · Glovo", kind:"connector", t1:"Glovo", t2:"Same-day courier · Lagos + Abuja", links:[], note:"mocked — not wired (Phase 2)"}],
+        [{id:"tm_c3", label:"Connector · Bolt", kind:"connector", t1:"Bolt", t2:"Driver dispatch · curb-to-curb", links:[], note:"mocked — not wired (Phase 2)"}],
+        [{id:"tm_tabs", label:"Tab bar · Sales active", kind:"tabbar", t1:"sales", links:["page_dashboard","page_chats","page_inventory","page_wallet"]}]
+      ]}
+    }},
+
+    page_wallet:{start:"wallet", screens:{
+      wallet:{title:"Lagbot Wallet", rows:[
+        [{id:"w_t", label:"Page title", kind:"pageTitle", t2:"Wallet", t1:"Lagbot Wallet", links:[]}],
+        [{id:"w_c", label:"Subtitle", kind:"caption", t1:"Customer payments collect here. Withdraw to your bank any time.", links:[]}],
+        [{id:"w_b", label:"Balance card · ₦508,000 / settles ₦18,000", kind:"balanceCard", t1:"₦508,000", t2:"₦18,000", sub:"Last from Mrs. Adekoya, 3h ago.", payk:"Pays out to", payn:"David Shodunke", payb:"Access Bank · ····4848", links:["api_wallet","db_business"], note:"⚠ demo ledger shows to real users — App Review risk · GET /wallet is a stub"}],
+        [{id:"w_wd", label:"Withdraw to bank CTA → sheet", kind:"cta", t1:"↓ Withdraw to bank", nav:"withdraw", links:["api_wallet"], note:"⚠ POST /api/wallet/withdraw — route does not exist"}],
+        [{id:"w_tax", label:"Tax · month summary + export", kind:"taxCard", t2:"Tax · this month", t1:"You've earned ₦262,000 this month.", sub:"71% goods sold, 17% services, 11% refunds.", lk:"Export ledger", links:["db_sales"], note:"CSV export stubbed"}],
+        [{id:"w_l", label:"Ledger section", kind:"section", t1:"Ledger", r:"8 transactions", links:["api_wallet"]}],
+        [{id:"w_l1", label:"Ledger · Mrs. Adekoya +62k", kind:"ledger", t1:"Mrs. Adekoya", t2:"Steel security door · 3h ago", amt:"+₦62,000", tag:"Settled", cat:"Goods", links:["api_wallet"]}],
+        [{id:"w_l2", label:"Ledger · Tunde Bakare pending", kind:"ledger", t1:"Tunde Bakare", t2:"Installation deposit · 6h ago", amt:"+₦18,000", tag:"Pending", cat:"Services", links:["api_wallet"]}],
+        [{id:"w_l3", label:"Ledger · withdrawal −80k", kind:"ledger", t1:"Anonymous", t2:"Withdrawal to Wema · 5 Jun", amt:"−₦80,000", tag:"Settled", links:["api_wallet"]}],
+        [{id:"w_tabs", label:"Tab bar · Wallet active", kind:"tabbar", t1:"wallet", links:["page_dashboard","page_chats","page_inventory","page_sales"]}]
+      ]},
+      withdraw:{title:"Withdraw", rows:[
+        [{id:"ww_h", label:"Header · back to wallet", kind:"headerBack", t1:"Withdraw to bank", t2:"Lagbot Wallet", av:"₦", links:["api_wallet"]}],
+        [{id:"ww_b", label:"Available balance", kind:"darkStat", t2:"Available", t1:"₦508,000", links:["api_wallet"]}],
+        [{id:"ww_a", label:"Amount input", kind:"input", links:[]}],
+        [{id:"ww_k", label:"Destination bank line", kind:"caption", t1:"To: Access Bank ····4848 · David Shodunke", links:["db_business"]}],
+        [{id:"ww_c", label:"Confirm withdrawal", kind:"cta", t1:"Confirm withdrawal", links:["api_wallet"], note:"⚠ endpoint missing — fails today (Phase 3 / Paystack)"}],
+        [{id:"ww_n", label:"Settlement note", kind:"caption", t1:"Settles to your bank within 24h once the route exists.", links:["ext_paystack"]}]
+      ]}
+    }},
+
+    page_auth:{start:"welcome", screens:{
+      welcome:{title:"Welcome", rows:[
+        [{id:"a_h", label:"Brand hero", kind:"heroDark", t2:"Welcome", t1:"Lagbot", lines:["AI that sells on your WhatsApp."], links:[]}],
+        [{id:"a_g", label:"Get started → signup", kind:"cta", t1:"Get started", nav:"signup", links:[]}],
+        [{id:"a_l", label:"Log in → login", kind:"ctaLine", t1:"Log in", nav:"login", links:[]}]
+      ]},
+      login:{title:"Log in", rows:[
+        [{id:"lg_t", label:"Title", kind:"pageTitle", t2:"Auth", t1:"Log in", links:[]}],
+        [{id:"lg_e", label:"Email input", kind:"input", links:["sb_auth"]}],
+        [{id:"lg_p", label:"Password input", kind:"input", links:["sb_auth"]}],
+        [{id:"lg_f", label:"Forgot password link", kind:"linkrow", t1:"Forgot password?", links:[], note:"⚠ no-op — unified gap #4"}],
+        [{id:"lg_b", label:"Log in → Dashboard", kind:"cta", t1:"Log in", nav:"page:page_dashboard", links:["sb_auth"]}],
+        [{id:"lg_g", label:"Google / Apple OAuth", kind:"ctaLine", t1:"Continue with Google · Apple", links:["sb_auth"], note:"OAuth PKCE → routes to Onboarding"}]
+      ]},
+      signup:{title:"Sign up", rows:[
+        [{id:"su_t", label:"Title", kind:"pageTitle", t2:"Auth", t1:"Create account", links:[]}],
+        [{id:"su_e", label:"Email input", kind:"input", links:["sb_auth"]}],
+        [{id:"su_p", label:"Password input", kind:"input", links:["sb_auth"]}],
+        [{id:"su_b", label:"Continue → verify OTP", kind:"cta", t1:"Continue", nav:"otp", links:["sb_auth","api_account"]}]
+      ]},
+      otp:{title:"Verify", rows:[
+        [{id:"ot_t", label:"Title", kind:"pageTitle", t2:"Auth", t1:"Verify your email", links:[]}],
+        [{id:"ot_c", label:"Helper text", kind:"caption", t1:"We sent a 6-digit code to your email.", links:[]}],
+        [{id:"ot_o", label:"OTP boxes", kind:"otp", links:["sb_auth"]}],
+        [{id:"ot_r", label:"Resend code (45s)", kind:"linkrow", t1:"Resend code (45s)", links:["sb_auth"]}],
+        [{id:"ot_b", label:"Verify → Onboarding", kind:"cta", t1:"Verify", nav:"page:page_onboarding", links:["sb_auth"]}]
+      ]}
+    }},
+
+    page_onboarding:{start:"wizard", screens:{
+      wizard:{title:"Setup wizard", rows:[
+        [{id:"ob_t", label:"Title", kind:"pageTitle", t2:"Onboarding", t1:"Set up your business", links:[]}],
+        [{id:"ob_s", label:"Step pills 1–6", kind:"pillsT", t1:"1,2,3,4,5,6", links:[]}],
+        [{id:"ob_n", label:"Business name input", kind:"input", links:["db_business"]}],
+        [{id:"ob_ty", label:"Business type cards", kind:"pillsT", t1:"Retail,Services,Food,Other", links:["db_business"]}],
+        [{id:"ob_to", label:"Tone cards", kind:"pillsT", t1:"Friendly,Formal,Playful", links:["db_business"]}],
+        [{id:"ob_c", label:"Continue → setup steps", kind:"cta", t1:"Continue", nav:"setup", links:["db_business"]}]
+      ]},
+      setup:{title:"Finish setup", rows:[
+        [{id:"st_t", label:"Title", kind:"pageTitle", t2:"Onboarding", t1:"Finish setup", links:[]}],
+        [{id:"st_p", label:"Add first product → editor", kind:"empty", t1:"Add your first product", t2:"Name, price and stock — Nova quotes from this.", nav:"page:page_product", links:["db_products"]}],
+        [{id:"st_nv", label:"Configure Nova · name + brain", kind:"empty", t1:"Configure Nova", t2:"Assistant name, language, what she can promise.", links:["db_business","api_ai"]}],
+        [{id:"st_sk", label:"Activate starter skills (max 3)", kind:"toggles", links:["db_skills"]}],
+        [{id:"st_qr", label:"WhatsApp pairing code", kind:"code", t1:"L4G·B0T", links:["api_whatsapp","svc_evolution"], note:"status poll every 3s ×60"}],
+        [{id:"st_d", label:"Go to Dashboard →", kind:"cta", t1:"Go to Dashboard →", nav:"page:page_dashboard", links:[]}]
+      ]}
+    }},
+
+    page_product:{start:"editor", screens:{
+      editor:{title:"Product editor", rows:[
+        [{id:"p_h", label:"Header · back", kind:"headerBack", t1:"New product", t2:"Inventory", av:"▣", links:["db_products"]}],
+        [{id:"p_ph", label:"Photo picker", kind:"hatch", links:[], note:"⚠ image picker stubbed — does nothing"}],
+        [{id:"p_n", label:"Name input", kind:"input", links:["db_products"]}],
+        [{id:"p_pr", label:"Price input", kind:"input", links:["db_products"]},
+         {id:"p_st", label:"Stock input", kind:"input", links:["db_products"]}],
+        [{id:"p_ch", label:"Sizes / colors chips", kind:"pillsT", t1:"S,M,L,Walnut,Oak", links:["db_products"]}],
+        [{id:"p_sv", label:"Save product (Supabase direct)", kind:"cta", t1:"Save product", links:["db_products"]}],
+        [{id:"p_im", label:"Import from file → import screen", kind:"ctaLine", t1:"⤴ Import from file", nav:"import", links:["api_import"]}]
+      ]},
+      import:{title:"Import", rows:[
+        [{id:"im_h", label:"Header · back", kind:"headerBack", t1:"Import products", t2:"CSV · Excel · PDF", av:"⤴", links:["api_import"]}],
+        [{id:"im_d", label:"Drop zone · CSV / Excel / PDF", kind:"hatch", links:["api_import"], note:"FormData upload, per-biz 10/min limit"}],
+        [{id:"im_c", label:"Parser note", kind:"caption", t1:"Claude (Haiku) extracts rows — preview only, nothing saved yet.", links:["svc_llm","ext_anthropic"]}],
+        [{id:"im_l", label:"Parsed preview rows", kind:"list", links:["api_import"]}],
+        [{id:"im_b", label:"Import all → insert client-side", kind:"cta", t1:"Import 24 products", links:["db_products"], note:"insert happens from the app, not the backend"}]
+      ]}
+    }},
+
+    page_analytics:{start:"overview", screens:{
+      overview:{title:"Analytics", rows:[
+        [{id:"an_h", label:"Header · back (hidden tab)", kind:"headerBack", t1:"Analytics", t2:"Hidden tab · 30s poll", av:"📈", links:["db_metrics"]}],
+        [{id:"an_p", label:"Period pills", kind:"pillsT", t1:"7D,1M,2M,6M", links:["db_metrics"]}],
+        [{id:"an_rt", label:"Response time chart", kind:"chart", links:["db_metrics"]}],
+        [{id:"an_a", label:"AI accuracy 94%", kind:"darkStat", t2:"AI accuracy", t1:"94%", links:["db_metrics"], note:"RPC calculate_ai_accuracy"},
+         {id:"an_s", label:"Satisfaction 4.6/5", kind:"darkStat", t2:"Satisfaction", t1:"4.6/5", links:["db_metrics"]}],
+        [{id:"an_i", label:"Human interventions card", kind:"empty", t1:"Human interventions", t2:"Times you took over from Nova this period.", links:["db_metrics","db_conversations"]}],
+        [{id:"an_tc", label:"Top customers ranked", kind:"list", links:["db_conversations"]}]
+      ]}
+    }},
+
+    page_skills:{start:"skills", screens:{
+      skills:{title:"Skills", rows:[
+        [{id:"k_h", label:"Header · back (hidden tab)", kind:"headerBack", t1:"Skills", t2:"Max 3 active", av:"⚡", links:["db_skills"]}],
+        [{id:"k_m", label:"Active 2 / 3 meter", kind:"meterCard", links:["db_skills"]}],
+        [{id:"k_t", label:"Skill toggle rows (optimistic)", kind:"toggles", links:["db_skills"]}],
+        [{id:"k_l", label:"Locked · Upgrade card", kind:"empty", t1:"Locked skills", t2:"Upgrade to unlock more.", links:[], note:"⚠ empty Pressable — no action wired"}]
+      ]}
+    }},
+
+    page_settings:{start:"hub", screens:{
+      hub:{title:"Settings hub", rows:[
+        [{id:"g_h", label:"Header · back", kind:"headerBack", t1:"Settings", t2:"Hub + 9 sub-pages", av:"⚙", links:["db_business"]}],
+        [{id:"g_p", label:"Profile · save + refresh", kind:"bar", links:["db_business","api_ai"]}],
+        [{id:"g_wa", label:"WhatsApp · pairing → poll → disconnect", kind:"toggleCard", links:["api_whatsapp","svc_evolution"]}],
+        [{id:"g_b", label:"Bank details", kind:"input", links:["db_business"], note:"used by receipt verification ±5%"},
+         {id:"g_pe", label:"Persona + tone", kind:"input", links:["db_business","api_ai"]}],
+        [{id:"g_bi", label:"Business info · hours", kind:"empty", t1:"Business info", t2:"Hours, address, what Nova may promise.", links:["db_business","api_ai"]}],
+        [{id:"g_tk", label:"Tokens usage meter", kind:"meterCard", links:["db_tokens"]}],
+        [{id:"g_st", label:"Token store → packs", kind:"empty", t1:"Token store", t2:"₦4k · ₦18.75k · ₦70k packs.", nav:"store", links:["api_wallet"], note:"⚠ purchase/init endpoint missing"}],
+        [{id:"g_pw", label:"Password change", kind:"input", links:["sb_auth"]},
+         {id:"g_so", label:"Sign out", kind:"ctaLine", t1:"Sign out", links:["sb_auth"]}],
+        [{id:"g_bl", label:"Blocked contacts picker", kind:"list", links:["db_business","db_conversations"]}],
+        [{id:"g_dl", label:"Delete account · Danger Zone", kind:"cta", t1:"Delete account", links:["api_account"], note:"App Store 5.1.1(v) — Evolution delete → CASCADE → auth.admin.deleteUser"}]
+      ]},
+      store:{title:"Token store", rows:[
+        [{id:"ts_h", label:"Header · back", kind:"headerBack", t1:"Token store", t2:"Buy Nova credits", av:"⚡", links:["db_tokens"]}],
+        [{id:"ts_g", label:"Pack grid · ₦4k / ₦18.75k / ₦70k", kind:"pillsT", t1:"₦4k,₦18.75k,₦70k", links:["api_wallet","ext_paystack"], note:"Paystack checkout — Phase 2"}],
+        [{id:"ts_b", label:"Buy tokens", kind:"cta", t1:"Buy tokens", links:["api_wallet","ext_paystack"], note:"⚠ purchase/init route missing — unified gap #1"}],
+        [{id:"ts_c", label:"Buckets note", kind:"caption", t1:"Spend order: free → rolled → bonus → purchased. 500 free/day, Lagos-midnight refill.", links:["db_tokens","svc_token"]}]
+      ]}
+    }},
+
+    page_admins:{start:"roster", screens:{
+      roster:{title:"Admins", rows:[
+        [{id:"m_h", label:"Header · back (hidden tab)", kind:"headerBack", t1:"Admins", t2:"Hidden tab", av:"👥", links:["db_team"]}],
+        [{id:"m_s1", label:"Total members stat", kind:"darkStat", t2:"Total", t1:"0", links:["db_team"]},
+         {id:"m_s2", label:"Roles stat", kind:"darkStat", t2:"Roles", t1:"3", links:["db_team"]}],
+        [{id:"m_a", label:"+ Add member", kind:"cta", t1:"＋ Add member", links:["db_team"]}],
+        [{id:"m_l", label:"Member rows + delete", kind:"list", links:["db_team"], note:"⚠ same team_members table as Sales ▸ Teams — two UIs, one table"}]
+      ]}
+    }}
+  }
+};}
+</script>
+<script>
+(function(){
+"use strict";
+/* ════════════════════════════ helpers ════════════════════════════ */
+const $ = id => document.getElementById(id);
+const SVGNS = "http://www.w3.org/2000/svg";
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clone = o => (typeof structuredClone==="function") ? structuredClone(o) : JSON.parse(JSON.stringify(o));
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+const mapEl=$("map"), viewport=$("viewport"), edgesG=$("edgesG"), nodesG=$("nodesG"),
+      ghost=$("ghost"), layerLabelsG=$("layerLabels"),
+      panel=$("panel"), panelBody=$("panelBody"), panelTitle=$("panelTitle"), panelEyebrow=$("panelEyebrow"),
+      drawer=$("drawer"), wfStack=$("wfStack"), elInspector=$("elInspector"),
+      traceBar=$("traceBar"), tracePath=$("tracePath"),
+      saveDot=$("saveDot"), toastEl=$("toast"), scrim=$("scrim"), helpModal=$("helpModal");
+
+/* ════════════════════════════ state ════════════════════════════ */
+let state=null;
+/* fallback: plain browsers get persistence via localStorage */
+if(!(window.storage && typeof window.storage.get==="function")){
+  try{
+    localStorage.setItem("lagbot:probe","1"); localStorage.removeItem("lagbot:probe");
+    window.storage={
+      get:async k=>({value:localStorage.getItem(k)}),
+      set:async (k,v)=>{ localStorage.setItem(k,v); }
+    };
+  }catch(e){ /* storage blocked — stay session-only */ }
+}
+const hasStore = !!(window.storage && typeof window.storage.get==="function" && typeof window.storage.set==="function");
+
+function ensureShape(s){
+  if(!s || typeof s!=="object") return clone(defaultState());
+  if(!Array.isArray(s.nodes)||!Array.isArray(s.edges)) return clone(defaultState());
+  s.wireframes = s.wireframes && typeof s.wireframes==="object" ? s.wireframes : {};
+  Object.keys(s.wireframes).forEach(k=>{
+    const wf=s.wireframes[k];
+    if(wf && Array.isArray(wf.rows)){ s.wireframes[k]={start:"main",screens:{main:{title:"Main",rows:wf.rows}}}; return; }
+    if(wf && (!wf.screens || typeof wf.screens!=="object")){ wf.screens={main:{title:"Main",rows:[]}}; }
+    if(wf && (!wf.start || !wf.screens[wf.start])){ wf.start=Object.keys(wf.screens)[0]||"main"; }
+  });
+  s.meta = s.meta || {name:"Lagbot — Backend ⇄ Frontend Circuit", v:1};
+  s.nodes.forEach(n=>{ n.x=+n.x||0; n.y=+n.y||0; if(!TYPES[n.type]) n.type="service"; });
+  s.edges = s.edges.filter(e=>e && e.from && e.to);
+  return s;
+}
+async function loadState(){
+  if(hasStore){
+    try{
+      const r = await window.storage.get(STORE_KEY);
+      if(r && r.value){ return ensureShape(JSON.parse(r.value)); }
+    }catch(e){ /* key missing or parse fail → defaults */ }
+  }
+  return clone(defaultState());
+}
+let saveTimer=null;
+function setDot(t,cls){ saveDot.textContent=t; saveDot.className=cls||""; }
+function autosave(){
+  setDot("Saving…","");
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async ()=>{
+    let localOk=false;
+    if(hasStore){ try{ await window.storage.set(STORE_KEY, JSON.stringify(state)); localOk=true; }catch(e){} }
+    if(syncOn){
+      const ok=await cloudSave();
+      setDot(ok?"Synced ✓":"Sync error — saved here only", ok?"ok":"warn");
+    } else {
+      setDot(localOk?"Saved":"Session only", localOk?"ok":"warn");
+    }
+  },400);
+}
+/* hard flush — guarantees the latest state lands in storage even if the page
+   is reloaded or closed before the debounced save fires */
+function flushSave(){
+  if(!state) return;
+  clearTimeout(saveTimer);
+  if(hasStore){ try{ window.storage.set(STORE_KEY, JSON.stringify(state)); }catch(e){} }
+  try{ if(window.localStorage) localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+  /* best-effort cloud flush that survives page close */
+  if(syncOn){
+    try{
+      const c=syncCfg();
+      fetch(c.url+"/rest/v1/sysmap?on_conflict=id",{
+        method:"POST", keepalive:true,
+        headers:{apikey:c.key, Authorization:"Bearer "+c.key, "Content-Type":"application/json", Prefer:"resolution=merge-duplicates"},
+        body:JSON.stringify([{id:SYNC_DOC_ID, doc:state, updated_at:new Date().toISOString(), updated_by:editorNameQuiet(), client_id:CLIENT_ID}])
+      });
+    }catch(e){}
+  }
+}
+window.addEventListener("pagehide",flushSave);
+window.addEventListener("beforeunload",flushSave);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") flushSave(); });
+
+/* ════════════════════════════ team sync via Supabase ════════════════════════════ */
+const SYNC_DOC_ID="lagbot";
+const CLIENT_ID="c_"+Math.random().toString(36).slice(2);
+let sb=null, sbChannel=null, syncOn=false;
+function editorNameQuiet(){ try{ return sessionStorage.getItem("lagbot:editor")||"Unknown"; }catch(e){ return "Unknown"; } }
+function syncCfg(){
+  try{ return {url:(localStorage.getItem("lagbot:sb_url")||"").trim().replace(/\/+$/,""), key:(localStorage.getItem("lagbot:sb_key")||"").trim()}; }
+  catch(e){ return {url:"",key:""}; }
+}
+function syncInit(){
+  if(sbChannel&&sb){ try{ sb.removeChannel(sbChannel); }catch(e){} }
+  sb=null; sbChannel=null; syncOn=false;
+  const c=syncCfg();
+  if(!c.url||!c.key) return;
+  if(!window.supabase){ toast("Couldn't load the sync library — check your internet","warn"); return; }
+  try{ sb=window.supabase.createClient(c.url,c.key); syncOn=true; }catch(e){ sb=null; return; }
+  sbChannel=sb.channel("sysmap-live")
+    .on("postgres_changes",{event:"*",schema:"public",table:"sysmap",filter:"id=eq."+SYNC_DOC_ID},payload=>{
+      const row=payload.new;
+      if(!row||!row.doc||row.client_id===CLIENT_ID) return;
+      applyRemote(row);
+    })
+    .subscribe();
+}
+function applyRemote(row){
+  try{
+    state=ensureShape(clone(row.doc));
+    clearFocusAll(); rebuild(); renderPanel();
+    if(hasStore){ try{ window.storage.set(STORE_KEY, JSON.stringify(state)); }catch(e){} }
+    setDot("Synced ✓","ok");
+    toast(`Map updated by ${row.updated_by||"a teammate"} — synced`);
+  }catch(e){}
+}
+async function cloudLoad(){
+  if(!sb) return null;
+  try{
+    const r=await sb.from("sysmap").select("doc").eq("id",SYNC_DOC_ID).maybeSingle();
+    if(r.error||!r.data||!r.data.doc) return null;
+    return ensureShape(clone(r.data.doc));
+  }catch(e){ return null; }
+}
+async function cloudSave(){
+  if(!sb||!state) return false;
+  try{
+    const r=await sb.from("sysmap").upsert({id:SYNC_DOC_ID, doc:state, updated_at:new Date().toISOString(), updated_by:editorNameQuiet(), client_id:CLIENT_ID});
+    return !r.error;
+  }catch(e){ return false; }
+}
+
+/* ════════════════════════════ view (pan/zoom) ════════════════════════════ */
+const view={x:60,y:60,k:1};
+function applyView(){ viewport.setAttribute("transform",`translate(${view.x},${view.y}) scale(${view.k})`); }
+function worldPt(cx,cy){ const r=mapEl.getBoundingClientRect(); return {x:(cx-r.left-view.x)/view.k, y:(cy-r.top-view.y)/view.k}; }
+function zoomAt(cx,cy,f){
+  const r=mapEl.getBoundingClientRect();
+  const px=cx-r.left, py=cy-r.top;
+  const wx=(px-view.x)/view.k, wy=(py-view.y)/view.k;
+  view.k=clamp(view.k*f,.2,2.6);
+  view.x=px-wx*view.k; view.y=py-wy*view.k;
+  applyView();
+}
+function panelPad(){ return (window.innerWidth>760 && !panel.classList.contains("hidden")) ? 312 : 0; }
+function fitView(){
+  if(!state.nodes.length) return;
+  let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;
+  state.nodes.forEach(n=>{ x1=Math.min(x1,n.x); y1=Math.min(y1,n.y); x2=Math.max(x2,n.x+NODE_W); y2=Math.max(y2,n.y+NODE_H); });
+  const pad=80, r=mapEl.getBoundingClientRect();
+  const aw=Math.max(120, r.width-panelPad()-24), ah=Math.max(120, r.height-24);
+  view.k=clamp(Math.min(aw/(x2-x1+pad*2), ah/(y2-y1+pad*2)),.2,2.6);
+  view.x=( (r.width-panelPad()) - (x2-x1)*view.k )/2 - x1*view.k;
+  view.y=( r.height - (y2-y1)*view.k )/2 - y1*view.k;
+  applyView();
+}
+
+/* ════════════════════════════ build / render map ════════════════════════════ */
+const nodeEls=new Map(), edgeEls=new Map();
+const nodeById = id => state.nodes.find(n=>n.id===id);
+const edgesOf = id => state.edges.filter(e=>e.from===id||e.to===id);
+
+function nodeCenter(n){ return {x:n.x+NODE_W/2, y:n.y+NODE_H/2}; }
+
+function svgEl(tag,attrs,parent){
+  const el=document.createElementNS(SVGNS,tag);
+  for(const k in attrs) el.setAttribute(k,attrs[k]);
+  if(parent) parent.appendChild(el);
+  return el;
+}
+
+function chipText(n){
+  let t=TYPES[n.type].label;
+  if(n.status==="gap") t+=" · GAP";
+  else if(n.status==="planned") t+=" · PLANNED";
+  return t;
+}
+
+function buildNode(n){
+  const g=svgEl("g",{class:"node","data-id":n.id, transform:`translate(${n.x},${n.y})`});
+  const color=TYPES[n.type].color;
+  const body=svgEl("rect",{class:"body",width:NODE_W,height:NODE_H,rx:9,stroke:color,"stroke-opacity":.55},g);
+  if(n.status==="gap"||n.status==="planned") body.setAttribute("stroke-dasharray","4 4");
+  svgEl("rect",{class:"accent",x:0,y:0,width:3,height:NODE_H,fill:color},g);
+  const chip=svgEl("text",{class:"chip",x:14,y:15,fill:color},g); chip.textContent=chipText(n);
+  const title=svgEl("text",{class:"title",x:14,y:32},g); title.textContent=n.label;
+  const sub=svgEl("text",{class:"sub",x:14,y:46},g);
+  sub.textContent=(n.sub||"").length>40 ? n.sub.slice(0,39)+"…" : (n.sub||"");
+  let wfm=null, gm=null;
+  if(n.wf){ wfm=svgEl("text",{class:"wfmark",x:NODE_W-12,y:15,"text-anchor":"end"},g); wfm.textContent="▣ WIREFRAME"; }
+  if(n.status==="gap"||n.status==="planned"){ gm=svgEl("text",{class:"gapmark",x:NODE_W-12,y:NODE_H-8,"text-anchor":"end"},g); gm.textContent=n.status==="gap"?"⚠ gap":"◌ planned"; }
+  const tt=svgEl("title",{},g); tt.textContent=`${n.label} — ${n.sub||""}`;
+  nodesG.appendChild(g);
+  nodeEls.set(n.id,{g,body,chip,title,sub,tt});
+  wireNode(g,n.id);
+}
+
+function edgeMarker(e,litOrSel){
+  if(litOrSel) return "url(#arrLit)";
+  if(e.status==="gap"||e.status==="planned") return "url(#arrWarn)";
+  return "url(#arr)";
+}
+function buildEdge(e){
+  const g=svgEl("g",{class:"edge","data-id":e.id});
+  if(e.status==="gap") g.classList.add("gap");
+  if(e.status==="planned") g.classList.add("planned");
+  const hit=svgEl("path",{class:"hit",d:""},g);
+  const line=svgEl("path",{class:"line",d:"", "marker-end":edgeMarker(e,false)},g);
+  if(e.dir==="both") line.setAttribute("marker-start",edgeMarker(e,false));
+  const tt=svgEl("title",{},g); setEdgeTitle(e,tt);
+  edgesG.appendChild(g);
+  edgeEls.set(e.id,{g,line,hit,tt});
+  hit.addEventListener("click",ev=>{ ev.stopPropagation(); if(connect.on) return; selectEdge(e.id); });
+}
+function setEdgeTitle(e,tt){
+  const a=nodeById(e.from),b=nodeById(e.to);
+  tt = tt || edgeEls.get(e.id).tt;
+  tt.textContent=`${a?a.label:e.from} ${e.dir==="both"?"⇄":"→"} ${b?b.label:e.to}${e.label?" — "+e.label:""}`;
+}
+
+/* anchors: distribute connection points along each node side, sorted by counterpart */
+function computeAnchors(){
+  const sides=new Map(); // nodeId -> {left:[],right:[],top:[],bottom:[]}
+  const get=id=>{ if(!sides.has(id)) sides.set(id,{left:[],right:[],top:[],bottom:[]}); return sides.get(id); };
+  const TH=140;
+  state.edges.forEach(e=>{
+    const a=nodeById(e.from), b=nodeById(e.to);
+    if(!a||!b) return;
+    const ca=nodeCenter(a), cb=nodeCenter(b);
+    const dx=cb.x-ca.x, dy=cb.y-ca.y;
+    let sa,sb;
+    if(dx>TH){ sa="right"; sb="left"; }
+    else if(dx<-TH){ sa="left"; sb="right"; }
+    else { sa = dy>=0?"bottom":"top"; sb = dy>=0?"top":"bottom"; }
+    get(e.from)[sa].push({e,end:"from",ox:cb.x,oy:cb.y});
+    get(e.to)[sb].push({e,end:"to",ox:ca.x,oy:ca.y});
+  });
+  const anchors=new Map(); // edgeId:end -> {x,y,side}
+  sides.forEach((s,nid)=>{
+    const n=nodeById(nid); if(!n) return;
+    ["left","right","top","bottom"].forEach(side=>{
+      const list=s[side];
+      if(!list.length) return;
+      if(side==="left"||side==="right") list.sort((p,q)=>p.oy-q.oy);
+      else list.sort((p,q)=>p.ox-q.ox);
+      list.forEach((p,i)=>{
+        const f=(i+1)/(list.length+1);
+        let x,y;
+        if(side==="left"){ x=n.x; y=n.y+NODE_H*f; }
+        else if(side==="right"){ x=n.x+NODE_W; y=n.y+NODE_H*f; }
+        else if(side==="top"){ x=n.x+NODE_W*f; y=n.y; }
+        else { x=n.x+NODE_W*f; y=n.y+NODE_H; }
+        anchors.set(p.e.id+":"+p.end,{x,y,side});
+      });
+    });
+  });
+  return anchors;
+}
+function bez(p1,p2){
+  const h1 = handle(p1,p2), h2 = handle(p2,p1);
+  return `M ${p1.x} ${p1.y} C ${p1.x+h1.x} ${p1.y+h1.y}, ${p2.x+h2.x} ${p2.y+h2.y}, ${p2.x} ${p2.y}`;
+}
+function handle(p,o){
+  const dx=Math.abs(o.x-p.x), dy=Math.abs(o.y-p.y);
+  if(p.side==="right") return {x: clamp(dx*.45,46,190), y:0};
+  if(p.side==="left")  return {x:-clamp(dx*.45,46,190), y:0};
+  if(p.side==="bottom")return {x:0, y: clamp(dy*.45,40,150)};
+  if(p.side==="top")   return {x:0, y:-clamp(dy*.45,40,150)};
+  return {x:0,y:0};
+}
+function updatePositions(){
+  state.nodes.forEach(n=>{
+    const el=nodeEls.get(n.id);
+    if(el) el.g.setAttribute("transform",`translate(${n.x},${n.y})`);
+  });
+  const anchors=computeAnchors();
+  state.edges.forEach(e=>{
+    const el=edgeEls.get(e.id); if(!el) return;
+    let p1=anchors.get(e.id+":from"), p2=anchors.get(e.id+":to");
+    if(!p1||!p2){
+      const a=nodeById(e.from), b=nodeById(e.to);
+      if(!a||!b) return;
+      p1={...nodeCenter(a),side:"right"}; p2={...nodeCenter(b),side:"left"};
+    }
+    const d=bez(p1,p2);
+    el.line.setAttribute("d",d); el.hit.setAttribute("d",d);
+  });
+  renderLayerLabels();
+}
+function renderLayerLabels(){
+  layerLabelsG.innerHTML="";
+  LAYERS.forEach(L=>{
+    const ns=state.nodes.filter(n=>n.layer===L.id);
+    if(!ns.length) return;
+    const mx=ns.reduce((s,n)=>s+n.x,0)/ns.length + NODE_W/2;
+    const my=Math.min(...ns.map(n=>n.y));
+    const t1=svgEl("text",{class:"layer-label",x:mx,y:my-44,"text-anchor":"middle"},layerLabelsG); t1.textContent=L.name;
+    const t2=svgEl("text",{class:"layer-sub",x:mx,y:my-30,"text-anchor":"middle"},layerLabelsG); t2.textContent=L.sub;
+  });
+}
+function rebuild(){
+  nodesG.innerHTML=""; edgesG.innerHTML="";
+  nodeEls.clear(); edgeEls.clear();
+  state.edges.forEach(buildEdge);
+  state.nodes.forEach(buildNode);
+  updatePositions();
+  refreshClasses();
+}
+
+/* ════════════════════════════ focus / search / classes ════════════════════════════ */
+let focus=null;      // {nodes:Set, edges:Set}
+let searchQ="";
+let selection=null;  // {kind:"node"|"edge", id}
+
+function matchSearch(n){
+  if(!searchQ) return true;
+  return (n.label+" "+(n.sub||"")+" "+n.id).toLowerCase().includes(searchQ);
+}
+function refreshClasses(){
+  const dimByFocus = !!focus;
+  state.nodes.forEach(n=>{
+    const el=nodeEls.get(n.id); if(!el) return;
+    const inF = !focus || focus.nodes.has(n.id);
+    const inS = matchSearch(n);
+    el.g.classList.toggle("dim", (dimByFocus&&!inF) || (!!searchQ&&!inS));
+    el.g.classList.toggle("lit", dimByFocus&&inF);
+    el.g.classList.toggle("selected", !!selection && selection.kind==="node" && selection.id===n.id);
+  });
+  state.edges.forEach(e=>{
+    const el=edgeEls.get(e.id); if(!el) return;
+    const a=nodeById(e.from), b=nodeById(e.to);
+    const sDim = !!searchQ && !(a&&matchSearch(a)) && !(b&&matchSearch(b));
+    const inF = !focus || focus.edges.has(e.id);
+    const lit = dimByFocus && inF;
+    const sel = !!selection && selection.kind==="edge" && selection.id===e.id;
+    el.g.classList.toggle("dim",(dimByFocus&&!inF)||sDim);
+    el.g.classList.toggle("lit",lit);
+    el.g.classList.toggle("selected",sel);
+    el.line.setAttribute("marker-end",edgeMarker(e,lit||sel));
+    if(e.dir==="both") el.line.setAttribute("marker-start",edgeMarker(e,lit||sel));
+  });
+}
+function setFocus(nodes,edges){ focus={nodes,edges}; refreshClasses(); }
+function clearFocus(){ focus=null; hideTrace(); refreshClasses(); }
+
+/* ════════════════════════════ selection + inspector panel ════════════════════════════ */
+function clearSelection(){ selection=null; refreshClasses(); renderPanel(); }
+function selectNode(id){
+  closeDrawer();
+  selection={kind:"node",id};
+  const nbN=new Set([id]), nbE=new Set();
+  edgesOf(id).forEach(e=>{ nbE.add(e.id); nbN.add(e.from); nbN.add(e.to); });
+  setFocus(nbN,nbE); hideTrace();
+  renderPanel();
+}
+function selectEdge(id){
+  selection={kind:"edge",id};
+  focus=null; hideTrace();
+  refreshClasses(); renderPanel();
+}
+
+function renderPanel(){
+  if(selection&&selection.kind==="node"){ const n=nodeById(selection.id); if(n) return panelNode(n); }
+  if(selection&&selection.kind==="edge"){ const e=state.edges.find(x=>x.id===selection.id); if(e) return panelEdge(e); }
+  panelOverview();
+}
+function panelOverview(){
+  panelEyebrow.textContent="Inspector";
+  panelTitle.textContent="System overview";
+  const gaps=state.nodes.filter(n=>n.status==="gap").length + state.edges.filter(e=>e.status==="gap").length;
+  const planned=state.nodes.filter(n=>n.status==="planned").length + state.edges.filter(e=>e.status==="planned").length;
+  panelBody.innerHTML=`
+    <div class="kvline"><span>Nodes</span><b>${state.nodes.length}</b></div>
+    <div class="kvline"><span>Connections</span><b>${state.edges.length}</b></div>
+    <div class="kvline"><span>Pages with wireframes</span><b>${state.nodes.filter(n=>n.wf).length}</b></div>
+    <div class="kvline"><span>Known gaps</span><b style="color:var(--warn)">${gaps}</b></div>
+    <div class="kvline"><span>Planned (Phase 2/3)</span><b>${planned}</b></div>
+    <hr class="sep">
+    <div class="note" style="margin-bottom:10px"><b>Click</b> a node to spotlight what it touches. <b>Double-click</b> an orange page to open its app wireframe — tap an element to trace its circuit (↗ calls, ↘ feeds), tap <b>⇢</b> elements twice to follow the flow. <b>Drag</b> anything to rearrange — it autosaves.</div>
+    <div class="warnbox">⚠ Amber dashed = known gap or Phase 2/3 item (wallet withdraw, token purchase, Paystack…). Click one for the detail.</div>
+    <div class="btnrow"><button class="pbtn accent" id="pbAdd">+ Add node</button><button class="pbtn" id="pbFit">⌖ Fit view</button></div>`;
+  $("pbAdd").onclick=panelAddNode;
+  $("pbFit").onclick=fitView;
+}
+function statusSelect(cur){
+  const opts=[["active","Active / built"],["gap","Gap — missing"],["planned","Planned — Phase 2/3"]];
+  return opts.map(([v,l])=>`<option value="${v}" ${ (cur||"active")===v?"selected":""}>${l}</option>`).join("");
+}
+/* ════════════════════════════ gap knowledge base ════════════════════════════ */
+const GAP_KB = {
+  api_wallet:{
+    what:"The whole money-out side is missing. GET /api/wallet returns hardcoded stub data, and the withdraw + token-purchase routes don't exist — the app's Withdraw and Buy Tokens buttons fail today.",
+    fix:"Phase 2/3: build the three wallet routes, integrate Paystack checkout + webhook, then switch token enforcement on. Until then, hide the demo ledger behind a flag — fake transactions shown to real users is an App Store review risk.",
+    recs:[
+      {kind:"node", node:{id:"svc_paystack_hook", label:"Paystack Webhook", sub:"payment events → wallet credit", type:"service", layer:"svc", status:"planned"}, reason:"A backend handler Paystack can call when money lands — the missing bridge between Paystack and the wallet."},
+      {kind:"edge", from:"ext_paystack", to:"svc_paystack_hook", label:"charge.success webhook", status:"planned", reason:"Paystack tells the backend a payment landed."},
+      {kind:"edge", from:"svc_paystack_hook", to:"db_tokens", label:"credit purchased bucket", status:"planned", reason:"Purchased tokens credited the moment payment confirms."},
+      {kind:"edge", from:"svc_paystack_hook", to:"db_sales", label:"auto-settle matching sale", status:"planned", reason:"A wallet credit that matches a pending sale completes it automatically — the Auto settlement promise on the Sales screen."}
+    ]
+  },
+  ext_paystack:{
+    what:"Paystack isn't integrated yet (Phase 2/3). It blocks three features: wallet withdrawal, token purchase, and auto-settlement of sales.",
+    fix:"Smallest first slice: Paystack checkout for token packs (₦4k / ₦18.75k / ₦70k), then the webhook that credits the wallet. Payout rails (withdraw) come last.",
+    recs:[
+      {kind:"node", node:{id:"svc_paystack_hook", label:"Paystack Webhook", sub:"payment events → wallet credit", type:"service", layer:"svc", status:"planned"}, reason:"The backend endpoint Paystack calls when a payment lands."},
+      {kind:"edge", from:"ext_paystack", to:"svc_paystack_hook", label:"charge.success webhook", status:"planned", reason:"How payment confirmations reach your system."}
+    ]
+  },
+  svc_ingress:{
+    what:"All app traffic enters through a temporary ngrok tunnel. Fine for development, but the URL can change and it's not production-grade.",
+    fix:"Deploy the Node server to a stable host and point api.lagbot.app at it, then update the app's base URL in api.ts. No route code changes needed.",
+    recs:[]
+  },
+  api_dormant:{
+    what:"These routes exist on the backend but nothing in the app calls them — auth/login·me, dashboard stats, /whatsapp/qr.",
+    fix:"Either wire the app to them (the dashboard stats route could replace several direct database reads) or delete them to shrink the attack surface.",
+    recs:[
+      {kind:"edge", from:"page_dashboard", to:"api_dormant", label:"stats read (replaces direct DB reads)", status:"planned", reason:"One API call instead of five separate database queries from the phone — faster dashboard, less data usage."}
+    ]
+  },
+  page_wallet:{
+    what:"The Wallet screen shows a demo ledger of fake transactions to every user, and the Withdraw button calls an endpoint that doesn't exist — it fails today.",
+    fix:"Short-term: hide the demo data and disable Withdraw with a 'coming soon' note (App Review risk otherwise). Long-term: Phase 3 Paystack payout rails. Remember: bank details are withdrawal-only; the wallet is the in-app holding account.",
+    recs:[]
+  },
+  page_settings:{
+    what:"The Token Store inside Settings can't actually sell tokens — the purchase/init endpoint is missing (unified gap #1).",
+    fix:"Needs POST /api/wallet/purchase/init plus Paystack checkout — Phase 2. Until then the Buy button should explain it's coming soon.",
+    recs:[]
+  },
+  page_auth:{
+    what:"'Forgot password?' does nothing when tapped (unified gap #4).",
+    fix:"Wire it to Supabase's resetPasswordForEmail — a small job, roughly an hour of work, and it already has the connection to Supabase Auth on this map.",
+    recs:[]
+  },
+  page_product:{
+    what:"The photo picker on the product editor is stubbed — tapping it does nothing, so products can't have pictures.",
+    fix:"Wire expo-image-picker to a Supabase Storage bucket and save the image URL on the product row. Nova can then send product photos to customers.",
+    recs:[
+      {kind:"node", node:{id:"db_storage", label:"Supabase Storage", sub:"product photos bucket", type:"db", layer:"bridge", status:"planned"}, reason:"Somewhere to actually keep the product photos."},
+      {kind:"edge", from:"page_product", to:"db_storage", label:"upload product photo", status:"planned", reason:"The editor saves the picked image here."}
+    ]
+  },
+  page_skills:{
+    what:"The 'Locked skills · Upgrade' card is an empty button — no action is wired to it.",
+    fix:"Point it at the Token Store, or hide it until paid plans exist. A dead button looks broken to users.",
+    recs:[]
+  },
+  svc_token:{
+    what:"Token charging is calculated on every turn, but enforcement is OFF — users never actually run out, so tokens are decorative right now.",
+    fix:"Only flip enforcement on after the purchase flow exists. Otherwise users hit zero with no way to buy more and Nova just stops talking to their customers.",
+    recs:[]
+  },
+  page_admins:{
+    what:"This screen edits the same team_members table as Sales ▸ Teams — two different UIs for one table will drift apart.",
+    fix:"Consolidate into one screen (keep Sales ▸ Teams, retire Admins, or make Admins a thin link to it).",
+    recs:[]
+  },
+  svc_dead:{
+    what:"Three backend leftovers nothing uses: file-parser.js (superseded by inline parsing in the import route), prompts/SYSTEM_CORE.md (legacy reference), and an empty routes/ folder.",
+    fix:"Delete them. Dead code confuses future work and hides which parser is actually live.",
+    recs:[]
+  },
+  agent_router:{
+    what:"Planned agent — today routing rules are simple if-this-then-that. This agent would read the conversation and pick the best team member intelligently.",
+    fix:"Build after team usage grows; the Routing Engine already fires the events it would need.",
+    recs:[]
+  },
+  agent_insight:{
+    what:"Planned agent — a weekly plain-English digest for the owner ('You made ₦X this week, top customer was Y, stock of Z is low').",
+    fix:"Reads the metrics tables that already exist, writes one summary via the LLM Service, sends it through Expo Push. No new data needed.",
+    recs:[]
+  }
+};
+
+function gapReportHTML(n){
+  const kb=GAP_KB[n.id];
+  const ownGap = n.status==="gap"||n.status==="planned";
+  const gapEdges = edgesOf(n.id).filter(e=>e.status==="gap"||e.status==="planned");
+  const wfNotes=[];
+  Object.keys(state.wireframes).forEach(pid=>{
+    const wf=state.wireframes[pid]; if(!wf||!wf.screens) return;
+    Object.keys(wf.screens).forEach(sid=>{
+      (wf.screens[sid].rows||[]).forEach(row=>row.forEach(el=>{
+        if(el.note && (pid===n.id || (el.links||[]).includes(n.id))) wfNotes.push(el);
+      }));
+    });
+  });
+  if(!kb && !ownGap && !gapEdges.length && !wfNotes.length) return "";
+
+  let h=`<div class="gapreport"><h5>⚠ Gap report</h5>`;
+  h+=`<div class="gr-sec">What's wrong</div>`;
+  if(kb) h+=`<div class="gr-item">${esc(kb.what)}</div>`;
+  else if(ownGap) h+=`<div class="gr-item">Marked <b>${n.status==="gap"?"gap — missing":"planned — Phase 2/3"}</b> on the map.</div>`;
+  if(gapEdges.length){
+    h+=gapEdges.slice(0,5).map(e=>{
+      const other=nodeById(e.from===n.id?e.to:e.from);
+      return `<div class="gr-item">· Connection to <b>${esc(other?other.label:"?")}</b> isn't live${e.label?` — ${esc(e.label)}`:""}.</div>`;
+    }).join("");
+  }
+  if(wfNotes.length){
+    h+=`<div class="gr-item">· ${wfNotes.length} app element${wfNotes.length>1?"s":""} flag${wfNotes.length>1?"":"s"} a problem here: ${wfNotes.slice(0,3).map(e=>`<b>${esc(e.label)}</b>`).join(", ")}${wfNotes.length>3?" …":""}.</div>`;
+  }
+  const recs=(kb&&kb.recs||[]).filter(r=>{
+    if(r.kind==="node") return !nodeById(r.node.id);
+    return !state.edges.some(e=>(e.from===r.from&&e.to===r.to)||(e.from===r.to&&e.to===r.from));
+  });
+  if(recs.length){
+    h+=`<div class="gr-sec">Recommended additions</div>`;
+    h+=recs.map((r,i)=>{
+      if(r.kind==="node")
+        return `<div class="gr-item">+ New node <b>${esc(r.node.label)}</b> — ${esc(r.reason)} <br><button class="gr-add" data-grrec="${i}">+ Add to map (planned)</button></div>`;
+      const a=nodeById(r.from), b=nodeById(r.to);
+      return `<div class="gr-item">+ Line <b>${esc(a?a.label:r.from)} → ${esc(b?b.label:r.to)}</b> — ${esc(r.reason)} <br><button class="gr-add" data-grrec="${i}">+ Draw line (planned)</button></div>`;
+    }).join("");
+  }
+  if(kb&&kb.fix){ h+=`<div class="gr-sec">How to fix it</div><div class="gr-fix">${esc(kb.fix)}</div>`; }
+  h+=`</div>`;
+  return {html:h, recs};
+}
+
+function wireGapReport(n, recs){
+  panelBody.querySelectorAll("[data-grrec]").forEach(btn=>{
+    btn.onclick=()=>{
+      const r=recs[+btn.dataset.grrec]; if(!r) return;
+      if(r.kind==="node"){
+        if(!nodeById(r.node.id)) state.nodes.push({...r.node});
+      } else {
+        if(r.from===n.id||r.to===n.id||true){
+          if(!nodeById(r.from)||!nodeById(r.to)){ toast("One end of that line isn't on the map yet — add the node first","warn"); return; }
+          if(!state.edges.some(e=>(e.from===r.from&&e.to===r.to)||(e.from===r.to&&e.to===r.from)))
+            state.edges.push({id:uid("e_"), from:r.from, to:r.to, label:r.label||"", status:r.status||"planned"});
+        }
+      }
+      logChange(r.kind==="node"?`Added planned node "${r.node.label}" (gap-report recommendation on ${n.label})`:`Drew planned line ${(nodeById(r.from)||{}).label||r.from} → ${(nodeById(r.to)||{}).label||r.to} (gap-report recommendation)`);
+      rebuild(); autosave(); toast("Added as planned — amber dashed on the map");
+      selectNode(n.id);
+    };
+  });
+}
+
+function panelNode(n){
+  panelEyebrow.textContent=chipText(n);
+  panelTitle.textContent=n.label;
+  const conns=edgesOf(n.id).map(e=>{
+    const other=nodeById(e.from===n.id?e.to:e.from);
+    const dir=e.dir==="both"?"⇄":(e.from===n.id?"→":"←");
+    const flag=(e.status==="gap"||e.status==="planned")?`<span class="gapflag">⚠</span>`:"";
+    return `<div class="conn-item" data-edge="${e.id}"><span class="dir">${dir}</span><span style="flex:1;min-width:0">${esc(other?other.label:"?")}${e.label?` <span style="color:var(--mute)">· ${esc(e.label)}</span>`:""}</span>${flag}</div>`;
+  }).join("") || `<div class="note">No connections yet — use ⌁ Connect.</div>`;
+  let compHTML="";
+  if(n.type==="page"){
+    const wf=state.wireframes[n.id];
+    const items=[];
+    if(wf&&wf.screens) Object.keys(wf.screens).forEach(sid=>{
+      (wf.screens[sid].rows||[]).forEach(row=>row.forEach(el=>items.push({sid,el})));
+    });
+    const list=items.slice(0,14).map(it=>`<div class="conn-item" data-wf="${n.id}" data-screen="${it.sid}" data-el="${it.el.id}"><span class="dir">▣</span><span style="flex:1;min-width:0">${esc((wf.screens[it.sid].title||it.sid))} · ${esc(it.el.label)}</span>${it.el.note?`<span class="gapflag">⚠</span>`:""}</div>`).join("");
+    compHTML=`<div class="fgroup"><label>Components · ${items.length}</label><div class="conn-list">${list||`<div class="note">No elements yet — open the wireframe and ✎ edit.</div>`}${items.length>14?`<div class="note">+${items.length-14} more — open the wireframe.</div>`:""}</div></div>`;
+  } else {
+    const hits=[];
+    Object.keys(state.wireframes).forEach(pid=>{
+      const pg=nodeById(pid); if(!pg) return;
+      const wf=state.wireframes[pid]; if(!wf||!wf.screens) return;
+      Object.keys(wf.screens).forEach(sid=>{
+        (wf.screens[sid].rows||[]).forEach(row=>row.forEach(el=>{
+          if((el.links||[]).includes(n.id)) hits.push({pid,pg,sid,sc:wf.screens[sid],el});
+        }));
+      });
+    });
+    if(hits.length){
+      const list=hits.slice(0,12).map(h=>`<div class="conn-item" data-wf="${h.pid}" data-screen="${h.sid}" data-el="${h.el.id}"><span class="dir">▸</span><span style="flex:1;min-width:0">${esc(h.pg.label)} · ${esc((h.sc.title||h.sid))} · ${esc(h.el.label)}</span>${h.el.note?`<span class="gapflag">⚠</span>`:""}</div>`).join("");
+      compHTML=`<div class="fgroup"><label>Powers these UI elements · ${hits.length}</label><div class="conn-list">${list}${hits.length>12?`<div class="note">+${hits.length-12} more</div>`:""}</div></div>`;
+    }
+  }
+  const rep=gapReportHTML(n);
+  panelBody.innerHTML=`
+    ${rep?rep.html:""}
+    <div class="fgroup"><label>Label</label><input type="text" id="fLabel" value="${esc(n.label)}"></div>
+    <div class="fgroup"><label>Sub / detail</label><input type="text" id="fSub" value="${esc(n.sub||"")}"></div>
+    <div class="fgroup"><label>Type</label><select id="fType">${Object.keys(TYPES).map(t=>`<option value="${t}" ${n.type===t?"selected":""}>${TYPES[t].label}</option>`).join("")}</select></div>
+    <div class="fgroup"><label>Status</label><select id="fStatus">${statusSelect(n.status)}</select></div>
+    ${n.type==="page"?`<div class="btnrow" style="margin-bottom:13px"><button class="pbtn orange" id="fOpenWF">▣ Open wireframe</button></div>`:""}
+    <div class="btnrow" style="margin-bottom:13px"><button class="pbtn" id="fConnect">⌁ Connect from here</button></div>
+    <div class="fgroup"><label>Connections · ${edgesOf(n.id).length}</label><div class="conn-list">${conns}</div></div>
+    ${compHTML}
+    <hr class="sep">
+    <div class="btnrow"><button class="pbtn ghost-danger" id="fDelete">Delete node</button></div>`;
+  const el=nodeEls.get(n.id);
+  $("fLabel").addEventListener("input",ev=>{ n.label=ev.target.value; el.title.textContent=n.label; el.tt.textContent=`${n.label} — ${n.sub||""}`; panelTitle.textContent=n.label; edgesOf(n.id).forEach(e=>setEdgeTitle(e)); autosave(); });
+  $("fSub").addEventListener("input",ev=>{ n.sub=ev.target.value; el.sub.textContent=n.sub.length>40?n.sub.slice(0,39)+"…":n.sub; el.tt.textContent=`${n.label} — ${n.sub||""}`; autosave(); });
+  $("fType").addEventListener("change",ev=>{ n.type=ev.target.value;
+    if(n.type==="page"){ n.wf=true; if(!state.wireframes[n.id]) state.wireframes[n.id]={start:"main",screens:{main:{title:n.label,rows:[]}}}; }
+    else { delete n.wf; }
+    rebuild(); selectNode(n.id); autosave(); });
+  $("fStatus").addEventListener("change",ev=>{ n.status=ev.target.value==="active"?undefined:ev.target.value; logChange(`Set "${n.label}" status to ${ev.target.value}`); rebuild(); selectNode(n.id); autosave(); });
+  if($("fOpenWF")) $("fOpenWF").onclick=()=>openDrawer(n.id);
+  $("fConnect").onclick=()=>setConnect(true,n.id);
+  $("fDelete").onclick=()=>deleteNode(n.id);
+  panelBody.querySelectorAll(".conn-item[data-edge]").forEach(ci=>ci.addEventListener("click",()=>selectEdge(ci.dataset.edge)));
+  panelBody.querySelectorAll(".conn-item[data-wf]").forEach(ci=>ci.addEventListener("click",()=>openDrawer(ci.dataset.wf, ci.dataset.screen, ci.dataset.el)));
+  if(rep) wireGapReport(n, rep.recs);
+}
+function panelEdge(e){
+  const a=nodeById(e.from), b=nodeById(e.to);
+  panelEyebrow.textContent="Connection";
+  panelTitle.textContent=`${a?a.label:"?"} ${e.dir==="both"?"⇄":"→"} ${b?b.label:"?"}`;
+  panelBody.innerHTML=`
+    <div class="fgroup"><label>What flows here</label><input type="text" id="eLabel" value="${esc(e.label||"")}" placeholder="e.g. POST /api/sales/:id/confirm"></div>
+    <div class="fgroup"><label>Status</label><select id="eStatus">${statusSelect(e.status)}</select></div>
+    <div class="fgroup"><label>Direction</label><select id="eDir"><option value="one" ${e.dir!=="both"?"selected":""}>One-way →</option><option value="both" ${e.dir==="both"?"selected":""}>Two-way ⇄</option></select></div>
+    <hr class="sep">
+    <div class="btnrow"><button class="pbtn ghost-danger" id="eDelete">Delete connection</button></div>`;
+  $("eLabel").addEventListener("input",ev=>{ e.label=ev.target.value; setEdgeTitle(e); panelTitle.textContent=`${a?a.label:"?"} ${e.dir==="both"?"⇄":"→"} ${b?b.label:"?"}`; autosave(); });
+  $("eStatus").addEventListener("change",ev=>{ e.status=ev.target.value==="active"?undefined:ev.target.value; logChange(`Set line ${a?a.label:e.from} → ${b?b.label:e.to} status to ${ev.target.value}`); rebuild(); selectEdge(e.id); autosave(); });
+  $("eDir").addEventListener("change",ev=>{ e.dir=ev.target.value==="both"?"both":undefined; rebuild(); selectEdge(e.id); autosave(); });
+  $("eDelete").onclick=()=>{ state.edges=state.edges.filter(x=>x.id!==e.id); logChange(`Removed line ${a?a.label:e.from} → ${b?b.label:e.to}`); clearSelection(); rebuild(); autosave(); toast("Connection removed"); };
+}
+function panelAddNode(){
+  selection=null; refreshClasses();
+  panelEyebrow.textContent="New node";
+  panelTitle.textContent="Add to the map";
+  panelBody.innerHTML=`
+    <div class="fgroup"><label>Label</label><input type="text" id="aLabel" placeholder="e.g. Paystack Webhook"></div>
+    <div class="fgroup"><label>Sub / detail</label><input type="text" id="aSub" placeholder="one line of context"></div>
+    <div class="fgroup"><label>Type</label><select id="aType">${Object.keys(TYPES).map(t=>`<option value="${t}">${TYPES[t].label}</option>`).join("")}</select></div>
+    <div class="fgroup"><label>Status</label><select id="aStatus">${statusSelect("active")}</select></div>
+    <div class="note" style="margin-bottom:12px">It lands in the middle of your current view — drag it anywhere after. Pages automatically get an editable wireframe.</div>
+    <div class="btnrow"><button class="pbtn accent" id="aPlace">Place node</button><button class="pbtn" id="aCancel">Cancel</button></div>`;
+  $("aPlace").onclick=()=>{
+    const type=$("aType").value;
+    const layerByType={external:"ext",service:"svc",api:"bridge",db:"bridge",channel:"bridge",client:"pages",page:"pages",agent:"agents"};
+    const r=mapEl.getBoundingClientRect();
+    const c=worldPt(r.left+(r.width-panelPad())/2, r.top+r.height/2);
+    const n={ id:uid("n_"), label:$("aLabel").value.trim()||"New node", sub:$("aSub").value.trim(),
+      type, layer:layerByType[type]||"svc", x:Math.round(c.x-NODE_W/2), y:Math.round(c.y-NODE_H/2) };
+    const st=$("aStatus").value; if(st!=="active") n.status=st;
+    if(type==="page"){ n.wf=true; state.wireframes[n.id]={start:"main",screens:{main:{title:n.label,rows:[]}}}; }
+    state.nodes.push(n);
+    logChange(`Added node "${n.label}" (${TYPES[n.type].label})`);
+    rebuild(); selectNode(n.id); autosave(); toast("Node added — drag it into place");
+  };
+  $("aCancel").onclick=()=>renderPanel();
+}
+function deleteNode(id){
+  const n=nodeById(id); if(!n) return;
+  if(!confirm(`Delete "${n.label}" and its connections?`)) return;
+  state.nodes=state.nodes.filter(x=>x.id!==id);
+  state.edges=state.edges.filter(e=>e.from!==id&&e.to!==id);
+  Object.values(state.wireframes).forEach(wf=>{
+    Object.values(wf.screens||{}).forEach(sc=>(sc.rows||[]).forEach(row=>row.forEach(el=>{
+      if(Array.isArray(el.links)) el.links=el.links.filter(l=>l!==id);
+      if(el.nav==="page:"+id) delete el.nav;
+    })));
+  });
+  delete state.wireframes[id];
+  if(curWF===id) closeDrawer();
+  selection=null; focus=null;
+  logChange(`Deleted node "${n.label}" and its connections`);
+  rebuild(); renderPanel(); autosave(); toast("Node deleted");
+}
+
+/* ════════════════════════════ node dragging + clicking ════════════════════════════ */
+function wireNode(g,id){
+  let down=null, moved=false;
+  g.addEventListener("pointerdown",ev=>{
+    if(ev.button!==0) return;
+    ev.stopPropagation();
+    down={x:ev.clientX,y:ev.clientY}; moved=false;
+    g.setPointerCapture(ev.pointerId);
+  });
+  g.addEventListener("pointermove",ev=>{
+    if(!down) return;
+    const dx=ev.clientX-down.x, dy=ev.clientY-down.y;
+    if(!moved && Math.hypot(dx,dy)<4) return;
+    moved=true; g.classList.add("dragging");
+    const n=nodeById(id);
+    n.x+=dx/view.k; n.y+=dy/view.k;
+    down={x:ev.clientX,y:ev.clientY};
+    updatePositions();
+  });
+  g.addEventListener("pointerup",ev=>{
+    if(!down) return;
+    try{ g.releasePointerCapture(ev.pointerId); }catch(e){}
+    g.classList.remove("dragging");
+    if(!moved){
+      if(connect.on) connectClick(id);
+      else selectNode(id);
+    } else if(moved){ autosave(); }
+    down=null;
+  });
+  g.addEventListener("dblclick",ev=>{
+    ev.stopPropagation();
+    const n=nodeById(id);
+    if(n && n.type==="page") openDrawer(id);
+  });
+}
+
+/* ════════════════════════════ pan + zoom wiring ════════════════════════════ */
+let pan=null;
+mapEl.addEventListener("pointerdown",ev=>{
+  if(ev.button!==0) return;
+  if(ev.target.closest(".node")||ev.target.closest(".edge")) return;
+  pan={x:ev.clientX,y:ev.clientY,moved:false};
+  mapEl.setPointerCapture(ev.pointerId);
+  mapEl.classList.add("panning");
+});
+mapEl.addEventListener("pointermove",ev=>{
+  if(connect.on&&connect.src){
+    const src=nodeById(connect.src);
+    if(src){ const p=worldPt(ev.clientX,ev.clientY); const c=nodeCenter(src);
+      ghost.setAttribute("visibility","visible");
+      ghost.setAttribute("d",bez({x:c.x,y:c.y,side: p.x>c.x?"right":"left"},{x:p.x,y:p.y,side:p.x>c.x?"left":"right"})); }
+  }
+  if(!pan) return;
+  const dx=ev.clientX-pan.x, dy=ev.clientY-pan.y;
+  if(Math.hypot(dx,dy)>3) pan.moved=true;
+  view.x+=dx; view.y+=dy;
+  pan.x=ev.clientX; pan.y=ev.clientY;
+  applyView();
+});
+mapEl.addEventListener("pointerup",ev=>{
+  mapEl.classList.remove("panning");
+  if(pan && !pan.moved){
+    if(connect.on){ setConnect(false); toast("Connect cancelled"); }
+    else { clearFocus(); clearSelection(); }
+  }
+  pan=null;
+});
+mapEl.addEventListener("wheel",ev=>{
+  ev.preventDefault();
+  zoomAt(ev.clientX,ev.clientY,Math.exp(-ev.deltaY*0.0015));
+},{passive:false});
+
+/* ════════════════════════════ connect mode ════════════════════════════ */
+const connect={on:false,src:null};
+function setConnect(on,src){
+  connect.on=on; connect.src=src||null;
+  $("btnConnect").classList.toggle("active",on);
+  mapEl.classList.toggle("connecting",on);
+  if(!on||!connect.src){ ghost.setAttribute("visibility","hidden"); ghost.setAttribute("d",""); }
+  if(on) toast(connect.src?"Click the target node":"Connect: click the source node, then the target");
+}
+function connectClick(id){
+  if(!connect.src){ connect.src=id; toast("Now click the target node"); return; }
+  if(connect.src===id){ toast("Pick a different node","warn"); return; }
+  const dup=state.edges.find(e=>(e.from===connect.src&&e.to===id)||(e.from===id&&e.to===connect.src));
+  if(dup){ toast("Those two are already connected","warn"); setConnect(false); selectEdge(dup.id); return; }
+  const e={id:uid("e_"),from:connect.src,to:id,label:""};
+  state.edges.push(e);
+  logChange(`Drew line ${(nodeById(e.from)||{}).label||e.from} → ${(nodeById(e.to)||{}).label||e.to} by hand`);
+  setConnect(false);
+  rebuild(); selectEdge(e.id); autosave(); toast("Connected — add a label in the inspector");
+}
+
+/* ════════════════════════════ trace (BFS) ════════════════════════════ */
+function adjacency(){
+  const adj=new Map(), eKey=new Map();
+  state.nodes.forEach(n=>adj.set(n.id,[]));
+  state.edges.forEach(e=>{
+    if(adj.has(e.from)&&adj.has(e.to)){
+      adj.get(e.from).push(e.to); adj.get(e.to).push(e.from);
+      if(!eKey.has(e.from+"|"+e.to)) eKey.set(e.from+"|"+e.to,e.id);
+      if(!eKey.has(e.to+"|"+e.from)) eKey.set(e.to+"|"+e.from,e.id);
+    }
+  });
+  return {adj,eKey};
+}
+function shortestPath(adj,a,b){
+  if(a===b) return [a];
+  const prev=new Map([[a,null]]); const q=[a];
+  while(q.length){
+    const cur=q.shift();
+    for(const nx of (adj.get(cur)||[])){
+      if(prev.has(nx)) continue;
+      prev.set(nx,cur);
+      if(nx===b){ const path=[b]; let p=cur; while(p){ path.unshift(p); p=prev.get(p);} return path; }
+      q.push(nx);
+    }
+  }
+  return null;
+}
+let activeEl=null;
+function traceElement(pageId,el){
+  activeEl=el.id; paintActiveEl();
+  const links=(el.links||[]).filter(id=>nodeById(id));
+  const tail=el.nav?` <span class="tgo">· tap again ⇢ ${esc(navTitle(el))}</span>`:"";
+  if(!links.length){
+    setFocus(new Set([pageId]),new Set());
+    showTrace(`<b>${esc(el.label)}</b> — UI-only, no backend call${el.note?` <span class="tnote">· ⚠ ${esc(el.note)}</span>`:""}${tail}`);
+    return;
+  }
+  const {adj,eKey}=adjacency();
+  const nset=new Set([pageId]), eset=new Set(); const parts=[];
+  links.forEach(t=>{
+    const target=nodeById(t);
+    if(target.type==="page"){ nset.add(t); parts.push(`⇢ opens <b>${esc(target.label)}</b>`); return; }
+    const path=shortestPath(adj,pageId,t);
+    if(!path){ nset.add(t); parts.push(`<b>${esc(target.label)}</b> <span class="tnote">(no path on map)</span>`); return; }
+    path.forEach(id=>nset.add(id));
+    for(let i=0;i<path.length-1;i++){ const k=eKey.get(path[i]+"|"+path[i+1]); if(k) eset.add(k); }
+    const reverse=target.type!=="api";
+    const seq=reverse?path.slice().reverse():path;
+    const names=seq.map(id=>{ const n=nodeById(id); return id===t?`<b>${esc(n.label)}</b>`:esc(n.label); }).join(" ⟶ ");
+    parts.push((reverse?"↘ ":"↗ ")+names);
+  });
+  setFocus(nset,eset);
+  let html=`<b>${esc(el.label)}</b> · ${parts.join(" &nbsp;·&nbsp; ")}`;
+  if(el.note) html+=` <span class="tnote">· ⚠ ${esc(el.note)}</span>`;
+  html+=tail;
+  showTrace(html);
+}
+function showTrace(html){ tracePath.innerHTML=html; traceBar.classList.add("show"); }
+function hideTrace(){ traceBar.classList.remove("show"); activeEl=null; paintActiveEl(); }
+$("traceClear").onclick=()=>{ clearFocus(); };
+
+/* ════════════════════════════ wireframe drawer · v2 screens + flow ════════════════════════════ */
+let curWF=null, curScreen=null, screenHist=[], editWF=false, editingEl=null;
+const KINDS=["pageTitle","caption","section","heroDark","darkStat","lagbotCard","warnText","skillTiles","chatCard","tabbar","linkrow","pillsT","headerBack","bubbleIn","bubbleOut","divider","receipt","suggest","bestSeller","productCard","seg2","choice","choiceOn","empty","cta","ctaLine","ruleCard","connector","balanceCard","taxCard","ledger","hero","statHero","stat","card","btn","btnOutline","link","input","inputs2","otp","code","pills","pillbar","chips","seg","toggles","toggleCard","bar","meterCard","grid","list","swipe","bubbles","composer","chart","kv","hatch"];
+
+const csv=s=>String(s||"").split(",").map(x=>x.trim()).filter(Boolean);
+const initials=s=>{ const w=String(s||"").trim().split(/\s+/).filter(Boolean); const t=((w[0]||"").slice(0,1)+(w[1]||"").slice(0,1)).toUpperCase(); return t||"?"; };
+const PLPILL='border:1.2px solid rgba(241,234,217,.5);border-radius:9px;padding:1px 6px;font-family:var(--mono);font-size:6px;letter-spacing:.08em';
+
+function kindFrame(el){
+  const k=el.kind;
+  if(k==="pageTitle"||k==="caption"||k==="section"||k==="linkrow"||k==="divider"||k==="warnText") return "flat";
+  if(k==="heroDark"||k==="darkStat"||k==="lagbotCard"||k==="taxCard"||k==="balanceCard"||k==="bestSeller"||k==="choiceOn") return "dk";
+  if(k==="headerBack") return "hdr";
+  if(k==="tabbar") return "tabwrap";
+  if(k==="bubbleIn"||k==="receipt") return "bubL";
+  if(k==="bubbleOut") return "bubR";
+  if(k==="chatCard") return "lbar "+(el.bar==="gr"?"gr":"or");
+  return "";
+}
+
+function kindHTML(el){
+  const k=el.kind;
+  switch(k){
+    /* ── v2 · app-accurate primitives ── */
+    case "pageTitle":{
+      let h="";
+      if(el.ico) h+=`<div class="pgt-ico">${esc(el.ico)}</div>`;
+      if(el.t2) h+=`<div class="pgt-eyebrow">${esc(el.t2)}</div>`;
+      h+=`<div class="pgt">${esc(el.t1||"")}</div>`;
+      return h;
+    }
+    case "caption": return `<div class="cap2">${esc(el.t1||"")}</div>`;
+    case "section": return `<div class="sec"><span class="t">${esc(el.t1||"")}</span>${el.b?`<span class="badge${el.bi?" ink":""}">${esc(el.b)}</span>`:""}${el.r?`<span class="r">${esc(el.r)}</span>`:""}</div>`;
+    case "warnText": return `<div class="warncaps">${esc(el.t1||"")}</div>`;
+    case "linkrow": return `<div class="cap2" style="font-weight:700;${el.or?"color:var(--page)":"color:var(--ink)"}">${esc(el.t1||"")}</div>`;
+    case "heroDark":{
+      let h="";
+      const ic=[el.ico?esc(el.ico):"", el.pl?`<span style="${PLPILL}">${esc(el.pl)}</span>`:""].filter(Boolean).join(" ");
+      if(ic) h+=`<div class="dk-ico">${ic}</div>`;
+      if(el.t2) h+=`<div class="dk-eyebrow">${esc(el.t2)}</div>`;
+      h+=`<div class="dk-big">${esc(el.t1||"")}</div>`;
+      (el.lines||[]).forEach(l=>h+=`<div class="dk-line">${esc(l)}</div>`);
+      if(el.stats&&el.stats.length) h+=`<div class="dk-stats">${el.stats.map(p=>{const l=p[0],v=String(p[1]==null?"":p[1]);const or=/!$/.test(v);return `<div class="dk-stat"><div class="l">${esc(l)}</div><div class="v${or?" or":""}">${esc(v.replace(/!$/,""))}</div></div>`;}).join("")}</div>`;
+      return h;
+    }
+    case "darkStat": return `<div class="dk-eyebrow">${esc(el.t2||"")}</div><div class="dk-big sm">${esc(el.t1||"")}</div>`;
+    case "lagbotCard": return `<div class="sk-flex"><div class="robo"></div><div style="flex:1;min-width:0;position:relative;z-index:1"><div style="font-size:9.5px;font-weight:700;color:var(--paper)">${esc(el.t1||"")}</div><div style="font-family:var(--mono);font-size:6px;letter-spacing:.16em;color:rgba(241,234,217,.6);text-transform:uppercase;margin-top:2px">● ${esc(el.t2||"")}</div></div><div class="sk-toggle off" style="border-color:rgba(241,234,217,.6)"></div></div>`;
+    case "skillTiles": return `<div class="tiles">${csv(el.t1).map(n=>`<div class="tcol"><div class="tile"></div><div class="tilecap">${esc(n)}</div></div>`).join("")}</div>`;
+    case "chatCard": return `<div class="ccard"><div class="cav">${esc(initials(el.t1))}</div><div class="cbody"><div class="cname">${esc(el.t1||"")} <span class="dt">${esc(el.dt||"")}</span></div><div class="cprev">${esc(el.t2||"")}</div></div>${el.tag?`<span class="ctag">${esc(el.tag)}</span>`:""}${el.badge?`<span class="cbadge">${esc(el.badge)}</span>`:""}</div>`;
+    case "tabbar":{
+      const act=String(el.t1||"home").toLowerCase();
+      return `<div class="wtabs">${["home","chats","inventory","sales","wallet"].map(n=>`<div class="wtab${n===act?" on":""}"><i></i>${n}</div>`).join("")}</div>`;
+    }
+    case "pillsT": return `<div class="sk-pills">${csv(el.t1).map((p,i)=>`<span class="sk-pill${i===0?" on":""}">${esc(p)}</span>`).join("")}</div>`;
+    case "headerBack": return `<div class="hback"><span class="bk">‹</span><span class="hav">${esc(el.av||"·")}</span><div class="hmid"><div class="hn">${esc(el.t1||"")}</div><div class="hs">${esc(el.t2||"")}</div></div>${el.pill?`<span class="hpill">${esc(el.pill)}</span>`:""}</div>`;
+    case "bubbleIn": return `<div class="btxt">${esc(el.t1||"")}</div><div class="btm">${esc(el.tm||"")}</div>`;
+    case "bubbleOut": return `<div class="btxt">${esc(el.t1||"")}</div><div class="btm">${esc(el.tm||"")}</div>${el.cap?`<div class="bcap">${esc(el.cap)}</div>`:""}`;
+    case "divider": return `<div class="divider"><span>${esc(el.t1||"")}</span></div>`;
+    case "receipt": return `<div class="btxt" style="font-family:var(--mono);font-size:7px">${esc(el.t1||"")}</div><div class="rcpt">RECEIPT IMAGE</div><div class="btm">${esc(el.tm||"")}</div>`;
+    case "suggest": return `<div class="sug"><span class="sp">✦</span><span class="st">${esc(el.t1||"")}</span><span class="sx">${esc(el.t2||"")}</span></div>`;
+    case "bestSeller": return `<div class="sk-flex" style="position:relative;z-index:1"><span class="dk-eyebrow" style="margin:0;flex:none">Best seller</span><span style="flex:1;min-width:0;font-size:9.5px;font-weight:700;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(el.t1||"")}</span><span style="flex:none;font-family:var(--mono);font-size:9px;font-weight:700;color:var(--page)">${esc(el.t2||"")}</span></div>`;
+    case "productCard": return `<div class="pcard"><div class="pic">▣</div><div class="pmid">${el.cat?`<div class="pcat">${esc(el.cat)}</div>`:""}<div class="pn">${esc(el.t1||"")}</div><div class="pp">${esc(el.t2||"")}</div></div>${el.q?`<div class="pqty"><div class="q">${esc(el.q)}</div><div class="ql">Low stock</div></div>`:""}</div>`;
+    case "seg2":{
+      const onI=+el.on||0;
+      return `<div class="sk-seg">${csv(el.t1).map((s,i)=>`<i class="${i===onI?"on":""}">${esc(s)}</i>`).join("")}</div>`;
+    }
+    case "choice": return `<div class="sk-flex choice"><div style="flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:var(--ink)">${esc(el.t1||"")}</div><div style="font-size:7.5px;color:var(--ink-soft);margin-top:1px;line-height:1.35">${esc(el.t2||"")}</div></div></div>`;
+    case "choiceOn": return `<div class="sk-flex choice" style="position:relative;z-index:1"><div style="flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:var(--paper)">${esc(el.t1||"")}</div><div style="font-size:7.5px;color:rgba(241,234,217,.62);margin-top:1px;line-height:1.35">${esc(el.t2||"")}</div></div><div class="chk">✓</div></div>`;
+    case "empty": return `<div class="empty"><div class="eic"></div><div style="flex:1;min-width:0"><div class="eb">${esc(el.t1||"")}</div><div class="es">${esc(el.t2||"")}</div></div></div>`;
+    case "cta": return `<div class="cta">${esc(el.t1||"")}</div>`;
+    case "ctaLine": return `<div class="cta line">${esc(el.t1||"")}</div>`;
+    case "ruleCard":{
+      const amber=el.amber!==0;
+      return `<div><span class="ractive">● Active</span><span class="rwhen">When</span><span class="rchip">${esc(el.t1||"")}</span></div><div class="rwhen" style="margin-top:5px">${esc(el.t2||"")} <span class="rchip${amber?" amber":""}">${esc(el.role||"")}</span></div>${el.tpl?`<div class="rtpl">${esc(el.tpl)}</div>`:""}`;
+    }
+    case "connector": return `<div class="conrow"><div class="cic">◌</div><div class="cmid"><div class="cn">${esc(el.t1||"")}</div><div class="cd">${esc(el.t2||"")}</div></div><span class="cbtn">⚡ Connect</span></div>`;
+    case "balanceCard": return `<div class="dk-eyebrow">Balance</div><div class="sk-flex" style="align-items:baseline;position:relative;z-index:1"><div class="dk-big" style="flex:1;min-width:0">${esc(el.t1||"")}</div><div style="flex:none;text-align:right"><div style="font-family:var(--mono);font-size:11px;font-weight:800;color:var(--paper)">${esc(el.t2||"")}</div><div style="font-family:var(--mono);font-size:5.5px;letter-spacing:.14em;color:rgba(241,234,217,.55);text-transform:uppercase;margin-top:1px">Settles tomorrow</div></div></div>${el.sub?`<div class="dk-line">${esc(el.sub)}</div>`:""}<div class="dk-rule"></div><div class="dk-kv"><span class="k">${esc(el.payk||"Pays out to")}</span><span class="vv"><b>${esc(el.payn||"")}</b><s>${esc(el.payb||"")}</s></span></div>`;
+    case "taxCard": return `<div class="dk-eyebrow">${esc(el.t2||"")}</div><div style="font-size:9.5px;font-weight:700;color:var(--paper);position:relative;z-index:1;line-height:1.35">${esc(el.t1||"")}</div>${el.sub?`<div class="dk-line">${esc(el.sub)}</div>`:""}${el.lk?`<div class="dk-link">▤ ${esc(el.lk)}</div>`:""}`;
+    case "ledger":{
+      const pos=String(el.amt||"").trim().charAt(0)==="+";
+      return `<div class="lrow"><div class="lav">${esc(initials(el.t1))}</div><div class="lmid"><div class="ln">${esc(el.t1||"")}</div><div class="ld">${esc(el.t2||"")}</div></div><div class="lr"><div class="amt${pos?" pos":""}">${esc(el.amt||"")}</div>${el.tag?`<span class="ltag${el.tag==="Pending"?" pend":""}">${esc(el.tag)}</span>`:""}${el.cat?`<span class="lcat">${esc(el.cat)}</span>`:""}</div></div>`;
+    }
+    /* ── v1 · generic lo-fi skeletons (kept) ── */
+    case "hero": return `<div class="sk-big"></div><div class="skb w70"></div><div class="skb w40"></div>`;
+    case "statHero": return `<div class="sk-big" style="width:70%"></div><div class="skb w40"></div><div class="sk-pills" style="margin-top:7px"><span class="sk-pill on">●●</span><span class="sk-pill">●●</span></div>`;
+    case "stat": return `<div class="sk-big" style="width:44%"></div><div class="skb w55"></div>`;
+    case "btn": return `<div class="sk-btn">● ● ●</div>`;
+    case "btnOutline": return `<div class="sk-btn outline">● ● ●</div>`;
+    case "link": return `<div class="skb w40" style="margin:3px auto"></div>`;
+    case "input": return `<div class="sk-input"><div class="skb w55"></div></div>`;
+    case "inputs2": return `<div class="sk-input"><div class="skb w55"></div></div><div class="sk-input" style="margin-top:6px"><div class="skb w40"></div></div>`;
+    case "otp": return `<div class="sk-otp"><i></i><i></i><i></i><i></i><i></i><i></i></div>`;
+    case "code": return `<div class="sk-code">${esc(el.t1||"● ● ● ●")}</div>`;
+    case "pills": return `<div class="sk-pills"><span class="sk-pill on">●●</span><span class="sk-pill">●●</span><span class="sk-pill">●●</span><span class="sk-pill">●●</span></div>`;
+    case "pillbar": return `<div class="sk-pills"><span class="sk-pill on">●●</span><span class="sk-pill">●●</span><span class="sk-pill">●●</span><span class="sk-pill">●●</span><span class="sk-pill">●●</span></div>`;
+    case "chips": return `<div class="sk-pills"><span class="sk-pill">●●●</span><span class="sk-pill">●●</span><span class="sk-pill">●●●</span></div>`;
+    case "seg": return `<div class="sk-seg"><i>●●</i><i class="on">●●</i><i>●●</i></div>`;
+    case "toggles": return [1,0,1].map(on=>`<div class="sk-flex" style="padding:3px 0"><div style="flex:1"><div class="skb w70"></div></div><div class="sk-toggle ${on?"on":"off"}"></div></div>`).join("");
+    case "toggleCard": return `<div class="sk-flex"><div style="flex:1"><div class="skb w70"></div><div class="skb w40"></div></div><div class="sk-toggle on"></div></div>`;
+    case "bar": return `<div class="sk-flex"><div style="flex:1"><div class="skb w55"></div></div><span class="sk-pill on">●●</span></div>`;
+    case "meterCard": return `<div class="skb w40" style="margin-bottom:7px"></div><div class="sk-meter"><i style="width:62%"></i></div><div class="skb w25" style="margin-top:7px"></div>`;
+    case "grid": return `<div class="sk-grid">${`<div class="sk-cell"><div class="skb"></div></div>`.repeat(6)}</div>`;
+    case "list": return [0,1,2].map(()=>`<div class="sk-listrow"><div class="sk-circle"></div><div class="lines"><div class="skb w70"></div><div class="skb w40"></div></div></div>`).join("");
+    case "swipe": return `<div class="sk-listrow"><div class="sk-circle"></div><div class="lines"><div class="skb w70"></div><div class="skb w40"></div></div><span class="sk-pill">⟵ ⟶</span></div>`;
+    case "bubbles": return `<div style="display:flex;flex-direction:column;gap:6px"><div style="max-width:74%;border:1.5px solid var(--ink);border-radius:9px 9px 9px 2px;background:var(--paper);padding:6px 8px"><div class="skb w90"></div><div class="skb w55"></div></div><div style="max-width:74%;align-self:flex-end;border-radius:9px 9px 2px 9px;background:var(--ink);padding:7px 8px"><div class="skb w70" style="background:var(--paper);opacity:.85;margin:0"></div></div></div>`;
+    case "composer": return `<div class="sk-flex"><div class="sk-input" style="flex:1"><div class="skb w40"></div></div><div class="sk-circle"></div></div>`;
+    case "chart": return `<div class="sk-chart"><svg viewBox="0 0 100 40" preserveAspectRatio="none"><line x1="0" y1="36" x2="100" y2="36" stroke="#D2C6A8" stroke-width="1" stroke-dasharray="3 3"/><polyline points="0,32 14,26 28,29 42,18 56,22 70,12 84,16 100,7" fill="none" stroke="#2B2C26" stroke-width="2"/></svg></div>`;
+    case "kv": return [0,1,2].map(()=>`<div class="sk-kv"><div class="skb w25" style="width:30%"></div><div class="skb w25" style="width:18%"></div></div>`).join("");
+    case "hatch": return `<div class="sk-hatch"></div>`;
+    default: return `<div class="skb w90"></div><div class="skb w55"></div>`;
+  }
+}
+
+function elHTML(el){
+  const linked=(el.links||[]).length;
+  const frame=kindFrame(el);
+  const cls=["wf-el",frame,el.nav?"hasnav":"",(!linked&&!el.note&&!el.nav)?"nolink":"",activeEl===el.id?"active":""].filter(Boolean).join(" ");
+  return `<div class="${cls}" data-el="${el.id}" title="${esc(el.label)}">
+    <span class="cap">${esc(el.label)}${editWF?'<span class="ed">✎</span>':""}</span>
+    ${el.nav?'<span class="navmark">⇢</span>':""}
+    ${el.note?'<span class="gapdot">⚠</span>':""}
+    ${kindHTML(el)}</div>`;
+}
+
+function curScreenObj(){
+  const wf=state.wireframes[curWF];
+  if(!wf||!wf.screens) return null;
+  return wf.screens[curScreen]||null;
+}
+function findEl(id){
+  const sc=curScreenObj(); if(!sc) return null;
+  for(const row of sc.rows) for(const el of row) if(el.id===id) return el;
+  return null;
+}
+function findElAnywhere(pageId,elId){
+  const wf=state.wireframes[pageId]; if(!wf||!wf.screens) return null;
+  for(const sid in wf.screens){
+    for(const row of (wf.screens[sid].rows||[])) for(const el of row) if(el.id===elId) return {screen:sid,el};
+  }
+  return null;
+}
+function paintActiveEl(){
+  wfStack.querySelectorAll(".wf-el").forEach(d=>d.classList.toggle("active",d.dataset.el===activeEl));
+}
+
+function navTitle(el){
+  if(!el.nav) return "";
+  if(el.nav.indexOf("page:")===0){ const n=nodeById(el.nav.slice(5)); return n?n.label:el.nav.slice(5); }
+  const wf=state.wireframes[curWF]; const sc=wf&&wf.screens&&wf.screens[el.nav];
+  return sc?(sc.title||el.nav):el.nav;
+}
+function doNav(el){
+  activeEl=null; clearFocus(); paintActiveEl();
+  if(el.nav.indexOf("page:")===0){
+    const pid=el.nav.slice(5);
+    if(!nodeById(pid)){ toast("Target page is no longer on the map","warn"); return; }
+    openDrawer(pid);
+    return;
+  }
+  goScreen(el.nav);
+}
+function goScreen(id,push){
+  const wf=state.wireframes[curWF];
+  if(!wf||!wf.screens[id]){ toast("That screen doesn't exist yet — add it in ✎ edit","warn"); return; }
+  if(push!==false && id!==curScreen) screenHist.push(curScreen);
+  if(id!==curScreen){ curScreen=id; clearFocus(); }
+  renderWF();
+}
+function addScreen(){
+  const wf=state.wireframes[curWF]; if(!wf) return;
+  const id=uid("s_");
+  wf.screens[id]={title:"New screen",rows:[]};
+  screenHist.push(curScreen); curScreen=id;
+  renderWF(); autosave(); toast("Screen added — tap its chip to rename");
+}
+function delScreen(id){
+  const wf=state.wireframes[curWF]; if(!wf) return;
+  if(Object.keys(wf.screens).length<2) return;
+  if(!confirm(`Delete screen "${(wf.screens[id]&&wf.screens[id].title)||id}" and its elements?`)) return;
+  delete wf.screens[id];
+  screenHist=screenHist.filter(s=>s!==id&&wf.screens[s]);
+  const rest=Object.keys(wf.screens);
+  if(!wf.screens[wf.start]) wf.start=rest[0];
+  if(!wf.screens[curScreen]) curScreen=wf.start;
+  renderWF(); autosave(); toast("Screen deleted");
+}
+
+function renderFlow(wf){
+  const flow=$("wfFlow"); if(!flow) return;
+  const ids=Object.keys(wf.screens);
+  let h="";
+  if(screenHist.length) h+=`<button class="fchip" data-back="1" title="Back">‹</button><span class="farrow">·</span>`;
+  h+=ids.map(id=>`<button class="fchip${id===curScreen?" on":""}" data-screen="${id}">${esc((wf.screens[id].title||id))}${editWF&&id===curScreen&&ids.length>1?' <span data-delscreen="1" title="Delete screen">✕</span>':""}</button>`).join(`<span class="farrow">⇢</span>`);
+  if(editWF) h+=`<span class="farrow">·</span><button class="fchip add" data-addscreen="1" title="Add screen">＋</button>`;
+  flow.innerHTML=h;
+  flow.querySelectorAll("[data-screen]").forEach(b=>b.onclick=ev=>{
+    if(ev.target && ev.target.dataset && ev.target.dataset.delscreen){ delScreen(b.dataset.screen); return; }
+    const id=b.dataset.screen;
+    if(id===curScreen){
+      if(editWF){
+        const t=prompt("Rename screen", wf.screens[id].title||id);
+        if(t!=null && t.trim()){ wf.screens[id].title=t.trim(); renderWF(); autosave(); }
+      }
+      return;
+    }
+    goScreen(id);
+  });
+  const back=flow.querySelector("[data-back]");
+  if(back) back.onclick=()=>{ const prev=screenHist.pop(); if(prev&&wf.screens[prev]){ curScreen=prev; clearFocus(); renderWF(); } };
+  const add=flow.querySelector("[data-addscreen]");
+  if(add) add.onclick=addScreen;
+}
+
+function renderWF(){
+  const n=nodeById(curWF); if(!n) return;
+  let wf=state.wireframes[curWF];
+  if(!wf||!wf.screens||!Object.keys(wf.screens).length){
+    wf=state.wireframes[curWF]={start:"main",screens:{main:{title:n.label,rows:[]}}};
+  }
+  if(!wf.screens[curScreen]) curScreen=wf.screens[wf.start]?wf.start:Object.keys(wf.screens)[0];
+  const sc=wf.screens[curScreen];
+  $("drawerTitle").textContent=n.label;
+  const total=sc.rows.reduce((s,r)=>s+r.length,0);
+  const linked=sc.rows.reduce((s,r)=>s+r.filter(e=>(e.links||[]).length).length,0);
+  $("drawerSub").textContent=`${sc.title||curScreen} · ${total} elements · ${linked} wired${editWF?" · editing":""}`;
+  renderFlow(wf);
+  $("drawerHint").innerHTML=editWF
+    ? `Edit mode — tap an element to retitle it, change its text, rewire its backend links, or point it at another screen. <b>＋</b> adds a screen; tap the current chip to rename it.`
+    : `Tap an element to <b>trace its circuit</b> — ↗ what it calls, ↘ what feeds it. <span style="color:var(--page)">⇢</span> elements: tap twice to follow the flow.`;
+  $("drawerEdit").classList.toggle("on",editWF);
+  $("btnAddEl").style.display=editWF?"block":"none";
+  wfStack.classList.toggle("editing",editWF);
+  wfStack.innerHTML=sc.rows.map(row=>`<div class="wf-row">${row.map(elHTML).join("")}</div>`).join("")
+    || `<div style="text-align:center;color:var(--ink-soft);font-family:var(--mono);font-size:9px;letter-spacing:.14em;padding:30px 0">EMPTY SCREEN — SWITCH TO ✎ EDIT</div>`;
+  if(!editWF){ elInspector.style.display="none"; editingEl=null; }
+}
+
+function openDrawer(pageId, screenId, focusElId){
+  curWF=pageId; editWF=false; editingEl=null; screenHist=[];
+  let wf=state.wireframes[pageId];
+  if(!wf||!wf.screens||!Object.keys(wf.screens).length){
+    const n=nodeById(pageId);
+    wf=state.wireframes[pageId]={start:"main",screens:{main:{title:n?n.label:"Main",rows:[]}}};
+  }
+  curScreen=(screenId&&wf.screens[screenId])?screenId:(wf.screens[wf.start]?wf.start:Object.keys(wf.screens)[0]);
+  activeEl=null;
+  drawer.classList.add("open");
+  renderWF();
+  if(focusElId){
+    const el=findEl(focusElId);
+    if(el) traceElement(curWF,el);
+  }
+}
+function closeDrawer(){
+  if(!drawer.classList.contains("open")) return;
+  drawer.classList.remove("open");
+  curWF=null; curScreen=null; screenHist=[]; editingEl=null; elInspector.style.display="none";
+}
+$("drawerClose").onclick=()=>{ closeDrawer(); };
+$("drawerEdit").onclick=()=>{ editWF=!editWF; renderWF(); };
+wfStack.addEventListener("click",ev=>{
+  const d=ev.target.closest(".wf-el"); if(!d) return;
+  const el=findEl(d.dataset.el); if(!el) return;
+  if(editWF){ openElInspector(el); return; }
+  if(activeEl===el.id){
+    if(el.nav){ doNav(el); return; }
+    activeEl=null; clearFocus(); paintActiveEl(); return;
+  }
+  traceElement(curWF,el);
+});
+$("btnAddEl").onclick=()=>{
+  const wf=state.wireframes[curWF]; if(!wf) return;
+  const sc=wf.screens[curScreen]; if(!sc) return;
+  const el={id:uid("el_"),label:"New element",kind:"card",links:[]};
+  sc.rows.push([el]);
+  renderWF(); openElInspector(el); autosave();
+};
+function openElInspector(el){
+  editingEl=el.id;
+  const opts=Object.keys(TYPES).map(t=>{
+    const ns=state.nodes.filter(n=>n.type===t && !(el.links||[]).includes(n.id));
+    if(!ns.length) return "";
+    return `<optgroup label="${TYPES[t].label}">${ns.map(n=>`<option value="${n.id}">${esc(n.label)}</option>`).join("")}</optgroup>`;
+  }).join("");
+  const chips=(el.links||[]).map(id=>{
+    const n=nodeById(id); if(!n) return "";
+    return `<span class="linkchip"><span class="sw" style="background:${TYPES[n.type].color}"></span>${esc(n.label)}<button data-unlink="${id}">✕</button></span>`;
+  }).join("") || `<span class="note">No links yet — UI-only.</span>`;
+  const wf=state.wireframes[curWF]||{screens:{}};
+  const screenOpts=Object.keys(wf.screens).filter(id=>id!==curScreen).map(id=>`<option value="${id}" ${el.nav===id?"selected":""}>screen · ${esc(wf.screens[id].title||id)}</option>`).join("");
+  const pageOpts=state.nodes.filter(n=>n.type==="page"&&n.id!==curWF).map(n=>`<option value="page:${n.id}" ${el.nav==="page:"+n.id?"selected":""}>page · ${esc(n.label)}</option>`).join("");
+  elInspector.style.display="block";
+  elInspector.innerHTML=`
+    <h4>Element · ${esc(el.label)}</h4>
+    <div class="fgroup"><label>Label (designer note)</label><input type="text" id="wLabel" value="${esc(el.label)}"></div>
+    <div class="fgroup"><label>Shape</label><select id="wKind">${KINDS.map(k=>`<option value="${k}" ${el.kind===k?"selected":""}>${k}</option>`).join("")}</select></div>
+    <div class="fgroup"><label>Primary text</label><input type="text" id="wT1" value="${esc(el.t1||"")}" placeholder="big text on the element"></div>
+    <div class="fgroup"><label>Secondary text</label><input type="text" id="wT2" value="${esc(el.t2||"")}" placeholder="eyebrow / small text"></div>
+    <div class="fgroup"><label>Tap-again goes to</label><select id="wNav"><option value="">— nothing —</option>${screenOpts}${pageOpts}</select></div>
+    <div class="fgroup"><label>Gap note (optional ⚠)</label><input type="text" id="wNote" value="${esc(el.note||"")}" placeholder="e.g. endpoint missing"></div>
+    <div class="fgroup"><label>Backend links</label><div class="linkchips" id="wChips">${chips}</div></div>
+    <div class="fgroup"><label>Add link</label><div class="btnrow"><select id="wAddSel" style="flex:2;min-width:0;background:var(--pane3);border:1px solid var(--line);border-radius:7px;color:var(--cream);font-size:11px;padding:7px 8px">${opts||"<option disabled>—</option>"}</select><button class="pbtn accent" id="wAddBtn" style="flex:1">+ Link</button></div></div>
+    <hr class="sep">
+    <div class="btnrow"><button class="pbtn" id="wDone">Done</button><button class="pbtn ghost-danger" id="wDel">Delete element</button></div>`;
+  $("wLabel").addEventListener("input",ev=>{ el.label=ev.target.value; renderWF(); autosave(); keepInspector(); });
+  $("wKind").addEventListener("change",ev=>{ el.kind=ev.target.value; renderWF(); autosave(); keepInspector(); });
+  $("wT1").addEventListener("input",ev=>{ const v=ev.target.value; if(v) el.t1=v; else delete el.t1; renderWF(); autosave(); keepInspector(); });
+  $("wT2").addEventListener("input",ev=>{ const v=ev.target.value; if(v) el.t2=v; else delete el.t2; renderWF(); autosave(); keepInspector(); });
+  $("wNav").addEventListener("change",ev=>{ const v=ev.target.value; if(v) el.nav=v; else delete el.nav; renderWF(); autosave(); keepInspector(); });
+  $("wNote").addEventListener("input",ev=>{ const v=ev.target.value.trim(); if(v) el.note=v; else delete el.note; renderWF(); autosave(); keepInspector(); });
+  $("wAddBtn").onclick=()=>{
+    const v=$("wAddSel").value; if(!v) return;
+    el.links=el.links||[]; if(!el.links.includes(v)) el.links.push(v);
+    renderWF(); openElInspector(el); autosave();
+  };
+  elInspector.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>{
+    el.links=(el.links||[]).filter(x=>x!==b.dataset.unlink);
+    renderWF(); openElInspector(el); autosave();
+  });
+  $("wDone").onclick=()=>{ editingEl=null; elInspector.style.display="none"; };
+  $("wDel").onclick=()=>{
+    const wf2=state.wireframes[curWF]; if(!wf2) return;
+    const sc=wf2.screens[curScreen]; if(!sc) return;
+    sc.rows=sc.rows.map(r=>r.filter(x=>x.id!==el.id)).filter(r=>r.length);
+    editingEl=null; elInspector.style.display="none";
+    renderWF(); autosave(); toast("Element removed");
+  };
+  function keepInspector(){ elInspector.querySelector("h4").textContent="Element · "+el.label; }
+  elInspector.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+/* ════════════════════════════ change log — signed, dated, AI-readable ════════════════════════════ */
+function currentEditor(forceAsk){
+  let n=null;
+  try{ n=sessionStorage.getItem("lagbot:editor"); }catch(e){}
+  if(!n||forceAsk){
+    const v=prompt("Who's making this change? (name for the change log)", n||"");
+    n=(v&&v.trim())?v.trim().slice(0,40):(n||"Unknown");
+    try{ sessionStorage.setItem("lagbot:editor", n); }catch(e){}
+  }
+  return n;
+}
+function logChange(msg){
+  if(!state) return;
+  state.changelog = Array.isArray(state.changelog)?state.changelog:[];
+  const ts=new Date();
+  const stamp=ts.getFullYear()+"-"+String(ts.getMonth()+1).padStart(2,"0")+"-"+String(ts.getDate()).padStart(2,"0")+" "+String(ts.getHours()).padStart(2,"0")+":"+String(ts.getMinutes()).padStart(2,"0")+":"+String(ts.getSeconds()).padStart(2,"0");
+  state.changelog.push({at:stamp, by:currentEditor(), msg:String(msg).slice(0,220)});
+  if(state.changelog.length>300) state.changelog=state.changelog.slice(-300);
+}
+function openLog(){
+  const list=(state&&state.changelog||[]).slice().reverse();
+  $("logEditor").textContent=currentEditor();
+  $("logBody").innerHTML = list.length
+    ? list.map(c=>`<div class="logrow"><span class="lt">${esc(c.at)}</span><span class="lb">${esc(c.by||"—")}</span><span class="lm">${esc(c.msg)}</span></div>`).join("")
+    : `<div class="note">Nothing logged yet — every addition, removal and approval will appear here with who made it, date and time.</div>`;
+  scrim.classList.add("show"); $("logModal").classList.add("show");
+}
+$("btnLog").onclick=openLog;
+$("logSwitch").onclick=()=>{ currentEditor(true); openLog(); };
+
+/* merge newly-shipped default nodes/edges into a previously saved map */
+function mergeNewDefaults(s){
+  s.meta=s.meta||{};
+  const REV=2;
+  if((s.meta.mergeRev||0)>=REV) return;
+  const d=defaultState();
+  const have=new Set(s.nodes.map(n=>n.id));
+  const isNew=id=>/^(agent_|svc_redis$|svc_server$|svc_cors$|svc_errors$|svc_jobs$|svc_saleshelp$|svc_dead$|api_health$|ext_droplet$|ext_github$|ext_codemagic$)/.test(id);
+  d.nodes.forEach(n=>{ if(isNew(n.id)&&!have.has(n.id)) s.nodes.push(clone(n)); });
+  const haveE=new Set(s.edges.map(e=>e.id));
+  d.edges.forEach(e=>{
+    if(!/^(ag|d)\d+$/.test(e.id)||haveE.has(e.id)) return;
+    if(s.nodes.some(x=>x.id===e.from)&&s.nodes.some(x=>x.id===e.to)) s.edges.push(clone(e));
+  });
+  s.meta.mergeRev=REV;
+}
+
+/* ════════════════════════════ Circuit — the AI prompt bar ════════════════════════════ */
+const aiPanelEl=$("aiPanel"), aiInputEl=$("aiInput"), aiAskBtn=$("aiAsk"), aiModeEl=$("aiMode"), aiKeyModal=$("aiKeyModal");
+let AI_PERSONA=(document.getElementById("aiPersonaMD")||{textContent:""}).textContent.trim();
+fetch("lagbot-map-ai.md",{cache:"no-store"}).then(r=>r.ok?r.text():null).then(t=>{ if(t&&t.trim()) AI_PERSONA=t.trim(); }).catch(()=>{});
+
+const aiKey=()=>{ try{return localStorage.getItem("lagbot:aikey")||"";}catch(e){return "";} };
+const aiModel=()=>{ try{return localStorage.getItem("lagbot:aimodel")||"claude-opus-4-8";}catch(e){return "claude-opus-4-8";} };
+function updateAiMode(){
+  const k=aiKey();
+  aiModeEl.textContent=k?("claude · "+aiModel().replace("claude-","").replace(/-/g,".")):"offline brain";
+  aiModeEl.classList.toggle("claude",!!k);
+}
+function laneName(id){ const L=LAYERS.find(l=>l.id===id); return L?L.name:id; }
+
+function buildMapContext(){
+  const lines=["CURRENT MAP STATE","","NODES (id | name | type | lane | status):"];
+  state.nodes.forEach(n=>lines.push(`${n.id} | ${n.label} | ${TYPES[n.type].label} | ${laneName(n.layer)} | ${n.status||"active"}`));
+  lines.push("","LINES (from -> to | what flows | status):");
+  state.edges.forEach(e=>lines.push(`${e.from} -> ${e.to} | ${(e.label||"").slice(0,70)} | ${e.status||"active"}`));
+  const notes=[];
+  Object.keys(state.wireframes).forEach(pid=>{
+    const pg=nodeById(pid); const wf=state.wireframes[pid]; if(!pg||!wf||!wf.screens) return;
+    Object.values(wf.screens).forEach(sc=>(sc.rows||[]).forEach(row=>row.forEach(el=>{ if(el.note) notes.push(`${pg.label} · ${el.label}: ${el.note}`); })));
+  });
+  if(notes.length){ lines.push("","APP-SCREEN WARNINGS (⚠):"); notes.forEach(n=>lines.push(n)); }
+  const log=(state.changelog||[]).slice(-15).reverse();
+  if(log.length){ lines.push("","RECENT CHANGES ON THE MAP (newest first · time — who — what):"); log.forEach(c=>lines.push(`${c.at} — ${c.by||"?"} — ${c.msg}`)); }
+  return lines.join("\n");
+}
+
+const aiMsgsEl=$("aiMsgs");
+function aiOpen(){ aiPanelEl.classList.add("open"); }
+function aiClose(){ aiPanelEl.classList.remove("open"); }
+function aiAppend(cls, html){
+  const d=document.createElement("div");
+  d.className=cls; d.innerHTML=html;
+  aiMsgsEl.appendChild(d); aiOpen();
+  aiPanelEl.scrollTop=aiPanelEl.scrollHeight;
+  return d;
+}
+$("aiPanelClose").onclick=()=>aiClose();
+$("aiChatClear").onclick=()=>{ aiMsgsEl.innerHTML=""; aiHistory=[]; aiClose(); };
+/* click anywhere outside the panel/bar closes it */
+document.addEventListener("pointerdown",ev=>{
+  if(!aiPanelEl.classList.contains("open")) return;
+  if(ev.target.closest("#aiPanel")||ev.target.closest("#aiBar")) return;
+  aiClose();
+},true);
+const nlink=n=>`<span class="nlink" data-node="${n.id}">${esc(n.label)}</span>`;
+aiPanelEl.addEventListener("click",ev=>{
+  const nl=ev.target.closest(".nlink");
+  if(nl){ const n=nodeById(nl.dataset.node); if(n) selectNode(n.id); return; }
+});
+
+/* — proposals: nothing is drawn until David approves — */
+let propSeq=0; const liveProps={};
+function resolveNodeRef(ref){
+  if(!ref) return null;
+  let n=nodeById(ref); if(n) return n;
+  const t=String(ref).toLowerCase().trim();
+  return state.nodes.find(x=>x.label.toLowerCase()===t)
+      || state.nodes.find(x=>x.label.toLowerCase().includes(t))
+      || null;
+}
+function renderProposals(props){
+  props.forEach(p=>{
+    const pid="prop"+(++propSeq);
+    liveProps[pid]=p;
+    let inner="";
+    if(p.kind==="node"){
+      const lane=laneName(p.node.layer||"svc");
+      inner=`<div class="ptag">Proposed new node</div>
+        <div class="ptitle">${esc(p.node.label)}</div>
+        <div class="ppath">lands in the ${esc(lane)} lane · ${esc(TYPES[p.node.type]?TYPES[p.node.type].label:String(p.node.type))} · drawn as ${esc(p.node.status||"planned")}</div>
+        <div class="preason">${esc(p.reason||"")}</div>`;
+    } else {
+      const a=resolveNodeRef(p.from), b=resolveNodeRef(p.to);
+      if(!a||!b){
+        aiAppend("ai-prop done rejected",
+          `<div class="ptag">Proposed new line</div>
+           <div class="ptitle">${esc(p.from||"?")} → ${esc(p.to||"?")}</div>
+           <div class="pwarn">⚠ Can't draw this — ${!a?`"${esc(p.from)}"`:`"${esc(p.to)}"`} isn't on the map.</div>
+           <div class="preason">${esc(p.reason||"")}</div><div class="pstate" style="display:block;color:var(--danger)">Skipped</div>`);
+        return;
+      }
+      p._from=a.id; p._to=b.id;
+      const dup=state.edges.find(e=>(e.from===a.id&&e.to===b.id)||(e.from===b.id&&e.to===a.id));
+      const cross=a.layer===b.layer?`stays inside the ${laneName(a.layer)} lane`:`crosses ${laneName(a.layer)} → ${laneName(b.layer)}`;
+      inner=`<div class="ptag">Proposed new line</div>
+        <div class="ptitle">${esc(a.label)} → ${esc(b.label)}${p.label?` <span style="color:var(--mute);font-weight:400">· ${esc(p.label)}</span>`:""}</div>
+        <div class="ppath">${esc(cross)} · drawn as ${esc(p.status||"planned")}</div>
+        <div class="preason">${esc(p.reason||"")}</div>
+        ${dup?`<div class="pwarn">⚠ These two are already connected — approving would duplicate it.</div>`:""}`;
+    }
+    inner+=`<div class="pbtns"><button class="ok" data-approve="${pid}">✓ Approve</button><button class="no" data-reject="${pid}">✕ Dismiss</button></div><div class="pstate"></div>`;
+    aiAppend("ai-prop"+(p.kind==="node"?" node-prop":""),inner);
+  });
+}
+aiPanelEl.addEventListener("click",ev=>{
+  const ok=ev.target.closest("[data-approve]"), no=ev.target.closest("[data-reject]");
+  if(!ok&&!no) return;
+  const card=ev.target.closest(".ai-prop");
+  const pid=ok?ok.dataset.approve:no.dataset.reject;
+  const p=liveProps[pid]; if(!p||!card) return;
+  if(no){ card.classList.add("done","rejected"); card.querySelector(".pstate").textContent="Dismissed"; return; }
+  if(p.kind==="node"){
+    const spec=p.node;
+    const laneX={ext:30,svc:330,agents:330,bridge:640,pages:985};
+    const layer=laneX[spec.layer]!==undefined?spec.layer:"svc";
+    const typeOk=TYPES[spec.type]?spec.type:"service";
+    const id=(spec.id&&!nodeById(spec.id))?spec.id:uid("n_");
+    const peers=state.nodes.filter(n=>n.layer===layer);
+    const y=peers.length?Math.max(...peers.map(n=>n.y))+95:120;
+    const n={id, label:spec.label||"New node", sub:spec.sub||"", type:typeOk, layer, x:laneX[layer], y};
+    if(spec.status&&spec.status!=="active") n.status=spec.status;
+    if(typeOk==="page"){ n.wf=true; state.wireframes[id]={start:"main",screens:{main:{title:n.label,rows:[]}}}; }
+    state.nodes.push(n);
+    logChange(`Approved AI suggestion: new node "${n.label}"`);
+    rebuild(); autosave(); selectNode(n.id);
+  } else {
+    if(!nodeById(p._from)||!nodeById(p._to)){ toast("One end of that line is gone from the map","warn"); return; }
+    if(state.edges.some(e=>(e.from===p._from&&e.to===p._to)||(e.from===p._to&&e.to===p._from))){
+      card.classList.add("done"); card.querySelector(".pstate").textContent="Already connected — nothing added";
+      return;
+    }
+    const e={id:uid("e_"), from:p._from, to:p._to, label:p.label||""};
+    if(p.status&&p.status!=="active") e.status=p.status;
+    state.edges.push(e);
+    logChange(`Approved AI suggestion: line ${nodeById(e.from).label} → ${nodeById(e.to).label}${e.label?` (${e.label})`:""}`);
+    rebuild(); autosave(); selectEdge(e.id);
+  }
+  card.classList.add("done"); card.querySelector(".pstate").textContent="Added to the map ✓";
+  toast("Added — autosaved");
+});
+
+/* — offline brain — works with no API key — */
+function kbProposals(limitNode){
+  const out=[];
+  Object.keys(GAP_KB).forEach(nid=>{
+    if(limitNode&&nid!==limitNode) return;
+    const kb=GAP_KB[nid]; if(!kb||!kb.recs) return;
+    kb.recs.forEach(r=>{
+      if(r.kind==="node"){ if(!nodeById(r.node.id)) out.push({kind:"node", node:r.node, reason:r.reason}); }
+      else if(!state.edges.some(e=>(e.from===r.from&&e.to===r.to)||(e.from===r.to&&e.to===r.from)))
+        out.push({kind:"edge", from:r.from, to:r.to, label:r.label, status:r.status||"planned", reason:r.reason});
+    });
+  });
+  const seen=new Set();
+  return out.filter(p=>{ const k=p.kind==="node"?"n:"+p.node.id:`e:${p.from}>${p.to}`; if(seen.has(k))return false; seen.add(k); return true; }).slice(0,4);
+}
+function gapInventoryHTML(){
+  const gapN=state.nodes.filter(n=>n.status==="gap"), plnN=state.nodes.filter(n=>n.status==="planned");
+  const gapE=state.edges.filter(e=>e.status==="gap");
+  const plnE=state.edges.filter(e=>e.status==="planned");
+  let noteCount=0;
+  Object.values(state.wireframes).forEach(wf=>Object.values(wf.screens||{}).forEach(sc=>(sc.rows||[]).forEach(r=>r.forEach(el=>{ if(el.note) noteCount++; }))));
+  let h=`Here's the current damage report:<ul>`;
+  if(gapN.length) h+=`<li><b>${gapN.length} missing piece${gapN.length>1?"s":""}</b>: ${gapN.map(nlink).join(", ")}</li>`;
+  if(gapE.length) h+=`<li><b>${gapE.length} broken connection${gapE.length>1?"s":""}</b>: ${gapE.slice(0,4).map(e=>{const a=nodeById(e.from),b=nodeById(e.to);return esc(`${a?a.label:"?"} → ${b?b.label:"?"}`);}).join(" · ")}</li>`;
+  if(plnN.length||plnE.length) h+=`<li><b>${plnN.length+plnE.length} planned items</b> (Phase 2/3)${plnN.length?": "+plnN.map(nlink).join(", "):""}</li>`;
+  if(noteCount) h+=`<li><b>${noteCount} ⚠ warnings</b> inside app screens (open any orange page's wireframe)</li>`;
+  h+=`</ul>Click a name to inspect it — its <b>Gap report</b> has the fix. Or ask me to <b>"suggest fixes"</b>.`;
+  return h;
+}
+function localAnswer(q){
+  const t=q.toLowerCase();
+  const findN=s=>{ s=s.toLowerCase().trim(); return state.nodes.find(n=>n.label.toLowerCase()===s)||state.nodes.find(n=>n.label.toLowerCase().includes(s))||state.nodes.find(n=>(n.sub||"").toLowerCase().includes(s)); };
+  const m=t.match(/connect\s+(.+?)\s+(?:to|with|and)\s+(.+)/);
+  if(m){
+    const a=findN(m[1]), b=findN(m[2]);
+    if(a&&b) return {html:`Here's that line as a proposal — check where it goes, then approve:`, proposals:[{kind:"edge", from:a.id, to:b.id, label:"", status:"planned", reason:"You asked for this connection from the prompt bar."}]};
+    return {html:`I couldn't find ${!a?`"${esc(m[1])}"`:`"${esc(m[2])}"`} on the map. Try the exact node name.`, proposals:[]};
+  }
+  if(/fix|suggest|recommend|improve/.test(t)){
+    const target=Object.keys(GAP_KB).map(nodeById).filter(Boolean).find(n=>t.includes(n.label.toLowerCase()));
+    const props=kbProposals(target?target.id:null);
+    if(!props.length) return {html:target?`No outstanding map additions for <b>${esc(target.label)}</b> — its remaining fixes are build work, not drawing (see its Gap report).`:`All my stock recommendations are already drawn. Add an API key in ⚙ and ask again for deeper ideas.`, proposals:[]};
+    return {html:`${props.length} recommendation${props.length>1?"s":""} — approve the ones you want drawn:`, proposals:props};
+  }
+  if(/gap|issue|problem|missing|broken|wrong|risk|stub/.test(t)) return {html:gapInventoryHTML(), proposals:[]};
+  if(/orphan|unwired|lonely|unused/.test(t)){
+    const orphans=state.nodes.filter(n=>!edgesOf(n.id).length);
+    return {html:orphans.length?`${orphans.length} node${orphans.length>1?"s have":" has"} no connections: ${orphans.map(nlink).join(", ")}. (Dead Code is expected to be orphaned — anything else needs wiring.)`:`No orphan nodes — everything is wired to something.`, proposals:[]};
+  }
+  if(/agent/.test(t)){
+    const ags=state.nodes.filter(n=>n.type==="agent");
+    return {html:`The <b>AI Agents</b> lane has ${ags.length} workers: ${ags.map(nlink).join(", ")}. Solid ones run today inside the Message Pipeline; dashed ones are planned. Add more with <b>+ Node → AI Agent</b>, or ask me in Claude mode to design some.`, proposals:[]};
+  }
+  if(/help|what can/.test(t)) return {html:`I can:<ul><li><b>find issues</b> — try "what's broken?"</li><li><b>suggest fixes</b> — try "suggest fixes" or "fix the wallet"</li><li><b>draw lines</b> — try "connect Wallet to Paystack"</li><li><b>find orphans</b> — try "anything unwired?"</li><li><b>look things up</b> — type any node name</li></ul>For real reasoning about flows, add an Anthropic API key in ⚙.`, proposals:[]};
+  const hits=state.nodes.filter(n=>(n.label+" "+(n.sub||"")).toLowerCase().includes(t)).slice(0,6);
+  if(hits.length) return {html:`Found ${hits.length}:<ul>${hits.map(n=>`<li>${nlink(n)} — ${esc(n.sub||TYPES[n.type].label)} · ${edgesOf(n.id).length} connection${edgesOf(n.id).length===1?"":"s"}</li>`).join("")}</ul>Click one to spotlight it.`, proposals:[]};
+  return {html:`The offline brain only does lookups, gap reports and stock suggestions. For a question like that, add an Anthropic API key in <b>⚙</b> and I'll reason about it properly.`, proposals:[]};
+}
+
+/* — Claude mode — */
+const AI_SCHEMA={
+  type:"object", additionalProperties:false,
+  properties:{
+    answer:{type:"string", description:"Plain-English answer for David. Short paragraphs, no markdown headers."},
+    proposals:{type:"array", description:"0-4 proposed map additions. Empty array if none needed.", items:{
+      type:"object", additionalProperties:false,
+      properties:{
+        kind:{type:"string", enum:["edge","node"]},
+        from:{type:"string", description:"edge only: exact node id; empty string for nodes"},
+        to:{type:"string", description:"edge only: exact node id; empty string for nodes"},
+        label:{type:"string", description:"edge only: what flows on this line; empty string for nodes"},
+        status:{type:"string", enum:["active","planned","gap"]},
+        reason:{type:"string", description:"why this helps, in plain English"},
+        nodeLabel:{type:"string", description:"node only; empty string for edges"},
+        nodeSub:{type:"string", description:"node only: one-line detail; empty string for edges"},
+        nodeType:{type:"string", enum:["external","service","api","db","channel","client","page","agent"]},
+        nodeLayer:{type:"string", enum:["ext","svc","agents","bridge","pages"]}
+      },
+      required:["kind","from","to","label","status","reason","nodeLabel","nodeSub","nodeType","nodeLayer"]
+    }}
+  },
+  required:["answer","proposals"]
+};
+let aiHistory=[];
+async function askClaude(q){
+  const body={
+    model:aiModel(), max_tokens:4000,
+    system:AI_PERSONA+"\n\nReply via the JSON schema. 'answer' is for David. Proposals: use EXACT node ids in from/to. For kind 'node' fill nodeLabel/nodeSub/nodeType/nodeLayer and use empty strings for from/to/label. Use empty strings for any field that doesn't apply. Never more than 4 proposals; zero is fine.",
+    output_config:{format:{type:"json_schema", schema:AI_SCHEMA}},
+    messages:[{role:"user", content: buildMapContext()
+      +(aiHistory.length?"\n\nEARLIER IN THIS CHAT:\n"+aiHistory.map(h=>`David: ${h.q}\nYou: ${h.a}`).join("\n"):"")
+      +"\n\nDavid asks: "+q}]
+  };
+  const res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{
+      "content-type":"application/json",
+      "x-api-key":aiKey(),
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    },
+    body:JSON.stringify(body)
+  });
+  if(!res.ok){
+    let msg=`The AI service said no (HTTP ${res.status}). Try again in a moment.`;
+    if(res.status===401) msg="That API key doesn't look right — check it in ⚙.";
+    else if(res.status===429) msg="Rate limited — wait a few seconds and try again.";
+    else if(res.status===400){ try{ const j=await res.json(); msg="Request problem: "+((j.error&&j.error.message)||"").slice(0,200); }catch(e){} }
+    throw new Error(msg);
+  }
+  const data=await res.json();
+  if(data.stop_reason==="refusal") throw new Error("Claude declined that request — try rephrasing.");
+  const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+  let obj; try{ obj=JSON.parse(txt); }catch(e){ throw new Error("Got a reply I couldn't read — ask again."); }
+  aiHistory.push({q, a:(obj.answer||"").slice(0,500)}); if(aiHistory.length>3) aiHistory=aiHistory.slice(-3);
+  const props=(obj.proposals||[]).slice(0,4).map(p=>{
+    if(p.kind==="node") return {kind:"node", node:{label:p.nodeLabel||"New node", sub:p.nodeSub||"", type:p.nodeType||"service", layer:p.nodeLayer||"svc", status:(p.status&&p.status!=="active")?p.status:"planned"}, reason:p.reason||""};
+    return {kind:"edge", from:p.from, to:p.to, label:p.label||"", status:p.status||"planned", reason:p.reason||""};
+  });
+  return {html:esc(obj.answer||"").replace(/\n/g,"<br>"), proposals:props};
+}
+
+let aiBusy=false;
+async function runAiAsk(){
+  const q=aiInputEl.value.trim();
+  if(!q||aiBusy) return;
+  aiInputEl.value="";
+  aiAppend("ai-msg you",`<span class="who">You</span>${esc(q)}`);
+  const useClaude=!!aiKey();
+  const thinking=aiAppend("ai-msg ai",`<span class="who">Circuit</span><span class="ai-think">${useClaude?"thinking with Claude…":"checking the map…"}</span>`);
+  aiBusy=true; aiAskBtn.disabled=true;
+  try{
+    const r = useClaude ? await askClaude(q) : localAnswer(q);
+    thinking.innerHTML=`<span class="who">Circuit${useClaude?"":" · offline"}</span>${r.html}`;
+    if(r.proposals&&r.proposals.length) renderProposals(r.proposals);
+  }catch(err){
+    thinking.innerHTML=`<span class="who">Circuit</span><span style="color:var(--danger)">${esc(err.message||"Something went wrong.")}</span>`;
+  }
+  aiBusy=false; aiAskBtn.disabled=false;
+  aiPanelEl.scrollTop=aiPanelEl.scrollHeight;
+}
+aiAskBtn.onclick=runAiAsk;
+aiInputEl.addEventListener("keydown",ev=>{
+  if(ev.key==="Enter"){ ev.preventDefault(); runAiAsk(); }
+  else if(ev.key==="Escape"){ aiClose(); aiInputEl.blur(); }
+});
+aiInputEl.addEventListener("focus",()=>{ if(aiMsgsEl.children.length) aiOpen(); });
+$("aiCfg").onclick=()=>{ $("aiKeyInput").value=aiKey(); $("aiModelSel").value=aiModel(); scrim.classList.add("show"); aiKeyModal.classList.add("show"); };
+$("aiKeySave").onclick=()=>{
+  try{
+    const v=$("aiKeyInput").value.trim();
+    if(v) localStorage.setItem("lagbot:aikey",v); else localStorage.removeItem("lagbot:aikey");
+    localStorage.setItem("lagbot:aimodel",$("aiModelSel").value);
+  }catch(e){}
+  updateAiMode(); closeModals(); toast(aiKey()?"Claude mode on ✦":"Offline brain mode");
+};
+$("aiKeyClear").onclick=()=>{ try{localStorage.removeItem("lagbot:aikey");}catch(e){} $("aiKeyInput").value=""; updateAiMode(); toast("Key removed — offline brain mode"); };
+updateAiMode();
+
+/* ════════════════════════════ sync modal wiring ════════════════════════════ */
+$("btnSync").onclick=()=>{
+  const c=syncCfg();
+  $("sbUrlInput").value=c.url; $("sbKeyInput").value=c.key;
+  $("syncStatus").textContent=syncOn?"Connected — everyone on this project sees the same map.":"";
+  scrim.classList.add("show"); $("syncModal").classList.add("show");
+};
+$("syncSave").onclick=async ()=>{
+  try{
+    localStorage.setItem("lagbot:sb_url",$("sbUrlInput").value.trim());
+    localStorage.setItem("lagbot:sb_key",$("sbKeyInput").value.trim());
+  }catch(e){}
+  $("syncStatus").textContent="Connecting…";
+  syncInit();
+  if(!syncOn){ $("syncStatus").textContent="Not connected — check the URL and key."; return; }
+  const remote=await cloudLoad();
+  if(remote){
+    state=remote; mergeNewDefaults(state);
+    clearFocusAll(); rebuild(); renderPanel(); fitView();
+    if(hasStore){ try{ window.storage.set(STORE_KEY, JSON.stringify(state)); }catch(e){} }
+    toast("Connected — loaded the team's shared map");
+  } else {
+    const ok=await cloudSave();
+    if(!ok){ $("syncStatus").textContent="Connected, but couldn't write to the sysmap table — run the SQL from lagbot-map-team-sync.sql in the Supabase SQL editor, then try again."; syncOn=false; return; }
+    toast("Connected — your map is now the team's shared map");
+  }
+  logChange("Connected this device to team sync");
+  cloudSave();
+  setDot("Synced ✓","ok");
+  closeModals();
+};
+$("syncOff").onclick=()=>{
+  try{ localStorage.removeItem("lagbot:sb_url"); localStorage.removeItem("lagbot:sb_key"); }catch(e){}
+  syncInit();
+  toast("Cloud sync off — saving on this device only");
+  setDot(hasStore?"Saved":"Session only", hasStore?"ok":"warn");
+  closeModals();
+};
+
+/* ════════════════════════════ search ════════════════════════════ */
+$("search").addEventListener("input",ev=>{ searchQ=ev.target.value.trim().toLowerCase(); refreshClasses(); });
+
+/* ════════════════════════════ topbar ════════════════════════════ */
+$("btnAddNode").onclick=()=>{ panel.classList.remove("hidden"); $("panelToggle").classList.remove("out"); panelAddNode(); };
+$("btnConnect").onclick=()=>setConnect(!connect.on);
+$("btnFit").onclick=fitView;
+$("btnZoomIn").onclick=()=>{ const r=mapEl.getBoundingClientRect(); zoomAt(r.left+(r.width-panelPad())/2,r.top+r.height/2,1.22); };
+$("btnZoomOut").onclick=()=>{ const r=mapEl.getBoundingClientRect(); zoomAt(r.left+(r.width-panelPad())/2,r.top+r.height/2,1/1.22); };
+$("btnExport").onclick=()=>{
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="lagbot-system-map.json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  toast("Exported lagbot-system-map.json");
+};
+$("btnImport").onclick=()=>$("fileImport").click();
+$("fileImport").addEventListener("change",ev=>{
+  const f=ev.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const s=ensureShape(JSON.parse(rd.result));
+      state=s; clearFocusAll();
+      rebuild(); fitView(); renderPanel(); autosave();
+      toast("Map imported");
+    }catch(e){ toast("Couldn't read that file — is it an exported map?","warn"); }
+    ev.target.value="";
+  };
+  rd.readAsText(f);
+});
+$("btnReset").onclick=()=>{
+  if(!confirm("Reset the map to the original Lagbot architecture? Your edits will be lost.")) return;
+  state=clone(defaultState()); clearFocusAll();
+  rebuild(); fitView(); renderPanel(); autosave(); toast("Reset to default map");
+};
+function clearFocusAll(){ selection=null; focus=null; hideTrace(); closeDrawer(); setConnect(false); }
+
+$("panelToggle").onclick=()=>{
+  const hidden=panel.classList.toggle("hidden");
+  $("panelToggle").classList.toggle("out",hidden);
+  $("panelToggle").textContent=hidden?"‹":"›";
+};
+
+/* help modal */
+function openHelp(){ scrim.classList.add("show"); helpModal.classList.add("show"); }
+function closeModals(){ scrim.classList.remove("show"); helpModal.classList.remove("show"); aiKeyModal.classList.remove("show"); $("logModal").classList.remove("show"); $("syncModal").classList.remove("show"); }
+$("btnHelp").onclick=openHelp;
+scrim.addEventListener("click",closeModals);
+document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeModals));
+
+/* toast */
+let toastT=null;
+function toast(msg,warn){
+  toastEl.textContent=msg;
+  toastEl.classList.toggle("warn",!!warn);
+  toastEl.classList.add("show");
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>toastEl.classList.remove("show"),2300);
+}
+
+/* ════════════════════════════ keyboard ════════════════════════════ */
+window.addEventListener("keydown",ev=>{
+  const tag=(ev.target.tagName||"").toUpperCase();
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
+  if(ev.key==="f"||ev.key==="F") fitView();
+  else if(ev.key==="+"||ev.key==="=") $("btnZoomIn").click();
+  else if(ev.key==="-"||ev.key==="_") $("btnZoomOut").click();
+  else if(ev.key==="Delete"||ev.key==="Backspace"){
+    if(selection&&selection.kind==="node") deleteNode(selection.id);
+    else if(selection&&selection.kind==="edge"){
+      const de=state.edges.find(x=>x.id===selection.id);
+      state.edges=state.edges.filter(x=>x.id!==selection.id);
+      if(de) logChange(`Removed line ${(nodeById(de.from)||{}).label||de.from} → ${(nodeById(de.to)||{}).label||de.to}`);
+      clearSelection(); rebuild(); autosave(); toast("Connection removed");
+    }
+  }
+  else if(ev.key==="Escape"){
+    if(helpModal.classList.contains("show")||aiKeyModal.classList.contains("show")||$("logModal").classList.contains("show")||$("syncModal").classList.contains("show")) closeModals();
+    else if(connect.on) setConnect(false);
+    else if(aiPanelEl.classList.contains("open")) aiClose();
+    else if(drawer.classList.contains("open")) closeDrawer();
+    else { clearFocus(); clearSelection(); }
+  }
+});
+
+/* ════════════════════════════ init ════════════════════════════ */
+(async function init(){
+  syncInit();
+  let st=null, hadCloud=false;
+  if(syncOn){ st=await cloudLoad(); hadCloud=!!st; }
+  if(!st) st=ensureShape(await loadState());
+  state=st;
+  mergeNewDefaults(state);
+  rebuild();
+  renderPanel();
+  requestAnimationFrame(()=>{ fitView(); });
+  if(syncOn){
+    if(!hadCloud) await cloudSave(); /* seed the shared row from this device */
+    setDot("Synced ✓","ok");
+  } else {
+    setDot(hasStore?"Saved":"Session only",hasStore?"ok":"warn");
+  }
+})();
+})();
+</script>
+</body>
+</html>
