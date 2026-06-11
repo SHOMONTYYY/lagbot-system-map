@@ -1,0 +1,42 @@
+name: Deploy to Vercel
+
+# Auto-deploys the site whenever the map repo changes (e.g. David's pushes).
+# The sync-from-code workflow deploys itself after refreshing docs, so its
+# bot commit is intentionally NOT re-deployed here (GITHUB_TOKEN pushes don't
+# trigger workflows anyway).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vercel-deploy
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: team_cjM1iUKNeACcTqQRoUzL4GI0
+  VERCEL_PROJECT_ID: prj_s7VHeKw12A4Q1lx0DBrPKb7ZSZvV
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Deploy to production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN secret not set. Add it in Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          npm i -g vercel@latest
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel deploy --prod --token="$VERCEL_TOKEN"

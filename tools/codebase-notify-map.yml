@@ -1,0 +1,36 @@
+# ── COPY THIS FILE INTO THE CODEBASE REPO ──
+# Put it at:  .github/workflows/notify-map.yml  in
+#            github.com/Joseph-Banke/lagbot-mobile-main
+#
+# On every push to the codebase, it pings the system map to re-sync + redeploy.
+# It only sends a notification — it grants the map NO access to your code.
+# Needs one repo secret in the CODEBASE repo: MAP_DISPATCH_TOKEN
+# (a fine-grained PAT, Contents: Read+write, scoped to the lagbot-system-map repo
+#  only — that permission is what GitHub requires to trigger a dispatch).
+
+name: Notify system map
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tell the system map to re-sync
+        env:
+          TOKEN: ${{ secrets.MAP_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::MAP_DISPATCH_TOKEN not set in this repo's Actions secrets."
+            exit 1
+          fi
+          curl -sS -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/SHOMONTYYY/lagbot-system-map/dispatches \
+            -d '{"event_type":"codebase-updated"}'

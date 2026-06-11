@@ -38,3 +38,30 @@ which the map and the Circuit AI read. The GitHub Action
 ```sh
 CODEBASE_DIR=/path/to/lagbot-mobile-main node tools/sync-from-code.mjs
 ```
+
+## Automatic deploy + instant updates
+
+Three workflows make "change the code → the live site updates" automatic:
+
+- `.github/workflows/deploy.yml` — deploys to Vercel on every push to the map
+  repo (covers map-feature changes).
+- `.github/workflows/sync-from-code.yml` — refreshes the code facts and deploys
+  if they changed. Runs nightly, on demand, and on a `codebase-updated` signal.
+- `tools/codebase-notify-map.yml` — copy into the **codebase** repo at
+  `.github/workflows/notify-map.yml`; it sends that signal on each push.
+
+One-time setup (in addition to `CODEBASE_RO_TOKEN` above):
+
+1. **Vercel token** → map repo. Create at vercel.com → Account Settings → Tokens.
+   Add it as the map repo secret **`VERCEL_TOKEN`** (Settings → Secrets and
+   variables → Actions).
+2. **Map dispatch token** → codebase repo. Create a fine-grained PAT with
+   **Contents: Read and write**, scoped to the **lagbot-system-map** repo only.
+   Add it as the codebase repo secret **`MAP_DISPATCH_TOKEN`**.
+3. Copy `tools/codebase-notify-map.yml` into the codebase repo at
+   `.github/workflows/notify-map.yml` and commit it.
+
+Note: the facts are *structure* (routes, guards, tables, services, screens), so
+the site redeploys when the **structure** changes — a new route, table, screen,
+or changed auth guard. Edits inside a function body don't move the facts and
+won't trigger a deploy (by design).

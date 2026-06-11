@@ -1,22 +1,30 @@
 name: Sync code facts
 
-# Keeps docs/code-facts.* in sync with the real Lagbot app codebase.
-# READ-ONLY against the codebase: it only `git clone`s it (never pushes,
-# never calls a write API). It writes only to THIS repo's docs/.
-# The codebase is read via a fine-grained, Contents:Read-only token stored
-# as the repo secret CODEBASE_RO_TOKEN — see tools/README.md.
+# Keeps docs/code-facts.* in sync with the real Lagbot app codebase, then
+# deploys if anything changed.
+#
+# READ-ONLY against the codebase: it only `git clone`s it (never pushes, never
+# calls a write API). It writes only to THIS repo's docs/.
+# The codebase is read via a fine-grained, Contents:Read-only token stored as
+# the repo secret CODEBASE_RO_TOKEN — see tools/README.md.
 
 on:
   schedule:
-    - cron: "0 3 * * *"   # nightly ~03:00 UTC
-  workflow_dispatch: {}    # manual "Run workflow" button
+    - cron: "0 3 * * *"            # nightly safety net ~03:00 UTC
+  workflow_dispatch: {}            # manual "Run workflow" button
+  repository_dispatch:
+    types: [codebase-updated]      # instant: fired when the codebase is pushed
 
 permissions:
-  contents: write          # to commit refreshed docs to THIS repo only
+  contents: write                  # to commit refreshed docs to THIS repo only
 
 concurrency:
   group: sync-from-code
   cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: team_cjM1iUKNeACcTqQRoUzL4GI0
+  VERCEL_PROJECT_ID: prj_s7VHeKw12A4Q1lx0DBrPKb7ZSZvV
 
 jobs:
   sync:
@@ -46,13 +54,29 @@ jobs:
         run: CODEBASE_DIR="$RUNNER_TEMP/codebase" node tools/sync-from-code.mjs
 
       - name: Commit if docs changed
+        id: commit
         run: |
           git config user.name  "lagbot-map-bot"
           git config user.email "actions@github.com"
           if git diff --quiet -- docs/code-facts.json docs/code-facts.md; then
             echo "No code changes — docs already current."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git add docs/code-facts.json docs/code-facts.md
-            git commit -m "Sync code facts from codebase [skip ci]"
+            git commit -m "Sync code facts from codebase"
             git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Deploy if facts changed
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::warning::Facts changed but VERCEL_TOKEN is not set — committed, not deployed."
+            exit 0
+          fi
+          npm i -g vercel@latest
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel deploy --prod --token="$VERCEL_TOKEN"
