@@ -944,6 +944,14 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
   <div id="logBody" style="margin-top:8px"></div>
 </div>
 
+<div class="modal" id="viewModal" style="width:min(420px,94vw)">
+  <button class="mclose" data-close>✕</button>
+  <div class="eyebrow">Circuit's view</div>
+  <h3 id="viewTitle">This screen</h3>
+  <div class="note" style="margin-top:6px;margin-bottom:10px">This is the screen as Circuit reads it — the same render it checks your UI changes against.</div>
+  <div id="viewImg" style="text-align:center;background:#0B110E;border:1px solid var(--line);border-radius:12px;padding:10px;max-height:62vh;overflow:auto"></div>
+</div>
+
 <div class="modal" id="hackModal">
   <button class="mclose" data-close>✕</button>
   <div class="eyebrow" style="color:var(--danger)">⚔ Hackathon</div>
@@ -1053,6 +1061,7 @@ unused routes, Admins screen duplicates Sales▸Teams.
       <h3 id="drawerTitle">—</h3>
       <div class="dh-sub" id="drawerSub"></div>
     </div>
+    <button class="dhbtn" id="drawerView" title="See this screen the way Circuit reads it">👁 View</button>
     <button class="dhbtn" id="drawerEdit">✎ Edit</button>
     <button class="dhbtn" id="drawerClose">✕</button>
   </div>
@@ -1090,6 +1099,8 @@ unused routes, Admins screen duplicates Sales▸Teams.
     <div class="hrow"><b>✦ Trace a flow</b><span>Ask the AI bar "how do conversations flow?" (or sale / receipt / token / withdrawal, or "from X to Y") and it lights the path and numbers the lines 1·2·3 in order.</span></div>
     <div class="hrow"><b>✦ Show skills</b><span>Circuit backs its answers with action chips — 📍 locate a node, ✦ highlight a set, ▣ open a wireframe, ▶ preview a flow animated node-by-node. The first auto-plays so it shows exactly what it's explaining.</span></div>
     <div class="hrow"><b>▶ Preview a change</b><span>Every AI suggestion has a Preview button — it animates the new line/node onto the map (or opens the screen) so you see the change before approving.</span></div>
+    <div class="hrow"><b>✦ AI edits UI</b><span>In Claude mode, Circuit can move, restyle, retext, rewire or remove existing components — ask it (e.g. "move the skills grid above the toggle"). It reads the open screen (see 👁 View) to match the real layout; every edit is still a proposal you Preview + Approve.</span></div>
+    <div class="hrow"><b>👁 View</b><span>In a wireframe, 👁 View shows the screen exactly as Circuit reads it — the render it checks your UI edits against.</span></div>
     <div class="hrow"><b>Reuse components</b><span>In ✎ edit, each component can be Duplicated, Copied, or Moved to another screen; ▤ Library drops in ready-made components in the app's style; ⧉ Paste reuses a copied one anywhere.</span></div>
     <div class="hrow"><b>⚔ Hackathon</b><span>A red-team self-audit. It picks a random angle, strobes through your architecture hunting for weak points, then shows its steps, what blocked it, and defensive fixes you can apply with one tap. ≡ History keeps every run.</span></div>
     <div class="hrow"><b>Edit wireframe</b><span>✎ turns on edit mode: add screens with the ＋ chip, tap a component to edit every property (text, badges, amounts, stats…), <b>drag components</b> to reorder — they snap between rows, or side-by-side when dropped on a row's right edge. + Add element places new components (bubbles, buttons, text, stats…), then wire them to backend nodes.</span></div>
@@ -3032,6 +3043,51 @@ function findElAnywhere(pageId,elId){
   }
   return null;
 }
+/* find a component anywhere across every page — returns {page,screen,el,ri,ci} */
+function findElLoc(elId){
+  for(const pid in state.wireframes){
+    const wf=state.wireframes[pid]; if(!wf||!wf.screens) continue;
+    for(const sid in wf.screens){
+      const rows=wf.screens[sid].rows||[];
+      for(let ri=0;ri<rows.length;ri++) for(let ci=0;ci<rows[ri].length;ci++) if(rows[ri][ci].id===elId) return {page:pid,screen:sid,el:rows[ri][ci],ri,ci};
+    }
+  }
+  return null;
+}
+const editOpLabel=op=>({move_after:"Move down",move_before:"Move up",restyle:"Restyle",retext:"Edit text",relink:"Rewire links",remove:"Remove"}[op]||"Edit");
+/* apply an approved edit proposal to the live wireframe */
+function applyEdit(p){
+  const loc=findElLoc(p.target); if(!loc) return false;
+  const wf=state.wireframes[loc.page], sc=wf.screens[loc.screen];
+  const pgName=(nodeById(loc.page)||{}).label||loc.page, scName=sc.title||loc.screen;
+  const el=loc.el;
+  if(p.op==="remove"){
+    sc.rows=sc.rows.map(r=>r.filter(e=>e.id!==p.target)).filter(r=>r.length);
+    logChange(`AI edit: removed “${el.label||el.kind}” from ${pgName} ▸ ${scName}`);
+  } else if(p.op==="restyle"){
+    el.kind=KINDS.includes(p.elKind)?p.elKind:el.kind;
+    logChange(`AI edit: restyled “${el.label||el.kind}” to ${el.kind} on ${pgName} ▸ ${scName}`);
+  } else if(p.op==="retext"){
+    if(p.t1) el.t1=p.t1; else delete el.t1;
+    if(p.t2) el.t2=p.t2; else delete el.t2;
+    logChange(`AI edit: changed text of “${el.label||el.kind}” on ${pgName} ▸ ${scName}`);
+  } else if(p.op==="relink"){
+    el.links=(p.links||[]).filter(nodeById);
+    logChange(`AI edit: rewired “${el.label||el.kind}” on ${pgName} ▸ ${scName}`);
+  } else if(p.op==="move_after"||p.op==="move_before"){
+    const ref=findElLoc(p.ref);
+    if(!ref||ref.page!==loc.page||ref.screen!==loc.screen) return false;
+    /* pull the element out (flatten to its own row) */
+    sc.rows=sc.rows.map(r=>r.filter(e=>e.id!==p.target)).filter(r=>r.length);
+    const idx=sc.rows.findIndex(r=>r.some(e=>e.id===p.ref));
+    if(idx<0){ sc.rows.push([el]); }
+    else sc.rows.splice(p.op==="move_after"?idx+1:idx,0,[el]);
+    logChange(`AI edit: moved “${el.label||el.kind}” on ${pgName} ▸ ${scName}`);
+  } else return false;
+  autosave();
+  openDrawer(loc.page, loc.screen, p.op==="remove"?undefined:p.target);
+  return true;
+}
 function paintActiveEl(){
   wfStack.querySelectorAll(".wf-el").forEach(d=>d.classList.toggle("active",d.dataset.el===activeEl));
 }
@@ -3170,6 +3226,14 @@ function closeDrawer(){
 }
 $("drawerClose").onclick=()=>{ closeDrawer(); };
 $("drawerEdit").onclick=()=>{ editWF=!editWF; renderWF(); };
+$("drawerView").onclick=()=>{
+  if(!curWF){ toast("Open a screen first"); return; }
+  const s=wireframeSVG();
+  const pg=nodeById(curWF), sc=state.wireframes[curWF].screens[curScreen];
+  $("viewTitle").textContent=`${pg?pg.label:curWF} ▸ ${sc.title||curScreen}`;
+  $("viewImg").innerHTML = s ? `<img src="${s.data}" style="max-width:100%;display:block;margin:0 auto" alt="screen render">` : `<div class="note">Couldn't render this screen.</div>`;
+  scrim.classList.add("show"); $("viewModal").classList.add("show");
+};
 wfStack.addEventListener("click",ev=>{
   if(suppressElClick){ suppressElClick=false; return; }
   const d=ev.target.closest(".wf-el"); if(!d) return;
@@ -3634,6 +3698,45 @@ async function fetchCodeFacts(){
   return codeFactsCache;
 }
 
+/* ── Circuit sees the screen: a faithful text render + a real image (best-effort) ── */
+function currentScreenSnapshot(){
+  if(!curWF) return "";
+  const wf=state.wireframes[curWF]; if(!wf||!wf.screens||!wf.screens[curScreen]) return "";
+  const pg=nodeById(curWF), sc=wf.screens[curScreen];
+  const lines=[`SCREEN YOU ARE LOOKING AT RIGHT NOW — ${pg?pg.label:curWF} ▸ ${sc.title||curScreen}${sc.modal?" (◍ MODAL/SHEET — overlays a page)":""}`,
+    "Rendered top-to-bottom (row → component): id | kind | text | →nav | links | ⚠note"];
+  (sc.rows||[]).forEach((row,ri)=>{
+    row.forEach((el,ci)=>{
+      const side=row.length>1?` [${ci+1} of ${row.length} side-by-side]`:"";
+      const txt=[el.t1,el.t2].filter(Boolean).join(" / ")||el.label||"";
+      lines.push(`row ${ri+1}${side}: ${el.id} | ${el.kind} | ${String(txt).slice(0,80)}${el.nav?` | →${el.nav}`:""}${(el.links||[]).length?` | links:${el.links.join(",")}`:""}${el.note?` | ⚠${String(el.note).slice(0,60)}`:""}`);
+    });
+  });
+  lines.push("This is exactly what is on screen. Match any UI edit to THIS — do not reshuffle components that already match the code.");
+  return lines.join("\n");
+}
+function wireframeSVG(){
+  const phone=document.querySelector(".wf-phone"); if(!phone) return null;
+  try{
+    const css=[...document.querySelectorAll("style")].map(s=>s.textContent).join("\n");
+    const w=Math.max(1,Math.ceil(phone.offsetWidth)), h=Math.max(1,Math.ceil(phone.scrollHeight||phone.offsetHeight));
+    const clone=phone.cloneNode(true); clone.style.margin="0";
+    const xhtml=new XMLSerializer().serializeToString(clone);
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject x="0" y="0" width="${w}" height="${h}"><div xmlns="http://www.w3.org/1999/xhtml" style="background:#0B110E"><style>${css}</style>${xhtml}</div></foreignObject></svg>`;
+    return {data:"data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg), w, h};
+  }catch(e){ return null; }
+}
+/* best-effort raster for Claude vision; resolves null if the browser taints the canvas */
+function wireframePNG(){
+  return new Promise(resolve=>{
+    const s=wireframeSVG(); if(!s){ resolve(null); return; }
+    const img=new Image();
+    img.onload=()=>{ try{ const c=document.createElement("canvas"); c.width=s.w; c.height=s.h; const ctx=c.getContext("2d"); ctx.fillStyle="#0B110E"; ctx.fillRect(0,0,s.w,s.h); ctx.drawImage(img,0,0); resolve(c.toDataURL("image/png")); }catch(e){ resolve(null); } };
+    img.onerror=()=>resolve(null);
+    img.src=s.data;
+  });
+}
+
 const aiMsgsEl=$("aiMsgs");
 function aiOpen(){ aiPanelEl.classList.add("open"); }
 function aiClose(){ aiPanelEl.classList.remove("open"); }
@@ -3734,6 +3837,12 @@ function previewProposal(p){
     /* also light the backend nodes it would wire to */
     const links=(p.links||[]).filter(nodeById);
     if(links.length) playPreview(links, {label:"Wires to"});
+  } else if(p.kind==="edit"){
+    const loc=findElLoc(p.target);
+    if(!loc){ toast("Can't preview — component not found","warn"); return; }
+    openDrawer(loc.page, loc.screen, p.target);
+    setTimeout(()=>{ const d=wfStack.querySelector(`.wf-el[data-el="${p.target}"]`); if(d){ d.scrollIntoView({behavior:"smooth",block:"center"}); d.classList.add("active"); } }, 120);
+    toast(`${editOpLabel(p.op)} — highlighted on the screen. Approve to apply.`);
   }
 }
 function renderProposals(props){
@@ -3742,6 +3851,32 @@ function renderProposals(props){
     const pid="prop"+(++propSeq);
     liveProps[pid]=p;
     let inner="";
+    if(p.kind==="edit"){
+      const loc=findElLoc(p.target);
+      if(!loc){
+        aiAppend("ai-prop done rejected",
+          `<div class="ptag">Proposed UI edit</div>
+           <div class="ptitle">${esc(editOpLabel(p.op))}</div>
+           <div class="pwarn">⚠ Can't find the component “${esc(String(p.target))}” to change.</div>
+           <div class="preason">${esc(p.reason||"")}</div><div class="pstate" style="display:block;color:var(--danger)">Skipped</div>`);
+        return;
+      }
+      const what=loc.el.label||loc.el.kind;
+      let detail="";
+      if(p.op==="move_after"||p.op==="move_before"){ const r=findElLoc(p.ref); detail=r?`${p.op==="move_after"?"below":"above"} “${esc(r.el.label||r.el.kind)}”`:"(reference component not found)"; }
+      else if(p.op==="restyle") detail=`change its shape to <b>${esc(p._kind=KINDS.includes(p.elKind)?p.elKind:loc.el.kind)}</b>`;
+      else if(p.op==="retext") detail=`change its text to “${esc(p.t1||"")}”${p.t2?` / “${esc(p.t2)}”`:""}`;
+      else if(p.op==="relink"){ const ok=(p.links||[]).filter(nodeById); detail=`wire it to ${ok.length?esc(ok.map(l=>nodeById(l).label).join(", ")):"nothing (UI-only)"}`; }
+      else if(p.op==="remove") detail="remove it from the screen";
+      inner=`<div class="ptag">Proposed UI edit</div>
+        <div class="ptitle">${esc(editOpLabel(p.op))} — “${esc(what)}”</div>
+        <div class="ppath">${esc((nodeById(loc.page)||{}).label||loc.page)} ▸ ${esc((state.wireframes[loc.page].screens[loc.screen].title)||loc.screen)} · ${detail}</div>
+        <div class="preason">${esc(p.reason||"")}</div>`;
+      inner+=`<div class="pbtns"><button class="ok" data-approve="${pid}">✓ Approve</button><button class="pv" data-preview="${pid}">▶ Preview</button><button class="no" data-reject="${pid}">✕ Dismiss</button></div><div class="pstate"></div>`;
+      aiAppend("ai-prop"+(p.op==="remove"?"":" node-prop"),inner);
+      made.push(pid);
+      return;
+    }
     if(p.kind==="element"){
       const pg=nodeById(p.page);
       const wf=state.wireframes[p.page];
@@ -3820,6 +3955,11 @@ aiPanelEl.addEventListener("click",ev=>{
   const pid=ok?ok.dataset.approve:no.dataset.reject;
   const p=liveProps[pid]; if(!p||!card) return;
   if(no){ card.classList.add("done","rejected"); card.querySelector(".pstate").textContent="Dismissed"; return; }
+  if(p.kind==="edit"){
+    if(applyEdit(p)){ card.classList.add("done"); card.querySelector(".pstate").textContent="Changed on the wireframe ✓"; toast("UI change applied — autosaved"); }
+    else { toast("Couldn't apply that edit — the component may have moved","warn"); }
+    return;
+  }
   if(p.kind==="element"){
     const wf=state.wireframes[p.page];
     const sc=wf&&wf.screens&&wf.screens[p.screen];
@@ -3934,7 +4074,7 @@ const AI_SCHEMA={
     proposals:{type:"array", description:"0-4 proposed map additions. Empty array if none needed.", items:{
       type:"object", additionalProperties:false,
       properties:{
-        kind:{type:"string", enum:["edge","node","element"]},
+        kind:{type:"string", enum:["edge","node","element","edit"]},
         from:{type:"string", description:"edge only: exact node id; empty string otherwise"},
         to:{type:"string", description:"edge only: exact node id; empty string otherwise"},
         label:{type:"string", description:"edge: what flows on this line · element: short designer note; empty string otherwise"},
@@ -3950,9 +4090,12 @@ const AI_SCHEMA={
         elKind:{type:"string", description:"element only: a wireframe kind (cta, linkrow, section, darkStat, empty, bar, input, pillsT, caption, heroDark, ledger, chatCard, toggleCard…); empty string otherwise"},
         elText:{type:"string", description:"element only: main visible text; empty string otherwise"},
         elText2:{type:"string", description:"element only: secondary text; empty string otherwise"},
-        elLinks:{type:"string", description:"element only: comma-separated backend node ids this component wires to; empty string otherwise"}
+        elLinks:{type:"string", description:"element only: comma-separated backend node ids this component wires to; empty string otherwise"},
+        editTarget:{type:"string", description:"edit only: exact id of the EXISTING component to change; empty otherwise"},
+        editOp:{type:"string", enum:["move_after","move_before","restyle","retext","relink","remove","none"], description:"edit only: move_after/move_before reorder it next to editRef · restyle changes its shape (elKind) · retext changes elText/elText2 · relink sets elLinks · remove deletes it"},
+        editRef:{type:"string", description:"edit only: for move ops, the existing component id to move next to; empty otherwise"}
       },
-      required:["kind","from","to","label","status","reason","nodeLabel","nodeSub","nodeType","nodeLayer","elPage","elScreen","elAfter","elKind","elText","elText2","elLinks"]
+      required:["kind","from","to","label","status","reason","nodeLabel","nodeSub","nodeType","nodeLayer","elPage","elScreen","elAfter","elKind","elText","elText2","elLinks","editTarget","editOp","editRef"]
     }},
     actions:{type:"array", description:"0-3 visual actions that SHOW what your answer explains. The first one auto-plays.", items:{
       type:"object", additionalProperties:false,
@@ -3972,15 +4115,24 @@ let aiHistory=[];
 async function askClaude(q){
   const docs=await fetchScreenDocs(q);
   const facts=await fetchCodeFacts();
-  const body={
-    model:aiModel(), max_tokens:5000,
-    system:AI_PERSONA+"\n\nReply via the JSON schema. 'answer' is for David. Proposals: use EXACT node ids in from/to. For kind 'node' fill nodeLabel/nodeSub/nodeType/nodeLayer. For kind 'element' (a new UI component on an app wireframe) fill elPage/elScreen/elAfter/elKind/elText/elText2/elLinks and put a short designer note in 'label' — reuse the wireframe kinds you can see in the map data, match the page's existing copy tone, place CTAs above the tab bar, and NEVER restyle, move or remove existing components unless asked. CRITICAL — pages vs modals: screens marked ◍ MODAL are overlays (bottom sheets / confirm modals), not pages. Content that belongs to a modal goes on that modal's screen; content that belongs to the page goes on the page screen — never mix them (e.g. the token payment sheet is a modal AFTER tapping a pack, so payment UI never sits inline on the Tokens page). If the right modal screen doesn't exist yet, say so in 'answer' and place the trigger element on the page instead. Check the FRONTEND CODE NOTES for what is a modal in the real app. When a feature needs both backend and frontend, propose the FULL PACKAGE in one answer, backend first: node(s) → line(s) → element(s), and explain the flow in 'answer'. Use empty strings for fields that don't apply. Maximum 4 proposals; zero is fine.\n\nVISUAL SKILLS — alongside your words, return up to 3 'actions' that SHOW what you explain on the map (the first auto-plays): 'locate' a key node, 'highlight' a related set, 'open' a page's wireframe, or 'preview' a flow as an ordered list of node ids that animates step by step. Use EXACT node ids. When you describe how something flows, prefer a 'preview' action with the nodes in order. When you point at one thing, 'locate' it. Empty array if the answer is purely conversational.",
-    output_config:{format:{type:"json_schema", schema:AI_SCHEMA}},
-    messages:[{role:"user", content: buildMapContext()
+  const snap=currentScreenSnapshot();
+  let png=null;
+  if(curWF){ try{ png=await wireframePNG(); }catch(e){} }
+  const textBlock=buildMapContext()
       +(facts?"\n\nLIVE CODE FACTS (auto-synced from the real codebase — actual routes with their auth guards, tables, RLS, services, screens. Trust this over the map when they disagree):\n"+facts:"")
       +(docs?"\n\nFRONTEND CODE NOTES (distilled from the real app code — ground truth for layout, copy and design):\n"+docs:"")
+      +(snap?"\n\n"+snap:"")
+      +(png?"\n\n(An image of this screen as currently rendered is attached — use it to confirm your edits visually.)":"")
       +(aiHistory.length?"\n\nEARLIER IN THIS CHAT:\n"+aiHistory.map(h=>`David: ${h.q}\nYou: ${h.a}`).join("\n"):"")
-      +"\n\nDavid asks: "+q}]
+      +"\n\nDavid asks: "+q;
+  const content = png
+    ? [{type:"text",text:textBlock},{type:"image",source:{type:"base64",media_type:"image/png",data:png.split(",")[1]}}]
+    : textBlock;
+  const body={
+    model:aiModel(), max_tokens:5000,
+    system:AI_PERSONA+"\n\nReply via the JSON schema. 'answer' is for David. Proposals: use EXACT node ids in from/to. For kind 'node' fill nodeLabel/nodeSub/nodeType/nodeLayer. For kind 'element' (a new UI component on an app wireframe) fill elPage/elScreen/elAfter/elKind/elText/elText2/elLinks and put a short designer note in 'label' — reuse the wireframe kinds you can see in the map data, match the page's existing copy tone, place CTAs above the tab bar. You CAN now change existing components when asked, via kind 'edit': fill editTarget (the existing component id) + editOp (move_after / move_before / restyle / retext / relink / remove) + editRef (for moves, the component to move next to) and use elKind for restyle, elText/elText2 for retext, elLinks for relink. Only edit components the user asked you to change; never reshuffle a screen that already matches the code, and explain each edit in 'reason'. Every edit is still a proposal the user approves. CRITICAL — pages vs modals: screens marked ◍ MODAL are overlays (bottom sheets / confirm modals), not pages. Content that belongs to a modal goes on that modal's screen; content that belongs to the page goes on the page screen — never mix them (e.g. the token payment sheet is a modal AFTER tapping a pack, so payment UI never sits inline on the Tokens page). If the right modal screen doesn't exist yet, say so in 'answer' and place the trigger element on the page instead. Check the FRONTEND CODE NOTES for what is a modal in the real app. When a feature needs both backend and frontend, propose the FULL PACKAGE in one answer, backend first: node(s) → line(s) → element(s), and explain the flow in 'answer'. Use empty strings for fields that don't apply. Maximum 4 proposals; zero is fine.\n\nSEEING THE SCREEN — when a wireframe is open you are given the exact screen as currently rendered (a top-to-bottom component list, and often an image of it). Read it as what the user is looking at. Confirm every UI edit against it: reference real component ids that exist on that screen, keep the layout that already matches the code, and only change what the user pointed at.\n\nVISUAL SKILLS — alongside your words, return up to 3 'actions' that SHOW what you explain on the map (the first auto-plays): 'locate' a key node, 'highlight' a related set, 'open' a page's wireframe, or 'preview' a flow as an ordered list of node ids that animates step by step. Use EXACT node ids. When you describe how something flows, prefer a 'preview' action with the nodes in order. When you point at one thing, 'locate' it. Empty array if the answer is purely conversational.",
+    output_config:{format:{type:"json_schema", schema:AI_SCHEMA}},
+    messages:[{role:"user", content}]
   };
   const useProxy=!aiKey()&&AI_PROXY; /* a personal key set via ⚙ still wins */
   const res=await fetch(useProxy?"/api/ai":"https://api.anthropic.com/v1/messages",{
@@ -4008,8 +4160,9 @@ async function askClaude(q){
   const props=(obj.proposals||[]).slice(0,4).map(p=>{
     if(p.kind==="node") return {kind:"node", node:{label:p.nodeLabel||"New node", sub:p.nodeSub||"", type:p.nodeType||"service", layer:p.nodeLayer||"svc", status:(p.status&&p.status!=="active")?p.status:"planned"}, reason:p.reason||""};
     if(p.kind==="element") return {kind:"element", page:p.elPage, screen:p.elScreen, after:p.elAfter||"end", elKind:p.elKind||"card", t1:p.elText||"", t2:p.elText2||"", links:(p.elLinks||"").split(",").map(s=>s.trim()).filter(Boolean), label:p.label||p.elText||"New component", status:p.status||"planned", reason:p.reason||""};
+    if(p.kind==="edit") return {kind:"edit", target:p.editTarget, op:p.editOp||"none", ref:p.editRef||"", elKind:p.elKind||"", t1:p.elText||"", t2:p.elText2||"", links:(p.elLinks||"").split(",").map(s=>s.trim()).filter(Boolean), reason:p.reason||""};
     return {kind:"edge", from:p.from, to:p.to, label:p.label||"", status:p.status||"planned", reason:p.reason||""};
-  });
+  }).filter(p=>p.kind!=="edit"||(p.op&&p.op!=="none"&&p.target));
   const actions=(obj.actions||[]).slice(0,3).map(a=>({
     type:a.type, nodes:(a.nodes||"").split(",").map(s=>s.trim()).filter(Boolean),
     page:a.page||"", screen:a.screen||"", label:a.label||a.type
@@ -4603,7 +4756,7 @@ $("panelToggle").onclick=()=>{
 
 /* help modal */
 function openHelp(){ scrim.classList.add("show"); helpModal.classList.add("show"); }
-function closeModals(){ scrim.classList.remove("show"); helpModal.classList.remove("show"); aiKeyModal.classList.remove("show"); $("logModal").classList.remove("show"); $("syncModal").classList.remove("show"); $("hackModal").classList.remove("show"); $("exportModal").classList.remove("show"); }
+function closeModals(){ scrim.classList.remove("show"); helpModal.classList.remove("show"); aiKeyModal.classList.remove("show"); $("logModal").classList.remove("show"); $("syncModal").classList.remove("show"); $("hackModal").classList.remove("show"); $("exportModal").classList.remove("show"); $("viewModal").classList.remove("show"); }
 $("btnHelp").onclick=openHelp;
 scrim.addEventListener("click",closeModals);
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeModals));
