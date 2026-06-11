@@ -135,7 +135,9 @@ input,select,textarea{font-family:inherit}
 #legend h4:hover{color:var(--cream-dim)}
 #legend.collapsed h4{margin-bottom:0}
 #legend.collapsed .lg-row,#legend.collapsed .hint{display:none}
-.lg-row{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:10.5px;color:var(--cream-dim)}
+.lg-row{display:flex;align-items:center;gap:8px;margin:4px -4px;padding:1px 4px;font-size:10.5px;color:var(--cream-dim);cursor:pointer;border-radius:5px;border:1px solid transparent}
+.lg-row:hover{color:var(--cream);background:rgba(237,229,211,.05)}
+.lg-row.active{color:var(--cream);background:rgba(242,169,92,.10);border-color:rgba(242,169,92,.35)}
 .lg-swatch{width:9px;height:9px;border-radius:3px;flex:none}
 .lg-line{width:18px;height:0;border-top:2px dashed var(--warn);flex:none}
 #legend .hint{margin-top:9px;padding-top:8px;border-top:1px solid var(--line-soft);font-size:9.5px;line-height:1.5;color:var(--mute)}
@@ -718,16 +720,16 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
 
 <aside id="legend">
   <h4 id="legendHead">Legend <span id="legendCaret">▾</span></h4>
-  <div class="lg-row"><span class="lg-swatch" style="background:#8E9AA8"></span>External system</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#4FA97E"></span>Backend service</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#7CC49C"></span>REST API surface</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#4A968F"></span>Supabase data</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#AC92DA"></span>Live channel (push / realtime)</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#E8853D"></span>Frontend page</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#D9A05B"></span>App core (Expo client)</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#5EA2E8"></span>AI agent (Claude-powered)</div>
-  <div class="lg-row"><span class="lg-line"></span>Gap / planned (not live yet)</div>
-  <div class="hint">Click a node to spotlight it · drag to move · double-click an orange page to open its wireframe.</div>
+  <div class="lg-row" data-cat="external"><span class="lg-swatch" style="background:#8E9AA8"></span>External system</div>
+  <div class="lg-row" data-cat="service"><span class="lg-swatch" style="background:#4FA97E"></span>Backend service</div>
+  <div class="lg-row" data-cat="api"><span class="lg-swatch" style="background:#7CC49C"></span>REST API surface</div>
+  <div class="lg-row" data-cat="db"><span class="lg-swatch" style="background:#4A968F"></span>Supabase data</div>
+  <div class="lg-row" data-cat="channel"><span class="lg-swatch" style="background:#AC92DA"></span>Live channel (push / realtime)</div>
+  <div class="lg-row" data-cat="page"><span class="lg-swatch" style="background:#E8853D"></span>Frontend page</div>
+  <div class="lg-row" data-cat="client"><span class="lg-swatch" style="background:#D9A05B"></span>App core (Expo client)</div>
+  <div class="lg-row" data-cat="agent"><span class="lg-swatch" style="background:#5EA2E8"></span>AI agent (Claude-powered)</div>
+  <div class="lg-row" data-cat="gapplanned"><span class="lg-line"></span>Gap / planned (not live yet)</div>
+  <div class="hint">Click a legend row to highlight its whole category · click a node to spotlight it · drag to move · double-click an orange page to open its wireframe.</div>
 </aside>
 
 <div id="traceBar" role="status">
@@ -2022,8 +2024,26 @@ function refreshClasses(){
     if(e.dir==="both") el.line.setAttribute("marker-start",edgeMarker(e,lit||sel));
   });
 }
-function setFocus(nodes,edges){ focus={nodes,edges}; refreshClasses(); }
-function clearFocus(){ focus=null; hideTrace(); refreshClasses(); }
+function setFocus(nodes,edges){ legendOff(); focus={nodes,edges}; refreshClasses(); }
+function clearFocus(){ legendOff(); focus=null; hideTrace(); refreshClasses(); }
+/* legend rows highlight a whole category */
+let legendSel=null;
+function legendOff(){ legendSel=null; document.querySelectorAll("#legend .lg-row.active").forEach(r=>r.classList.remove("active")); }
+function legendPick(row){
+  const t=row.dataset.cat;
+  if(legendSel===t){ clearFocus(); return; }
+  let nset, eset=new Set();
+  if(t==="gapplanned"){
+    nset=new Set(state.nodes.filter(n=>n.status==="gap"||n.status==="planned").map(n=>n.id));
+    state.edges.forEach(e=>{ if(e.status==="gap"||e.status==="planned") eset.add(e.id); });
+  } else {
+    nset=new Set(state.nodes.filter(n=>n.type===t).map(n=>n.id));
+  }
+  if(!nset.size&&!eset.size){ toast("Nothing on the map in that category yet"); return; }
+  setFocus(nset,eset);
+  legendSel=t; row.classList.add("active");
+}
+document.querySelectorAll("#legend .lg-row").forEach(r=>{ r.onclick=()=>legendPick(r); });
 
 /* ════════════════════════════ selection + inspector panel ════════════════════════════ */
 function clearSelection(){ selection=null; refreshClasses(); renderPanel(); }
@@ -3666,7 +3686,7 @@ $("btnReset").onclick=()=>{
   state=clone(defaultState()); clearFocusAll();
   rebuild(); fitView(); renderPanel(); autosave(); toast("Reset to default map");
 };
-function clearFocusAll(){ selection=null; focus=null; hideTrace(); closeDrawer(); setConnect(false); }
+function clearFocusAll(){ legendOff(); selection=null; focus=null; hideTrace(); closeDrawer(); setConnect(false); }
 
 $("panelToggle").onclick=()=>{
   const hidden=panel.classList.toggle("hidden");
