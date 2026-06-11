@@ -123,6 +123,13 @@ input,select,textarea{font-family:inherit}
 .node.dim{opacity:.13;pointer-events:none}
 .node.dragging{cursor:grabbing}
 
+/* security-fix blips — compact pills drawn by Hackathon apply-fix */
+.node.blip .body{fill:rgba(217,107,91,.07);stroke:var(--danger);stroke-opacity:.65}
+.node.blip .title{font-size:9.5px;font-weight:600;fill:var(--cream)}
+.node.blip .chip{font-size:10px;letter-spacing:0;text-transform:none}
+.node.blip.selected .body{filter:drop-shadow(0 0 7px rgba(217,107,91,.45))}
+.node.blip.lit .body{filter:drop-shadow(0 0 8px rgba(217,107,91,.4))}
+
 #ghost{stroke:var(--current);stroke-width:1.6;stroke-dasharray:5 5;fill:none;pointer-events:none}
 
 /* ───────────────────────── legend ───────────────────────── */
@@ -1021,6 +1028,7 @@ unused routes, Admins screen duplicates Sales▸Teams.
 <script>
 /* ════════════════════════ DEFAULT DATA — Lagbot map (from frontend-map.md + backend-map.md @ 2f4eafe / 64f0b48) ════════════════════════ */
 const NODE_W = 224, NODE_H = 58;
+const BLIP_W = 110, BLIP_H = 24; /* compact security-fix blips */
 const STORE_KEY = "lagbot:sysmap:v2";
 
 const TYPES = {
@@ -1737,6 +1745,7 @@ function ensureShape(s){
     if(wf && (!wf.start || !wf.screens[wf.start])){ wf.start=Object.keys(wf.screens)[0]||"main"; }
   });
   s.meta = s.meta || {name:"Lagbot — Backend ⇄ Frontend Circuit", v:1};
+  s.seclog = Array.isArray(s.seclog)?s.seclog:[];
   s.nodes.forEach(n=>{ n.x=+n.x||0; n.y=+n.y||0; if(!TYPES[n.type]) n.type="service"; });
   s.edges = s.edges.filter(e=>e && e.from && e.to);
   return s;
@@ -1908,7 +1917,7 @@ function panelPad(){ return (window.innerWidth>760 && !panel.classList.contains(
 function fitView(){
   if(!state.nodes.length) return;
   let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;
-  state.nodes.forEach(n=>{ x1=Math.min(x1,n.x); y1=Math.min(y1,n.y); x2=Math.max(x2,n.x+NODE_W); y2=Math.max(y2,n.y+NODE_H); });
+  state.nodes.forEach(n=>{ x1=Math.min(x1,n.x); y1=Math.min(y1,n.y); x2=Math.max(x2,n.x+nodeW(n)); y2=Math.max(y2,n.y+nodeH(n)); });
   const pad=80, r=mapEl.getBoundingClientRect();
   const aw=Math.max(120, r.width-panelPad()-24), ah=Math.max(120, r.height-24);
   view.k=clamp(Math.min(aw/(x2-x1+pad*2), ah/(y2-y1+pad*2)),.2,2.6);
@@ -1922,7 +1931,9 @@ const nodeEls=new Map(), edgeEls=new Map();
 const nodeById = id => state.nodes.find(n=>n.id===id);
 const edgesOf = id => state.edges.filter(e=>e.from===id||e.to===id);
 
-function nodeCenter(n){ return {x:n.x+NODE_W/2, y:n.y+NODE_H/2}; }
+const nodeW = n => n.blip ? BLIP_W : NODE_W;
+const nodeH = n => n.blip ? BLIP_H : NODE_H;
+function nodeCenter(n){ return {x:n.x+nodeW(n)/2, y:n.y+nodeH(n)/2}; }
 
 function svgEl(tag,attrs,parent){
   const el=document.createElementNS(SVGNS,tag);
@@ -1938,7 +1949,19 @@ function chipText(n){
   return t;
 }
 
+function buildBlip(n){
+  const g=svgEl("g",{class:"node blip","data-id":n.id, transform:`translate(${n.x},${n.y})`});
+  const body=svgEl("rect",{class:"body",width:BLIP_W,height:BLIP_H,rx:12,stroke:"var(--danger)","stroke-dasharray":"4 4"},g);
+  const chip=svgEl("text",{class:"chip",x:8,y:16,fill:"var(--danger)"},g); chip.textContent="🛡";
+  const title=svgEl("text",{class:"title",x:24,y:16},g);
+  title.textContent=(n.label||"").length>16 ? n.label.slice(0,15)+"…" : (n.label||"");
+  const tt=svgEl("title",{},g); tt.textContent=`🛡 Security fix — ${n.label}${n.sec&&n.sec.finding?` · ${n.sec.finding}`:""}`;
+  nodesG.appendChild(g);
+  nodeEls.set(n.id,{g,body,chip,title,sub:title,tt});
+  wireNode(g,n.id);
+}
 function buildNode(n){
+  if(n.blip) return buildBlip(n);
   const g=svgEl("g",{class:"node","data-id":n.id, transform:`translate(${n.x},${n.y})`});
   const color=TYPES[n.type].color;
   const body=svgEl("rect",{class:"body",width:NODE_W,height:NODE_H,rx:9,stroke:color,"stroke-opacity":.55},g);
@@ -2008,10 +2031,10 @@ function computeAnchors(){
       list.forEach((p,i)=>{
         const f=(i+1)/(list.length+1);
         let x,y;
-        if(side==="left"){ x=n.x; y=n.y+NODE_H*f; }
-        else if(side==="right"){ x=n.x+NODE_W; y=n.y+NODE_H*f; }
-        else if(side==="top"){ x=n.x+NODE_W*f; y=n.y; }
-        else { x=n.x+NODE_W*f; y=n.y+NODE_H; }
+        if(side==="left"){ x=n.x; y=n.y+nodeH(n)*f; }
+        else if(side==="right"){ x=n.x+nodeW(n); y=n.y+nodeH(n)*f; }
+        else if(side==="top"){ x=n.x+nodeW(n)*f; y=n.y; }
+        else { x=n.x+nodeW(n)*f; y=n.y+nodeH(n); }
         anchors.set(p.e.id+":"+p.end,{x,y,side});
       });
     });
@@ -2055,7 +2078,7 @@ function renderLayerLabels(){
   LAYERS.forEach(L=>{
     const ns=state.nodes.filter(n=>n.layer===L.id);
     if(!ns.length) return;
-    const mx=ns.reduce((s,n)=>s+n.x,0)/ns.length + NODE_W/2;
+    const mx=ns.reduce((s,n)=>s+n.x+nodeW(n)/2,0)/ns.length;
     const my=Math.min(...ns.map(n=>n.y));
     const t1=svgEl("text",{class:"layer-label",x:mx,y:my-44,"text-anchor":"middle"},layerLabelsG); t1.textContent=L.name;
     const t2=svgEl("text",{class:"layer-sub",x:mx,y:my-30,"text-anchor":"middle"},layerLabelsG); t2.textContent=L.sub;
@@ -2177,7 +2200,7 @@ function fitFlow(nset){
   const ns=[...nset].map(nodeById).filter(Boolean);
   if(!ns.length) return;
   let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;
-  ns.forEach(n=>{ x1=Math.min(x1,n.x); y1=Math.min(y1,n.y); x2=Math.max(x2,n.x+NODE_W); y2=Math.max(y2,n.y+NODE_H); });
+  ns.forEach(n=>{ x1=Math.min(x1,n.x); y1=Math.min(y1,n.y); x2=Math.max(x2,n.x+nodeW(n)); y2=Math.max(y2,n.y+nodeH(n)); });
   const pad=120, r=mapEl.getBoundingClientRect();
   const aw=Math.max(120,r.width-panelPad()-24), ah=Math.max(120,r.height-24);
   view.k=clamp(Math.min(aw/(x2-x1+pad*2), ah/(y2-y1+pad*2)),.2,2.6);
@@ -2405,7 +2428,29 @@ function wireGapReport(n, recs){
   });
 }
 
+function panelBlip(n){
+  const s=n.sec||{};
+  panelEyebrow.textContent="🛡 Security fix";
+  panelTitle.textContent=s.finding||n.label;
+  const conns=edgesOf(n.id).map(e=>{
+    const other=nodeById(e.from===n.id?e.to:e.from);
+    const dir=e.dir==="both"?"⇄":(e.from===n.id?"→":"←");
+    return `<div class="conn-item" data-edge="${e.id}"><span class="dir">${dir}</span><span style="flex:1;min-width:0">${esc(other?other.label:"?")}${e.label?` <span style="color:var(--mute)">· ${esc(e.label)}</span>`:""}</span></div>`;
+  }).join("");
+  panelBody.innerHTML=`
+    <div class="fgroup"><label>Finding</label><div class="note">${esc(s.finding||n.label)}</div></div>
+    <div class="fgroup"><label>Defensive fix to implement</label><div class="note">${esc(s.fix||"—")}</div></div>
+    <div class="kvline"><span>Applied by</span><b>${esc(s.by||"—")}</b></div>
+    <div class="kvline"><span>Applied</span><b>${esc(s.at||"—")}</b></div>
+    ${conns?`<div class="fgroup" style="margin-top:10px"><label>Connections · ${edgesOf(n.id).length}</label><div class="conn-list">${conns}</div></div>`:""}
+    <hr class="sep">
+    <div class="note" style="margin-bottom:10px">Removing the blip keeps the fix in the security log and the export.</div>
+    <div class="btnrow"><button class="pbtn ghost-danger" id="fDelete">Delete node</button></div>`;
+  $("fDelete").onclick=()=>deleteNode(n.id);
+  panelBody.querySelectorAll(".conn-item[data-edge]").forEach(ci=>ci.addEventListener("click",()=>selectEdge(ci.dataset.edge)));
+}
 function panelNode(n){
+  if(n.blip) return panelBlip(n);
   panelEyebrow.textContent=chipText(n);
   panelTitle.textContent=n.label;
   const conns=edgesOf(n.id).map(e=>{
@@ -3725,7 +3770,7 @@ function organiseMap(){
   });
   /* agents band sits below the services lane */
   const svcG=groups.svc||[];
-  const svcEnd=svcG.length ? startY.svc+(svcG.length-1)*lanes.svc.gap+NODE_H : 0;
+  const svcEnd=svcG.length ? startY.svc+(svcG.length-1)*lanes.svc.gap+nodeH(svcG[svcG.length-1]) : 0;
   (groups.agents||[]).forEach((n,i)=>{ n.x=lanes.agents.x; n.y=svcEnd+100+i*lanes.agents.gap; });
   logChange("Organised the map into clean lanes");
   rebuild(); fitView(); autosave(); toast("Map organised — everything back in its lane");
@@ -3889,9 +3934,9 @@ function hackOffline(vec){
 }
 
 /* render one run into the modal */
-let hackRunMap={};
+let hackRunMap={}, hackCurRun=null;
 function renderHackRun(run){
-  hackHistMode=false;
+  hackHistMode=false; hackCurRun=run;
   $("hackMode").textContent=`${run.mode==="claude"?"Claude red-team":"Offline auditor"} · ${run.at} · ${run.by}`;
   hackRunMap={};
   const stepsHTML=run.steps.map((s,i)=>`<div class="hk-step ${s.blocked?"blocked":"breach"}"><span class="sn">${i+1}</span><span style="flex:1;min-width:0">${esc(s.action)}<br><span style="color:var(--mute)">→ ${esc(s.result)}</span></span><span class="se">${s.blocked?"blocked":"got through"}</span></div>`).join("");
@@ -3902,7 +3947,7 @@ function renderHackRun(run){
     return `<div class="hk-find ${sev}"><div><span class="ft">${esc(f.title)}</span><span class="fsev">${esc(f.severity)}</span></div>
       ${f.node&&nodeById(f.node)?`<div class="fwhere" data-hknode="${esc(f.node)}">▸ ${esc((nodeById(f.node)||{}).label)}</div>`:""}
       <div class="fdet">${esc(f.detail)}</div>
-      <div class="ffix"><b>Fix:</b> ${f.fix}</div>
+      <div class="ffix"><b>Fix:</b> ${esc(String(f.fix==null?"":f.fix)).replace(/&lt;(\/?b)&gt;/g,"<$1>")}</div>
       ${hasMut?`<button class="fapply" data-hkfix="${fid}">✓ Apply fix to the map</button>`:`<div class="ffix" style="color:var(--mute)">Advice only — no map change.</div>`}</div>`;
   }).join("") || `<div class="note">No weaknesses surfaced on this angle — the defenses held.</div>`;
   hackBody.innerHTML=`<div class="hk-run">
@@ -3930,11 +3975,14 @@ hackBody.addEventListener("click",ev=>{
   if(fix){
     const f=hackRunMap[fix.dataset.hkfix]; if(!f||!f.mut) return;
     if(!confirm(`Apply this fix to the map?\n\n${f.title}\n\nIt adds the recommended defensive nodes/lines as "planned" — your dev can then build them.`)) return;
-    applyFix(f.mut, f.title);
+    applyFix(f);
     fix.disabled=true; fix.textContent="✓ Applied to the map";
   }
 });
-function applyFix(mut, title){
+const stripTags = s => String(s==null?"":s).replace(/<[^>]*>/g,"");
+function applyFix(f){
+  const mut=f.mut||{}, title=f.title, fixTxt=stripTags(f.fix);
+  const at=stampNow(), by=editorNameQuiet(), drawn=[];
   let n=0;
   (mut.nodes||[]).forEach(spec=>{
     if(nodeById(spec.id)) return;
@@ -3942,24 +3990,34 @@ function applyFix(mut, title){
     const layer=laneX[spec.layer]!==undefined?spec.layer:"svc";
     const peers=state.nodes.filter(x=>x.layer===layer);
     const y=peers.length?Math.max(...peers.map(x=>x.y))+95:120;
-    const node={id:spec.id,label:spec.label,sub:spec.sub||"",type:TYPES[spec.type]?spec.type:"service",layer,x:laneX[layer],y};
+    const node={id:spec.id,label:spec.label,sub:spec.sub||"",type:TYPES[spec.type]?spec.type:"service",layer,x:laneX[layer],y,
+      blip:true, sec:{finding:title, fix:fixTxt, at, by}};
     if(spec.status&&spec.status!=="active") node.status=spec.status;
-    state.nodes.push(node); n++;
+    state.nodes.push(node); drawn.push(`blip "${spec.label}"`); n++;
   });
   (mut.edges||[]).forEach(spec=>{
     if(!nodeById(spec.from)||!nodeById(spec.to)) return;
     if(edgeExists(spec.from,spec.to)) return;
     const e={id:uid("e_"),from:spec.from,to:spec.to,label:spec.label||""};
     if(spec.status&&spec.status!=="active") e.status=spec.status;
-    state.edges.push(e); n++;
+    state.edges.push(e); drawn.push(`line ${(nodeById(spec.from)||{}).label||spec.from} → ${(nodeById(spec.to)||{}).label||spec.to}`); n++;
   });
   (mut.setStatus||[]).forEach(spec=>{
     const nn=nodeById(spec.id); if(!nn) return;
-    nn.status=spec.status==="active"?undefined:spec.status; n++;
+    nn.status=spec.status==="active"?undefined:spec.status; drawn.push(`status "${nn.label}" → ${spec.status}`); n++;
   });
+  /* permanent record — survives even if the blips are later deleted from the map */
+  state.seclog = Array.isArray(state.seclog)?state.seclog:[];
+  const dup=state.seclog.some(r=>r.finding===title&&r.fix===fixTxt);
+  if(!n&&dup){ toast("Already applied — it's on the map and in the security log"); return; }
+  if(!dup){
+    const rec={at, by, run:hackCurRun?{strategy:hackCurRun.strategy, at:hackCurRun.at, outcome:hackCurRun.outcome}:null, finding:title, fix:fixTxt, drawn};
+    if(f.severity) rec.severity=f.severity;
+    state.seclog.push(rec);
+  }
   logChange(`Applied Hackathon fix: ${title}`);
   rebuild(); autosave();
-  toast(n?"Fix added to the map — autosaved":"Nothing to add — already on the map");
+  toast(n?"Fix added to the map — autosaved":"Recorded in the security log — autosaved");
 }
 
 /* Claude red-team mode */
@@ -4047,10 +4105,11 @@ function buildAgentBrief(){
     if(r.kind==="node"&&r.node) recReason["n:"+r.node.id]=r.reason;
     if(r.kind==="edge") recReason["e:"+r.from+">"+r.to]=r.reason;
   }));
-  const addedNodes=state.nodes.filter(n=>!dn.has(n.id));
+  const addedNodes=state.nodes.filter(n=>!dn.has(n.id)&&!n.blip); /* blips are covered by the security sections */
   const removedNodes=d.nodes.filter(n=>!cn.has(n.id));
   const editedNodes=state.nodes.filter(n=>{ const o=dn.get(n.id); return o&&(o.label!==n.label||(o.sub||"")!==(n.sub||"")||st(o)!==st(n)); });
-  const addedEdges=state.edges.filter(e=>!de.has(e.id));
+  const isBlip=id=>{ const n=cn.get(id); return !!(n&&n.blip); };
+  const addedEdges=state.edges.filter(e=>!de.has(e.id)&&!isBlip(e.from)&&!isBlip(e.to));
   const removedEdges=d.edges.filter(e=>!ce.has(e.id));
   const editedEdges=state.edges.filter(e=>{ const o=de.get(e.id); return o&&((o.label||"")!==(e.label||"")||st(o)!==st(e)); });
   const flat=s=>{ const out=new Map(); ((s&&s.rows)||[]).forEach(row=>row.forEach(el=>out.set(el.id,el))); return out; };
@@ -4112,11 +4171,32 @@ function buildAgentBrief(){
        if(st(o)!==st(e)) bits.push(`status ${st(o)} → ${st(e)}`);
        return `- Connection ${briefEdge(e)}: ${bits.join("; ")}`; })]);
   sec("5. UI / wireframe changes", wfOut, `The team edited the page wireframes ([MODAL screen] = sheet/overlay, not a full page):`);
-  sec("6. Open gaps flagged on the map", state.nodes.filter(n=>st(n)==="gap").map(n=>{
+  /* ── security: applied fixes + red-team audit history ── */
+  const seclog=(state.seclog||[]);
+  const appliedTitles=new Set(seclog.map(s=>s.finding));
+  sec("6. Security fixes implemented (from the team's red-team runs)", seclog.map(s=>
+    [`- **${s.finding}**${s.severity?` · severity: ${s.severity}`:""}`,
+     `  - implement this defense: ${s.fix||"—"}`,
+     `  - applied by ${s.by||"—"} on ${s.at||"—"}${s.run?` (from run "${s.run.strategy}" @ ${s.run.at}, outcome: ${s.run.outcome})`:""}`,
+     `  - drawn on the map: ${(s.drawn||[]).join("; ")||"nothing — advice only"}`].join("\n")),
+    `Defensive fixes the team committed to from Hackathon findings. Map blips for these may have been removed later — this log is the source of truth.`);
+  const runs=(state.hackathon||[]).slice().reverse();
+  const hackOut=[];
+  runs.slice(0,10).forEach(r=>{
+    hackOut.push(`- **${r.at}** · ${r.by||"—"} · ${r.strategy} · outcome: ${r.outcome==="breach"?"breach":r.outcome==="blocked"?"defended":"partial"} · ${r.mode==="claude"?"Claude red-team":"offline auditor"}`);
+    (r.findings||[]).forEach(f=>hackOut.push(`  - ${appliedTitles.has(f.title)?"[APPLIED]":"[OPEN — suggested, not yet applied]"} **${f.title}** (${f.severity||"med"}) — fix: ${stripTags(f.fix)}`));
+  });
+  if(runs.length>10) hackOut.push(`- _…plus ${runs.length-10} older run${runs.length-10>1?"s":""} omitted._`);
+  sec("7. Red-team audit history (Hackathon runs)", hackOut, `Self-audit attack runs from the map's Hackathon mode, newest first (latest 10):`);
+  const openF=new Map();
+  runs.forEach(r=>(r.findings||[]).forEach(f=>{ if(f.title&&!appliedTitles.has(f.title)&&!openF.has(f.title)) openF.set(f.title,f); }));
+  sec("8. Open security suggestions", [...openF.values()].map(f=>`- **${f.title}** (${f.severity||"med"}) — ${stripTags(f.fix)}`),
+    `Deduplicated rollup of every finding not yet applied — outstanding security work in one list:`);
+  sec("9. Open gaps flagged on the map", state.nodes.filter(n=>st(n)==="gap").map(n=>{
     const kb=GAP_KB[n.id]||{};
     return `- **${n.label}**${n.sub?` — ${n.sub}`:""}${kb.what?`\n  - problem: ${kb.what}`:""}${kb.fix?`\n  - recommended fix: ${kb.fix}`:""}`;
   }), `Known problem areas already flagged (pre-existing — fix when prioritised):`);
-  L.push(``,`## 7. Signed change log`,``,`| When | Who | What |`,`|---|---|---|`);
+  L.push(``,`## 10. Signed change log`,``,`| When | Who | What |`,`|---|---|---|`);
   const logs=(state.changelog||[]).slice().reverse();
   if(logs.length) logs.forEach(c=>L.push(`| ${c.at} | ${c.by||"—"} | ${String(c.msg).replace(/\|/g,"\\|")} |`));
   else L.push(`| — | — | nothing logged yet |`);
@@ -4140,6 +4220,10 @@ $("fileImport").addEventListener("change",ev=>{
   rd.onload=()=>{
     try{
       const s=ensureShape(JSON.parse(rd.result));
+      /* an older backup must not wipe the team's audit trail */
+      if(!s.seclog.length&&state&&Array.isArray(state.seclog)) s.seclog=state.seclog;
+      if(!s.hackathon||!s.hackathon.length) s.hackathon=(state&&state.hackathon)||[];
+      if(!Array.isArray(s.changelog)||!s.changelog.length) s.changelog=(state&&state.changelog)||[];
       state=s; clearFocusAll();
       rebuild(); fitView(); renderPanel(); autosave();
       toast("Map imported");
@@ -4149,9 +4233,11 @@ $("fileImport").addEventListener("change",ev=>{
   rd.readAsText(f);
 });
 $("btnReset").onclick=()=>{
-  if(!confirm("Reset the map to the original Lagbot architecture? Your edits will be lost.")) return;
-  state=clone(defaultState()); clearFocusAll();
-  rebuild(); fitView(); renderPanel(); autosave(); toast("Reset to default map");
+  if(!confirm("Reset the map to the original Lagbot architecture? Your drawing edits will be lost (the change log, security log and Hackathon history are kept).")) return;
+  const keep={seclog:(state&&state.seclog)||[], hackathon:(state&&state.hackathon)||[], changelog:(state&&state.changelog)||[]};
+  state=Object.assign(clone(defaultState()),keep); clearFocusAll();
+  logChange("Reset the map to the default architecture");
+  rebuild(); fitView(); renderPanel(); autosave(); toast("Reset to default map — logs kept");
 };
 function clearFocusAll(){ legendOff(); selection=null; focus=null; hideTrace(); closeDrawer(); setConnect(false); }
 
