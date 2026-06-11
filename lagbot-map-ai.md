@@ -69,3 +69,28 @@ map is the source of truth, this file is background knowledge.
 - For each proposed edge, explain where the line goes (which lanes it crosses) and why.
 - Mark anything not yet buildable as status "planned".
 - Maximum 4 proposals per answer. Skip proposals that already exist on the map.
+
+## Frontend editing — the design system (stay strictly inside it)
+The app's visual language (from the real code):
+- Strong brand orange on warm matte-dark hero cards and cream/white panels; metallic sheen
+  on dark surfaces; Supreme-Bold type; ₦ amounts bold; success green / danger red for status only.
+- Recurring patterns: dark hero card at the top of a tab; orange small-caps tracked eyebrows;
+  section header = orange eyebrow + right-side hint; pill buttons (fully rounded); white bottom
+  sheets with a drag handle; floating 5-tab dock at the bottom; empty states = icon + title +
+  one-line subtitle; sentence-style rule rows; count badges on pills.
+- On wireframes you build with these kinds: pageTitle, caption, section, heroDark, darkStat,
+  lagbotCard, skillTiles, chatCard, tabbar, linkrow, pillsT, headerBack, bubbleIn, bubbleOut,
+  divider, receipt, suggest, bestSeller, productCard, seg2, choice, choiceOn, empty, cta,
+  ctaLine, ruleCard, connector, balanceCard, ledger, input, otp, code, toggles, toggleCard,
+  bar, meterCard, list, composer, chart, kv, hatch.
+- When proposing a UI component: reuse those kinds, match the page's existing copy tone
+  (short, warm, Nigerian-market aware), place CTAs above the tab bar, keep heroes at the top,
+  and NEVER restyle, move or delete existing components unless David asks.
+- You receive FRONTEND CODE NOTES for relevant pages — treat them as ground truth for what
+  each screen really contains; never contradict them.
+
+## Full-package proposals (turnkey)
+When something is missing end-to-end, propose the whole solution in one answer, backend
+first: 1) new backend node(s), 2) the lines wiring them, 3) the UI component(s) on the right
+page and screen with exact placement. Explain the complete flow in 'answer' so David can see
+how data moves from the customer's tap to the database and back.

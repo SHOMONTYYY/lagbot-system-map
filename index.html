@@ -487,6 +487,21 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
 }
 .addElBtn:hover{border-color:var(--page);color:var(--page)}
 
+/* drag & snap reordering (edit mode) */
+.wf-stack.editing{user-select:none;-webkit-user-select:none}
+.wf-stack.editing .wf-el{cursor:grab}
+.wf-el.wf-dragging{opacity:.35;cursor:grabbing}
+.wf-drop-line{height:3px;border-radius:2px;background:var(--page);margin:3px 2px;box-shadow:0 0 7px rgba(232,133,61,.65)}
+.wf-row.joinTarget{outline:2px dashed var(--page);outline-offset:3px;border-radius:10px}
+
+/* element property editor rows */
+.proprow{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.proprow .pk{flex:0 0 64px;font-family:var(--mono);font-size:9px;color:var(--mute);overflow:hidden;text-overflow:ellipsis}
+.proprow input{flex:1;min-width:0;background:var(--pane2);border:1px solid var(--line);border-radius:6px;color:var(--cream);font-size:11px;padding:6px 8px}
+.proprow input:focus{border-color:var(--svc);outline:none}
+.proprow .px{flex:none;background:none;border:1px solid var(--line);color:var(--mute);border-radius:6px;width:24px;height:24px;font-size:10px}
+.proprow .px:hover{border-color:var(--danger);color:var(--danger)}
+
 /* ───────────────────────── modal / help / toast ───────────────────────── */
 #scrim{position:fixed;inset:0;background:rgba(5,8,6,.6);z-index:70;display:none;backdrop-filter:blur(2px)}
 #scrim.show{display:block}
@@ -865,7 +880,7 @@ unused routes, Admins screen duplicates Sales▸Teams.
     <div class="hrow"><b>≡ Log</b><span>Every change is signed — the first change each session asks for your name, then logs who · what · date · time. View or switch name via ≡ Log.</span></div>
     <div class="hrow"><b>☁ Sync</b><span>Connect a Supabase project to share one live map with your whole team — changes sync within a second, signed with each editor's name. One-time setup SQL is in lagbot-map-team-sync.sql.</span></div>
     <div class="hrow"><b>⌗ Organise</b><span>Snaps every node back into its lane in flow order. Connections are untouched — only positions move.</span></div>
-    <div class="hrow"><b>Edit wireframe</b><span>✎ turns on edit mode: add screens with the ＋ chip, tap the current chip to rename it (✕ deletes it), then tap any element to edit its text, set where tapping it twice navigates, and rewire which backend nodes it links to.</span></div>
+    <div class="hrow"><b>Edit wireframe</b><span>✎ turns on edit mode: add screens with the ＋ chip, tap a component to edit every property (text, badges, amounts, stats…), <b>drag components</b> to reorder — they snap between rows, or side-by-side when dropped on a row's right edge. + Add element places new components (bubbles, buttons, text, stats…), then wire them to backend nodes.</span></div>
     <div class="hrow"><b>Search</b><span>Type to dim everything except matching nodes.</span></div>
     <div class="hrow"><b>Keys</b><span>F fit · + / − zoom · Del removes selection · Esc closes / cancels.</span></div>
     <div class="hrow"><b>Saving</b><span>Every change persists automatically. Export / Import moves the whole map as JSON; Reset restores the original Lagbot map.</span></div>
@@ -2602,6 +2617,7 @@ function closeDrawer(){
 $("drawerClose").onclick=()=>{ closeDrawer(); };
 $("drawerEdit").onclick=()=>{ editWF=!editWF; renderWF(); };
 wfStack.addEventListener("click",ev=>{
+  if(suppressElClick){ suppressElClick=false; return; }
   const d=ev.target.closest(".wf-el"); if(!d) return;
   const el=findEl(d.dataset.el); if(!el) return;
   if(editWF){ openElInspector(el); return; }
@@ -2616,8 +2632,101 @@ $("btnAddEl").onclick=()=>{
   const sc=wf.screens[curScreen]; if(!sc) return;
   const el={id:uid("el_"),label:"New element",kind:"card",links:[]};
   sc.rows.push([el]);
+  logChange(`Added component "${el.label}" on ${(nodeById(curWF)||{}).label||curWF} ▸ ${sc.title||curScreen}`);
   renderWF(); openElInspector(el); autosave();
 };
+
+/* ── drag & snap: reorder components in edit mode ── */
+let elDrag=null, dropMark=null, dropTarget=null, suppressElClick=false;
+function clearDrop(){
+  if(dropMark&&dropMark.parentNode) dropMark.parentNode.removeChild(dropMark);
+  dropMark=null; dropTarget=null;
+  wfStack.querySelectorAll(".wf-row.joinTarget").forEach(r=>r.classList.remove("joinTarget"));
+}
+wfStack.addEventListener("pointerdown",ev=>{
+  if(!editWF) return;
+  const d=ev.target.closest(".wf-el"); if(!d) return;
+  const el=findEl(d.dataset.el); if(!el) return;
+  elDrag={el, dom:d, sx:ev.clientX, sy:ev.clientY, moved:false};
+});
+document.addEventListener("pointermove",ev=>{
+  if(!elDrag) return;
+  if(!elDrag.moved){
+    if(Math.hypot(ev.clientX-elDrag.sx, ev.clientY-elDrag.sy)<7) return;
+    elDrag.moved=true;
+    elDrag.dom.classList.add("wf-dragging");
+  }
+  ev.preventDefault();
+  clearDrop();
+  dropMark=document.createElement("div"); dropMark.className="wf-drop-line";
+  const rows=[...wfStack.querySelectorAll(".wf-row")];
+  let placed=false;
+  for(const r of rows){
+    const b=r.getBoundingClientRect();
+    if(ev.clientY < b.top-2){ r.parentNode.insertBefore(dropMark,r); dropTarget={type:"before",row:r}; placed=true; break; }
+    if(ev.clientY <= b.bottom+2){
+      const within=(ev.clientX-b.left)/Math.max(1,b.width);
+      const count=r.querySelectorAll(".wf-el").length;
+      if(count<3 && within>0.66 && !r.contains(elDrag.dom)){
+        r.classList.add("joinTarget"); dropTarget={type:"join",row:r}; placed=true; break;
+      }
+      if(ev.clientY < b.top+b.height/2){ r.parentNode.insertBefore(dropMark,r); dropTarget={type:"before",row:r}; }
+      else { r.parentNode.insertBefore(dropMark, r.nextSibling); dropTarget={type:"after",row:r}; }
+      placed=true; break;
+    }
+  }
+  if(!placed && rows.length){ wfStack.appendChild(dropMark); dropTarget={type:"end"}; }
+});
+document.addEventListener("pointerup",()=>{
+  if(!elDrag) return;
+  const drag=elDrag; elDrag=null;
+  if(!drag.moved){ clearDrop(); return; }
+  suppressElClick=true;
+  drag.dom.classList.remove("wf-dragging");
+  const sc=curScreenObj();
+  if(!sc||!dropTarget){ clearDrop(); renderWF(); return; }
+  /* capture reference element BEFORE mutating the data */
+  let refId=null;
+  if(dropTarget.type!=="end"&&dropTarget.row){
+    const ids=[...dropTarget.row.querySelectorAll(".wf-el")].map(x=>x.dataset.el).filter(x=>x!==drag.el.id);
+    refId=ids[0]||null;
+  }
+  const tType=dropTarget.type;
+  clearDrop();
+  let moving=null;
+  sc.rows=sc.rows.map(row=>row.filter(e=>{ if(e.id===drag.el.id){ moving=e; return false; } return true; })).filter(r=>r.length);
+  if(!moving){ renderWF(); return; }
+  if(tType==="join" && refId){
+    const row=sc.rows.find(r=>r.some(e=>e.id===refId));
+    if(row && row.length<3) row.push(moving); else sc.rows.push([moving]);
+  } else if((tType==="before"||tType==="after") && refId){
+    const idx=sc.rows.findIndex(r=>r.some(e=>e.id===refId));
+    if(idx<0) sc.rows.push([moving]);
+    else sc.rows.splice(tType==="before"?idx:idx+1, 0, [moving]);
+  } else {
+    sc.rows.push([moving]);
+  }
+  logChange(`Moved "${moving.label}" on ${(nodeById(curWF)||{}).label||curWF} ▸ ${sc.title||curScreen}`);
+  renderWF(); autosave();
+});
+/* generic property access — every scalar prop on a component is editable */
+const PROP_HIDDEN=new Set(["id","kind","label","links","nav","note","stats","lines","t1","t2"]);
+const PROP_KNOWN=["sub","dt","tag","badge","bar","amt","cat","q","b","bi","r","ico","or","on","pl","av","pill","tm","cap","role","tpl","lk","t2sub","payk","payn","payb","stats","lines"];
+function coerceProp(v){
+  if(v==="") return null;
+  return /^\d+$/.test(v) ? +v : v;
+}
+function propRowsHTML(el){
+  let h=Object.keys(el).filter(k=>!PROP_HIDDEN.has(k)&&typeof el[k]!=="object").map(k=>`
+    <div class="proprow"><span class="pk" title="${esc(k)}">${esc(k)}</span><input type="text" data-pk="${esc(k)}" value="${esc(String(el[k]))}"><button class="px" data-pdel="${esc(k)}" title="Remove property">✕</button></div>`).join("");
+  if(Array.isArray(el.stats)) h+=`<div class="proprow"><span class="pk" title="stats — Label:Value | Label:Value">stats</span><input type="text" data-parr="stats" value="${esc(el.stats.map(p=>p[0]+":"+p[1]).join(" | "))}"><button class="px" data-pdel="stats" title="Remove">✕</button></div>`;
+  if(Array.isArray(el.lines)) h+=`<div class="proprow"><span class="pk" title="lines — one | per line">lines</span><input type="text" data-parr="lines" value="${esc(el.lines.join(" | "))}"><button class="px" data-pdel="lines" title="Remove">✕</button></div>`;
+  return h||`<div class="note">No extra properties yet — add one below.</div>`;
+}
+function propAddOptions(el){
+  return PROP_KNOWN.filter(k=>el[k]===undefined).map(k=>`<option value="${k}">${k}</option>`).join("");
+}
+
 function openElInspector(el){
   editingEl=el.id;
   const opts=Object.keys(TYPES).map(t=>{
@@ -2643,6 +2752,9 @@ function openElInspector(el){
     <div class="fgroup"><label>Gap note (optional ⚠)</label><input type="text" id="wNote" value="${esc(el.note||"")}" placeholder="e.g. endpoint missing"></div>
     <div class="fgroup"><label>Backend links</label><div class="linkchips" id="wChips">${chips}</div></div>
     <div class="fgroup"><label>Add link</label><div class="btnrow"><select id="wAddSel" style="flex:2;min-width:0;background:var(--pane3);border:1px solid var(--line);border-radius:7px;color:var(--cream);font-size:11px;padding:7px 8px">${opts||"<option disabled>—</option>"}</select><button class="pbtn accent" id="wAddBtn" style="flex:1">+ Link</button></div></div>
+    <div class="fgroup"><label>All properties</label><div id="wProps">${propRowsHTML(el)}</div>
+      <div class="btnrow"><select id="wPropSel" style="flex:2;min-width:0;background:var(--pane3);border:1px solid var(--line);border-radius:7px;color:var(--cream);font-size:11px;padding:7px 8px">${propAddOptions(el)||"<option disabled>all added</option>"}</select><button class="pbtn" id="wPropAdd" style="flex:1">+ Property</button></div>
+      <div class="note" style="margin-top:6px">Stats format: Label:Value | Label:Value · Lines format: line one | line two</div></div>
     <hr class="sep">
     <div class="btnrow"><button class="pbtn" id="wDone">Done</button><button class="pbtn ghost-danger" id="wDel">Delete element</button></div>`;
   $("wLabel").addEventListener("input",ev=>{ el.label=ev.target.value; renderWF(); autosave(); keepInspector(); });
@@ -2660,6 +2772,31 @@ function openElInspector(el){
     el.links=(el.links||[]).filter(x=>x!==b.dataset.unlink);
     renderWF(); openElInspector(el); autosave();
   });
+  /* generic property wiring */
+  elInspector.querySelectorAll("[data-pk]").forEach(inp=>inp.addEventListener("input",ev=>{
+    const k=inp.dataset.pk, v=coerceProp(ev.target.value);
+    if(v===null) delete el[k]; else el[k]=v;
+    renderWF(); autosave(); keepInspector();
+  }));
+  elInspector.querySelectorAll("[data-parr]").forEach(inp=>inp.addEventListener("input",ev=>{
+    const k=inp.dataset.parr, raw=ev.target.value.trim();
+    if(!raw){ delete el[k]; }
+    else if(k==="stats") el.stats=raw.split("|").map(s=>{ const i=s.indexOf(":"); return i<0?[s.trim(),""]:[s.slice(0,i).trim(), s.slice(i+1).trim()]; });
+    else el.lines=raw.split("|").map(s=>s.trim()).filter(Boolean);
+    renderWF(); autosave(); keepInspector();
+  }));
+  elInspector.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>{
+    delete el[b.dataset.pdel];
+    renderWF(); openElInspector(el); autosave();
+  });
+  if($("wPropAdd")) $("wPropAdd").onclick=()=>{
+    const sel=$("wPropSel"); if(!sel||!sel.value) return;
+    const k=sel.value;
+    if(k==="stats") el.stats=[["Label","0"]];
+    else if(k==="lines") el.lines=["New line"];
+    else el[k]="";
+    renderWF(); openElInspector(el); autosave();
+  };
   $("wDone").onclick=()=>{ editingEl=null; elInspector.style.display="none"; };
   $("wDel").onclick=()=>{
     const wf2=state.wireframes[curWF]; if(!wf2) return;
@@ -2763,9 +2900,50 @@ function buildMapContext(){
     Object.values(wf.screens).forEach(sc=>(sc.rows||[]).forEach(row=>row.forEach(el=>{ if(el.note) notes.push(`${pg.label} · ${el.label}: ${el.note}`); })));
   });
   if(notes.length){ lines.push("","APP-SCREEN WARNINGS (⚠):"); notes.forEach(n=>lines.push(n)); }
+  lines.push("","APP WIREFRAMES (page → screen → components: id | kind | text | →nav | links):");
+  Object.keys(state.wireframes).forEach(pid=>{
+    const pg=nodeById(pid); const wf=state.wireframes[pid];
+    if(!pg||!wf||!wf.screens) return;
+    lines.push(`# ${pg.label} (${pid})`);
+    Object.keys(wf.screens).forEach(sid=>{
+      lines.push(`## screen ${sid} "${wf.screens[sid].title||sid}"`);
+      (wf.screens[sid].rows||[]).forEach(row=>row.forEach(el=>{
+        lines.push(`- ${el.id} | ${el.kind} | ${String(el.t1||el.label||"").slice(0,70)}${el.nav?` | →${el.nav}`:""}${(el.links||[]).length?` | links:${el.links.join(",")}`:""}${el.note?` | ⚠${String(el.note).slice(0,50)}`:""}`);
+      }));
+    });
+  });
   const log=(state.changelog||[]).slice(-15).reverse();
   if(log.length){ lines.push("","RECENT CHANGES ON THE MAP (newest first · time — who — what):"); log.forEach(c=>lines.push(`${c.at} — ${c.by||"?"} — ${c.msg}`)); }
   return lines.join("\n");
+}
+
+/* per-page frontend code notes — distilled from the real app code, stored in docs/screens/ */
+const SCREEN_DOCS={
+  page_dashboard:"docs/screens/dashboard-wallet.md", page_wallet:"docs/screens/dashboard-wallet.md",
+  page_chats:"docs/screens/chats-inventory.md", page_inventory:"docs/screens/chats-inventory.md",
+  page_sales:"docs/screens/sales-analytics-skills.md", page_analytics:"docs/screens/sales-analytics-skills.md",
+  page_skills:"docs/screens/sales-analytics-skills.md",
+  page_auth:"docs/screens/auth-onboarding.md", page_onboarding:"docs/screens/auth-onboarding.md",
+  page_settings:"docs/screens/settings.md"
+};
+const PAGE_WORDS={wallet:"page_wallet", withdraw:"page_wallet", dashboard:"page_dashboard", home:"page_dashboard",
+  chat:"page_chats", thread:"page_chats", inventory:"page_inventory", product:"page_inventory", import:"page_inventory",
+  sale:"page_sales", team:"page_sales", routing:"page_sales", analytic:"page_analytics", skill:"page_skills",
+  setting:"page_settings", token:"page_settings", persona:"page_settings", onboard:"page_onboarding",
+  login:"page_auth", signup:"page_auth", welcome:"page_auth", verify:"page_auth"};
+const screenDocCache={};
+async function fetchScreenDocs(q){
+  const t=q.toLowerCase(); const files=new Set();
+  if(curWF && SCREEN_DOCS[curWF]) files.add(SCREEN_DOCS[curWF]);
+  Object.keys(PAGE_WORDS).forEach(w=>{ if(t.includes(w)){ const f=SCREEN_DOCS[PAGE_WORDS[w]]; if(f) files.add(f); } });
+  const list=[...files].slice(0,2), out=[];
+  for(const f of list){
+    if(!(f in screenDocCache)){
+      try{ const r=await fetch(f,{cache:"no-store"}); screenDocCache[f]=r.ok?await r.text():null; }catch(e){ screenDocCache[f]=null; }
+    }
+    if(screenDocCache[f]) out.push(`--- ${f} ---\n${screenDocCache[f]}`);
+  }
+  return out.join("\n\n");
 }
 
 const aiMsgsEl=$("aiMsgs");
@@ -2803,10 +2981,38 @@ function resolveNodeRef(ref){
       || null;
 }
 function renderProposals(props){
+  const made=[];
   props.forEach(p=>{
     const pid="prop"+(++propSeq);
     liveProps[pid]=p;
     let inner="";
+    if(p.kind==="element"){
+      const pg=nodeById(p.page);
+      const wf=state.wireframes[p.page];
+      const sc=wf&&wf.screens&&wf.screens[p.screen];
+      if(!pg||!sc){
+        aiAppend("ai-prop done rejected",
+          `<div class="ptag">Proposed UI component</div>
+           <div class="ptitle">${esc(p.elKind||"component")} — “${esc(p.t1||p.label||"")}”</div>
+           <div class="pwarn">⚠ Can't place this — ${!pg?`page "${esc(String(p.page))}"`:`screen "${esc(String(p.screen))}"`} doesn't exist.</div>
+           <div class="preason">${esc(p.reason||"")}</div><div class="pstate" style="display:block;color:var(--danger)">Skipped</div>`);
+        return;
+      }
+      p._kind=KINDS.includes(p.elKind)?p.elKind:"card";
+      const aft=(p.after&&p.after!=="end")?findElAnywhere(p.page,p.after):null;
+      const okLinks=(p.links||[]).filter(l=>nodeById(l));
+      const badLinks=(p.links||[]).filter(l=>!nodeById(l));
+      p.links=okLinks;
+      inner=`<div class="ptag">Proposed UI component</div>
+        <div class="ptitle">${esc(p._kind)} — “${esc(p.t1||p.label)}”</div>
+        <div class="ppath">${esc(pg.label)} ▸ ${esc(sc.title||p.screen)} · ${aft?`directly below “${esc(aft.el.label)}”`:"at the bottom of the screen"}${okLinks.length?` · wires to ${esc(okLinks.map(l=>nodeById(l).label).join(", "))}`:" · UI-only"}</div>
+        <div class="preason">${esc(p.reason||"")}</div>
+        ${badLinks.length?`<div class="pwarn">⚠ Unknown backend ids dropped: ${esc(badLinks.join(", "))}</div>`:""}`;
+      inner+=`<div class="pbtns"><button class="ok" data-approve="${pid}">✓ Approve</button><button class="no" data-reject="${pid}">✕ Dismiss</button></div><div class="pstate"></div>`;
+      aiAppend("ai-prop node-prop",inner);
+      made.push(pid);
+      return;
+    }
     if(p.kind==="node"){
       const lane=laneName(p.node.layer||"svc");
       inner=`<div class="ptag">Proposed new node</div>
@@ -2834,15 +3040,45 @@ function renderProposals(props){
     }
     inner+=`<div class="pbtns"><button class="ok" data-approve="${pid}">✓ Approve</button><button class="no" data-reject="${pid}">✕ Dismiss</button></div><div class="pstate"></div>`;
     aiAppend("ai-prop"+(p.kind==="node"?" node-prop":""),inner);
+    made.push(pid);
   });
+  if(made.length>1){
+    aiAppend("ai-msg ai",`<button class="pbtn accent" style="padding:8px 16px" data-approveall="${made.join(",")}">✓ Approve all ${made.length} — full package</button>`);
+  }
 }
 aiPanelEl.addEventListener("click",ev=>{
+  const all=ev.target.closest("[data-approveall]");
+  if(all){
+    all.dataset.approveall.split(",").forEach(pid=>{
+      const btn=aiMsgsEl.querySelector(`[data-approve="${pid}"]`);
+      if(btn) btn.click();
+    });
+    all.disabled=true; all.textContent="✓ All approved";
+    return;
+  }
   const ok=ev.target.closest("[data-approve]"), no=ev.target.closest("[data-reject]");
   if(!ok&&!no) return;
   const card=ev.target.closest(".ai-prop");
   const pid=ok?ok.dataset.approve:no.dataset.reject;
   const p=liveProps[pid]; if(!p||!card) return;
   if(no){ card.classList.add("done","rejected"); card.querySelector(".pstate").textContent="Dismissed"; return; }
+  if(p.kind==="element"){
+    const wf=state.wireframes[p.page];
+    const sc=wf&&wf.screens&&wf.screens[p.screen];
+    if(!sc){ toast("That screen is gone from the map","warn"); return; }
+    const el={id:uid("el_"), label:p.label||"New component", kind:p._kind||"card", links:(p.links||[]).filter(l=>nodeById(l))};
+    if(p.t1) el.t1=p.t1;
+    if(p.t2) el.t2=p.t2;
+    if(p.status==="gap") el.note="missing — needs backend work";
+    const idx=(p.after&&p.after!=="end")?sc.rows.findIndex(r=>r.some(e=>e.id===p.after)):-1;
+    if(idx>=0) sc.rows.splice(idx+1,0,[el]); else sc.rows.push([el]);
+    logChange(`Approved AI suggestion: UI component "${el.label}" on ${(nodeById(p.page)||{}).label||p.page} ▸ ${sc.title||p.screen}`);
+    autosave();
+    card.classList.add("done"); card.querySelector(".pstate").textContent="Added to the wireframe ✓";
+    openDrawer(p.page, p.screen, el.id);
+    toast("Component added — autosaved");
+    return;
+  }
   if(p.kind==="node"){
     const spec=p.node;
     const laneX={ext:30,svc:330,agents:330,bridge:640,pages:985};
@@ -2940,29 +3176,38 @@ const AI_SCHEMA={
     proposals:{type:"array", description:"0-4 proposed map additions. Empty array if none needed.", items:{
       type:"object", additionalProperties:false,
       properties:{
-        kind:{type:"string", enum:["edge","node"]},
-        from:{type:"string", description:"edge only: exact node id; empty string for nodes"},
-        to:{type:"string", description:"edge only: exact node id; empty string for nodes"},
-        label:{type:"string", description:"edge only: what flows on this line; empty string for nodes"},
+        kind:{type:"string", enum:["edge","node","element"]},
+        from:{type:"string", description:"edge only: exact node id; empty string otherwise"},
+        to:{type:"string", description:"edge only: exact node id; empty string otherwise"},
+        label:{type:"string", description:"edge: what flows on this line · element: short designer note; empty string otherwise"},
         status:{type:"string", enum:["active","planned","gap"]},
         reason:{type:"string", description:"why this helps, in plain English"},
-        nodeLabel:{type:"string", description:"node only; empty string for edges"},
-        nodeSub:{type:"string", description:"node only: one-line detail; empty string for edges"},
+        nodeLabel:{type:"string", description:"node only; empty string otherwise"},
+        nodeSub:{type:"string", description:"node only: one-line detail; empty string otherwise"},
         nodeType:{type:"string", enum:["external","service","api","db","channel","client","page","agent"]},
-        nodeLayer:{type:"string", enum:["ext","svc","agents","bridge","pages"]}
+        nodeLayer:{type:"string", enum:["ext","svc","agents","bridge","pages"]},
+        elPage:{type:"string", description:"element only: page node id; empty string otherwise"},
+        elScreen:{type:"string", description:"element only: screen id on that page; empty string otherwise"},
+        elAfter:{type:"string", description:"element only: existing element id to place it directly below, or 'end'; empty string otherwise"},
+        elKind:{type:"string", description:"element only: a wireframe kind (cta, linkrow, section, darkStat, empty, bar, input, pillsT, caption, heroDark, ledger, chatCard, toggleCard…); empty string otherwise"},
+        elText:{type:"string", description:"element only: main visible text; empty string otherwise"},
+        elText2:{type:"string", description:"element only: secondary text; empty string otherwise"},
+        elLinks:{type:"string", description:"element only: comma-separated backend node ids this component wires to; empty string otherwise"}
       },
-      required:["kind","from","to","label","status","reason","nodeLabel","nodeSub","nodeType","nodeLayer"]
+      required:["kind","from","to","label","status","reason","nodeLabel","nodeSub","nodeType","nodeLayer","elPage","elScreen","elAfter","elKind","elText","elText2","elLinks"]
     }}
   },
   required:["answer","proposals"]
 };
 let aiHistory=[];
 async function askClaude(q){
+  const docs=await fetchScreenDocs(q);
   const body={
-    model:aiModel(), max_tokens:4000,
-    system:AI_PERSONA+"\n\nReply via the JSON schema. 'answer' is for David. Proposals: use EXACT node ids in from/to. For kind 'node' fill nodeLabel/nodeSub/nodeType/nodeLayer and use empty strings for from/to/label. Use empty strings for any field that doesn't apply. Never more than 4 proposals; zero is fine.",
+    model:aiModel(), max_tokens:5000,
+    system:AI_PERSONA+"\n\nReply via the JSON schema. 'answer' is for David. Proposals: use EXACT node ids in from/to. For kind 'node' fill nodeLabel/nodeSub/nodeType/nodeLayer. For kind 'element' (a new UI component on an app wireframe) fill elPage/elScreen/elAfter/elKind/elText/elText2/elLinks and put a short designer note in 'label' — reuse the wireframe kinds you can see in the map data, match the page's existing copy tone, place CTAs above the tab bar, and NEVER restyle, move or remove existing components unless asked. When a feature needs both backend and frontend, propose the FULL PACKAGE in one answer, backend first: node(s) → line(s) → element(s), and explain the flow in 'answer'. Use empty strings for fields that don't apply. Maximum 4 proposals; zero is fine.",
     output_config:{format:{type:"json_schema", schema:AI_SCHEMA}},
     messages:[{role:"user", content: buildMapContext()
+      +(docs?"\n\nFRONTEND CODE NOTES (distilled from the real app code — ground truth for layout, copy and design):\n"+docs:"")
       +(aiHistory.length?"\n\nEARLIER IN THIS CHAT:\n"+aiHistory.map(h=>`David: ${h.q}\nYou: ${h.a}`).join("\n"):"")
       +"\n\nDavid asks: "+q}]
   };
@@ -2990,6 +3235,7 @@ async function askClaude(q){
   aiHistory.push({q, a:(obj.answer||"").slice(0,500)}); if(aiHistory.length>3) aiHistory=aiHistory.slice(-3);
   const props=(obj.proposals||[]).slice(0,4).map(p=>{
     if(p.kind==="node") return {kind:"node", node:{label:p.nodeLabel||"New node", sub:p.nodeSub||"", type:p.nodeType||"service", layer:p.nodeLayer||"svc", status:(p.status&&p.status!=="active")?p.status:"planned"}, reason:p.reason||""};
+    if(p.kind==="element") return {kind:"element", page:p.elPage, screen:p.elScreen, after:p.elAfter||"end", elKind:p.elKind||"card", t1:p.elText||"", t2:p.elText2||"", links:(p.elLinks||"").split(",").map(s=>s.trim()).filter(Boolean), label:p.label||p.elText||"New component", status:p.status||"planned", reason:p.reason||""};
     return {kind:"edge", from:p.from, to:p.to, label:p.label||"", status:p.status||"planned", reason:p.reason||""};
   });
   return {html:esc(obj.answer||"").replace(/\n/g,"<br>"), proposals:props};
