@@ -64,5 +64,9 @@ remains the local/offline way to share keys.
 
 ## Keeping it honest
 
-The map is a snapshot, not wired to the codebase. After real development,
-regenerate/compare against the code and update both the map and the docs.
+The hand-drawn map is a snapshot, but `docs/code-facts.md` is kept true to the
+real app codebase automatically: a nightly GitHub Action
+(`.github/workflows/sync-from-code.yml`) reads the codebase **read-only** and
+regenerates sanitized structural facts (routes + their auth guards, tables, RLS,
+services, screens — never source). The Circuit AI reads these facts, so it
+answers from the real code. One-time token setup is in `tools/README.md`.

@@ -3563,6 +3563,15 @@ async function fetchScreenDocs(q){
   return out.join("\n\n");
 }
 
+/* live code facts — auto-synced from the real codebase (docs/code-facts.md) */
+let codeFactsCache;
+async function fetchCodeFacts(){
+  if(codeFactsCache!==undefined) return codeFactsCache;
+  try{ const r=await fetch("docs/code-facts.md",{cache:"no-store"}); codeFactsCache=r.ok?await r.text():null; }
+  catch(e){ codeFactsCache=null; }
+  return codeFactsCache;
+}
+
 const aiMsgsEl=$("aiMsgs");
 function aiOpen(){ aiPanelEl.classList.add("open"); }
 function aiClose(){ aiPanelEl.classList.remove("open"); }
@@ -3900,11 +3909,13 @@ const AI_SCHEMA={
 let aiHistory=[];
 async function askClaude(q){
   const docs=await fetchScreenDocs(q);
+  const facts=await fetchCodeFacts();
   const body={
     model:aiModel(), max_tokens:5000,
     system:AI_PERSONA+"\n\nReply via the JSON schema. 'answer' is for David. Proposals: use EXACT node ids in from/to. For kind 'node' fill nodeLabel/nodeSub/nodeType/nodeLayer. For kind 'element' (a new UI component on an app wireframe) fill elPage/elScreen/elAfter/elKind/elText/elText2/elLinks and put a short designer note in 'label' — reuse the wireframe kinds you can see in the map data, match the page's existing copy tone, place CTAs above the tab bar, and NEVER restyle, move or remove existing components unless asked. CRITICAL — pages vs modals: screens marked ◍ MODAL are overlays (bottom sheets / confirm modals), not pages. Content that belongs to a modal goes on that modal's screen; content that belongs to the page goes on the page screen — never mix them (e.g. the token payment sheet is a modal AFTER tapping a pack, so payment UI never sits inline on the Tokens page). If the right modal screen doesn't exist yet, say so in 'answer' and place the trigger element on the page instead. Check the FRONTEND CODE NOTES for what is a modal in the real app. When a feature needs both backend and frontend, propose the FULL PACKAGE in one answer, backend first: node(s) → line(s) → element(s), and explain the flow in 'answer'. Use empty strings for fields that don't apply. Maximum 4 proposals; zero is fine.\n\nVISUAL SKILLS — alongside your words, return up to 3 'actions' that SHOW what you explain on the map (the first auto-plays): 'locate' a key node, 'highlight' a related set, 'open' a page's wireframe, or 'preview' a flow as an ordered list of node ids that animates step by step. Use EXACT node ids. When you describe how something flows, prefer a 'preview' action with the nodes in order. When you point at one thing, 'locate' it. Empty array if the answer is purely conversational.",
     output_config:{format:{type:"json_schema", schema:AI_SCHEMA}},
     messages:[{role:"user", content: buildMapContext()
+      +(facts?"\n\nLIVE CODE FACTS (auto-synced from the real codebase — actual routes with their auth guards, tables, RLS, services, screens. Trust this over the map when they disagree):\n"+facts:"")
       +(docs?"\n\nFRONTEND CODE NOTES (distilled from the real app code — ground truth for layout, copy and design):\n"+docs:"")
       +(aiHistory.length?"\n\nEARLIER IN THIS CHAT:\n"+aiHistory.map(h=>`David: ${h.q}\nYou: ${h.a}`).join("\n"):"")
       +"\n\nDavid asks: "+q}]
@@ -4322,11 +4333,14 @@ const HACK_SCHEMA={
   required:["strategy","outcome","steps","findings"]
 };
 async function hackClaude(vec){
+  const facts=await fetchCodeFacts();
   const body={
     model:aiModel(), max_tokens:4000,
     system:AI_PERSONA+"\n\nYou are now in RED-TEAM mode for an AUTHORIZED self-audit of THIS team's own documented architecture (the map). Goal: threat-model for security weaknesses and recommend DEFENSIVE fixes. You are reasoning over a diagram — never produce real exploit code, payloads, or steps against any live or third-party system. Pick the angle of attack you are given, walk the system as an attacker would, and report: numbered steps (each with whether a defense blocked you), an honest outcome, and findings with plain-English defensive fixes. For fixNodes/fixEdges, propose defensive additions (drawn as 'planned') using EXACT node ids; leave them empty if the fix is process-only. Reply via the JSON schema.",
     output_config:{format:{type:"json_schema", schema:HACK_SCHEMA}},
-    messages:[{role:"user", content: buildMapContext()+`\n\nAttack angle for this run: ${vec.name} (focus around: ${vec.target.join(", ")}). Audit it.`}]
+    messages:[{role:"user", content: buildMapContext()
+      +(facts?"\n\nLIVE CODE FACTS (auto-synced from the real codebase — the actual routes and which auth guards protect each, real tables and RLS. Base your audit on THESE real defenses, not assumptions):\n"+facts:"")
+      +`\n\nAttack angle for this run: ${vec.name} (focus around: ${vec.target.join(", ")}). Audit it.`}]
   };
   const useProxy=!aiKey()&&AI_PROXY;
   const res=await fetch(useProxy?"/api/ai":"https://api.anthropic.com/v1/messages",{

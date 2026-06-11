@@ -1,0 +1,471 @@
+{
+  "source": "github.com/Joseph-Banke/lagbot-mobile-main",
+  "note": "Auto-generated structural facts (read-only). No source code is copied here.",
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/api/account/delete",
+      "guards": [
+        "requireAuth"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ai/pause",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ai/resume",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/create-business",
+      "guards": [
+        "requireAuth"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "guards": [
+        "validateBody",
+        "email",
+        "password"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "guards": [
+        "requireAuth"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/signup",
+      "guards": [
+        "validateBody",
+        "email",
+        "password",
+        "businessName"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/conversations/:id/archive",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/conversations/:id/smart-replies",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/ai-accuracy",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/budget",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/message-count",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/recent-conversations",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/products/import",
+      "guards": [
+        "requireAuth",
+        "requireBusiness",
+        "rateLimitBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/routing-rules/:id",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/routing-rules/:id",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/routing-rules",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/sales/:id/confirm",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sales/confirmed",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sales/pending",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/settings/refresh",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/stats",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/status",
+      "guards": [],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/test/push",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/wallet",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/whatsapp/disconnect",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/whatsapp/pairing-code",
+      "guards": [
+        "requireAuth",
+        "requireBusiness",
+        "rateLimitBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/api/whatsapp/send",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/whatsapp/status",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "guards": [],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "guards": [],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/webhook/evolution/:secret",
+      "guards": [
+        "webhookHandler"
+      ],
+      "file": "backend/server.js"
+    },
+    {
+      "method": "POST",
+      "path": "/webhook/evolution",
+      "guards": [
+        "webhookHandler"
+      ],
+      "file": "backend/server.js"
+    }
+  ],
+  "schema": {
+    "tables": [
+      "ai_accuracy_metrics",
+      "ai_behavior_settings",
+      "ai_tone_metrics",
+      "budget_tracking",
+      "conversation_state",
+      "customer_satisfaction",
+      "frequently_asked_questions",
+      "heartbeat_logs",
+      "human_interventions",
+      "inventory_imports",
+      "lead_reminders",
+      "message_count_realtime",
+      "response_time_metrics",
+      "routing_rules",
+      "sales_records",
+      "skills",
+      "subscriptions",
+      "token_config",
+      "token_ledger",
+      "user_profiles",
+      "user_skills",
+      "vendor_token_state",
+      "wallet_transactions",
+      "wallet_withdrawal_accounts",
+      "wallets",
+      "weekly_reports"
+    ],
+    "rlsEnabled": [
+      "ai_accuracy_metrics",
+      "ai_behavior_settings",
+      "ai_tone_metrics",
+      "budget_tracking",
+      "business_config",
+      "businesses",
+      "confirmed_sales",
+      "conversation_state",
+      "conversations",
+      "customer_satisfaction",
+      "daily_stats",
+      "frequently_asked_questions",
+      "heartbeat_logs",
+      "human_interventions",
+      "inventory_imports",
+      "lead_reminders",
+      "message_count_realtime",
+      "messages",
+      "pending_sales",
+      "products",
+      "response_time_metrics",
+      "routing_rules",
+      "sales_records",
+      "skills",
+      "subscriptions",
+      "team_members",
+      "token_config",
+      "token_ledger",
+      "user_profiles",
+      "user_skills",
+      "vendor_token_state",
+      "wallet_transactions",
+      "wallet_withdrawal_accounts",
+      "wallets",
+      "weekly_reports",
+      "whatsapp_connections"
+    ],
+    "functions": [
+      "auth_business_id",
+      "calculate_ai_accuracy",
+      "decrement_product_stock",
+      "increment_budget",
+      "increment_message_count",
+      "protect_business_columns"
+    ],
+    "policyCounts": {
+      "businesses": 1,
+      "business_config": 1,
+      "products": 1,
+      "conversations": 1,
+      "messages": 1,
+      "daily_stats": 1,
+      "pending_sales": 2,
+      "confirmed_sales": 2,
+      "team_members": 1,
+      "ai_accuracy_metrics": 1,
+      "skills": 2,
+      "user_skills": 1,
+      "sales_records": 1,
+      "response_time_metrics": 1,
+      "customer_satisfaction": 1,
+      "human_interventions": 1,
+      "whatsapp_connections": 1,
+      "wallets": 1,
+      "wallet_transactions": 1,
+      "wallet_withdrawal_accounts": 1,
+      "conversation_state": 1,
+      "routing_rules": 1,
+      "vendor_token_state": 1,
+      "token_ledger": 1,
+      "token_config": 1
+    }
+  },
+  "services": [
+    {
+      "name": "evolution-api.client.js",
+      "purpose": "Evolution API Client"
+    },
+    {
+      "name": "evolution-webhook.handler.js",
+      "purpose": "Evolution API Webhook Handler"
+    },
+    {
+      "name": "file-parser.js",
+      "purpose": "File Parser Service"
+    },
+    {
+      "name": "llm.service.js",
+      "purpose": "LLM Service — Multi-tier AI routing"
+    },
+    {
+      "name": "message-pipeline.service.js",
+      "purpose": "Message Pipeline — Multi-tenant"
+    },
+    {
+      "name": "nova-rules.js",
+      "purpose": "Nova rule layer — pure, dependency-free helpers shared by the message"
+    },
+    {
+      "name": "routing-engine.service.js",
+      "purpose": "Routing engine (Feature 3): fires Sales+Teams routing rules by sending"
+    },
+    {
+      "name": "sales.helpers.js",
+      "purpose": "Sale line-item helpers — pure, dependency-free; shared by the message"
+    },
+    {
+      "name": "token.service.js",
+      "purpose": "Token billing service — Phase 1 (core metering + free tier)."
+    }
+  ],
+  "screens": {
+    "auth": [
+      "(auth)/index",
+      "(auth)/login",
+      "(auth)/signup",
+      "(auth)/verify"
+    ],
+    "onboarding": [
+      "(onboarding)/activate-skill",
+      "(onboarding)/add-product",
+      "(onboarding)/complete",
+      "(onboarding)/configure-nova",
+      "(onboarding)/index",
+      "(onboarding)/setup",
+      "(onboarding)/whatsapp-info"
+    ],
+    "product": [
+      "(product)/import",
+      "(product)/new"
+    ],
+    "tabs": [
+      "(tabs)/admins",
+      "(tabs)/analytics",
+      "(tabs)/chats",
+      "(tabs)/dashboard",
+      "(tabs)/index",
+      "(tabs)/inventory",
+      "(tabs)/sales",
+      "(tabs)/settings",
+      "(tabs)/skills",
+      "(tabs)/wallet"
+    ],
+    "welcome": [
+      "(welcome)/index"
+    ]
+  }
+}
