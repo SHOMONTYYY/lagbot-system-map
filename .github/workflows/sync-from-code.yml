@@ -1,0 +1,58 @@
+name: Sync code facts
+
+# Keeps docs/code-facts.* in sync with the real Lagbot app codebase.
+# READ-ONLY against the codebase: it only `git clone`s it (never pushes,
+# never calls a write API). It writes only to THIS repo's docs/.
+# The codebase is read via a fine-grained, Contents:Read-only token stored
+# as the repo secret CODEBASE_RO_TOKEN — see tools/README.md.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # nightly ~03:00 UTC
+  workflow_dispatch: {}    # manual "Run workflow" button
+
+permissions:
+  contents: write          # to commit refreshed docs to THIS repo only
+
+concurrency:
+  group: sync-from-code
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the map repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Clone the codebase (read-only)
+        env:
+          TOKEN: ${{ secrets.CODEBASE_RO_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::CODEBASE_RO_TOKEN is not set. Add it in Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          git clone --depth 1 \
+            "https://x-access-token:${TOKEN}@github.com/Joseph-Banke/lagbot-mobile-main.git" \
+            "$RUNNER_TEMP/codebase"
+
+      - name: Regenerate code facts (sanitized, structure only)
+        run: CODEBASE_DIR="$RUNNER_TEMP/codebase" node tools/sync-from-code.mjs
+
+      - name: Commit if docs changed
+        run: |
+          git config user.name  "lagbot-map-bot"
+          git config user.email "actions@github.com"
+          if git diff --quiet -- docs/code-facts.json docs/code-facts.md; then
+            echo "No code changes — docs already current."
+          else
+            git add docs/code-facts.json docs/code-facts.md
+            git commit -m "Sync code facts from codebase [skip ci]"
+            git push
+          fi
