@@ -679,7 +679,7 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
     <button class="tbtn" id="btnFit" title="Fit the whole map on screen">⌖</button>
     <button class="tbtn" id="btnZoomOut" title="Zoom out">−</button>
     <button class="tbtn" id="btnZoomIn" title="Zoom in">+</button>
-    <button class="tbtn" id="btnExport" title="Export the map as a JSON file">⤓</button>
+    <button class="tbtn" id="btnExport" title="Export — coding-agent brief (.md) or JSON backup">⤓</button>
     <button class="tbtn" id="btnImport" title="Import a map JSON file">⤒</button>
     <button class="tbtn danger" id="btnReset" title="Reset to the original map">↺</button>
     <button class="tbtn" id="btnSync" title="Team sync via Supabase">☁ Sync</button>
@@ -788,6 +788,17 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
     <button class="pbtn" id="logSwitch" style="flex:none;padding:5px 10px;font-size:10px">Switch profile</button>
   </div>
   <div id="logBody" style="margin-top:8px"></div>
+</div>
+
+<div class="modal" id="exportModal">
+  <button class="mclose" data-close>✕</button>
+  <div class="eyebrow">Export</div>
+  <h3>What do you want to export?</h3>
+  <div class="note" style="margin-top:6px;margin-bottom:12px">The <b>agent brief</b> is a Markdown work order for a coding agent: every change the team drew on this map since the baseline — new components, new connections, removals, wireframe edits, open gaps — written as instructions, with the signed change log. The <b>JSON backup</b> is the full map for ⤒ Import.</div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <button class="pbtn accent" id="exportBrief" style="padding:12px">⌘ Coding-agent brief (.md)</button>
+    <button class="pbtn" id="exportJson" style="padding:12px">JSON backup (for ⤒ Import)</button>
+  </div>
 </div>
 
 <div class="modal" id="syncModal">
@@ -907,7 +918,7 @@ unused routes, Admins screen duplicates Sales▸Teams.
     <div class="hrow"><b>Edit wireframe</b><span>✎ turns on edit mode: add screens with the ＋ chip, tap a component to edit every property (text, badges, amounts, stats…), <b>drag components</b> to reorder — they snap between rows, or side-by-side when dropped on a row's right edge. + Add element places new components (bubbles, buttons, text, stats…), then wire them to backend nodes.</span></div>
     <div class="hrow"><b>Search</b><span>Type to dim everything except matching nodes.</span></div>
     <div class="hrow"><b>Keys</b><span>F fit · + / − zoom · Del removes selection · Esc closes / cancels.</span></div>
-    <div class="hrow"><b>Saving</b><span>Every change persists automatically. Export / Import moves the whole map as JSON; Reset restores the original Lagbot map.</span></div>
+    <div class="hrow"><b>Saving</b><span>Every change persists automatically. ⤓ Export offers a coding-agent brief (.md work order of all team changes) or a JSON backup; ⤒ Import restores a JSON backup; Reset restores the original Lagbot map.</span></div>
   </div>
 </div>
 <div id="profileOverlay">
@@ -3527,13 +3538,113 @@ $("btnConnect").onclick=()=>setConnect(!connect.on);
 $("btnFit").onclick=fitView;
 $("btnZoomIn").onclick=()=>{ const r=mapEl.getBoundingClientRect(); zoomAt(r.left+(r.width-panelPad())/2,r.top+r.height/2,1.22); };
 $("btnZoomOut").onclick=()=>{ const r=mapEl.getBoundingClientRect(); zoomAt(r.left+(r.width-panelPad())/2,r.top+r.height/2,1/1.22); };
-$("btnExport").onclick=()=>{
-  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+/* ════════════════ export — coding-agent brief (.md) or JSON backup ════════════════ */
+function dlFile(content,name,type){
+  const blob=new Blob([content],{type});
   const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob); a.download="lagbot-system-map.json";
+  a.href=URL.createObjectURL(blob); a.download=name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-  toast("Exported lagbot-system-map.json");
+}
+function buildAgentBrief(){
+  const d=defaultState();
+  const dn=new Map(d.nodes.map(n=>[n.id,n])), de=new Map(d.edges.map(e=>[e.id,e]));
+  const cn=new Map(state.nodes.map(n=>[n.id,n])), ce=new Map(state.edges.map(e=>[e.id,e]));
+  const nm=id=>{ const n=cn.get(id)||dn.get(id); return n?n.label:id; };
+  const lay=id=>{ const L=LAYERS.find(l=>l.id===id); return L?L.name:id; };
+  const typ=t=>(TYPES[t]||{}).label||t;
+  const st=x=>(x.status||"active");
+  const briefEdge=e=>`${nm(e.from)} → ${nm(e.to)}${e.label?` ("${e.label}")`:""}${st(e)!=="active"?` [${st(e)}]`:""}`;
+  const recReason={};
+  Object.keys(GAP_KB).forEach(k=>(GAP_KB[k].recs||[]).forEach(r=>{
+    if(r.kind==="node"&&r.node) recReason["n:"+r.node.id]=r.reason;
+    if(r.kind==="edge") recReason["e:"+r.from+">"+r.to]=r.reason;
+  }));
+  const addedNodes=state.nodes.filter(n=>!dn.has(n.id));
+  const removedNodes=d.nodes.filter(n=>!cn.has(n.id));
+  const editedNodes=state.nodes.filter(n=>{ const o=dn.get(n.id); return o&&(o.label!==n.label||(o.sub||"")!==(n.sub||"")||st(o)!==st(n)); });
+  const addedEdges=state.edges.filter(e=>!de.has(e.id));
+  const removedEdges=d.edges.filter(e=>!ce.has(e.id));
+  const editedEdges=state.edges.filter(e=>{ const o=de.get(e.id); return o&&((o.label||"")!==(e.label||"")||st(o)!==st(e)); });
+  const flat=s=>{ const out=new Map(); ((s&&s.rows)||[]).forEach(row=>row.forEach(el=>out.set(el.id,el))); return out; };
+  const elSig=el=>[el.kind,el.label,el.t1||"",el.t2||"",el.note||""].join("|");
+  const elDesc=el=>`"${el.label||el.t1||el.id}" (${el.kind}${el.t1?`, text: "${el.t1}"`:""}${el.note?`, note: ${el.note}`:""})`;
+  const wfOut=[];
+  const pageIds=[...new Set([...Object.keys(d.wireframes||{}),...Object.keys(state.wireframes||{})])];
+  pageIds.forEach(pid=>{
+    const dp=(d.wireframes||{})[pid], cp=(state.wireframes||{})[pid];
+    const pname=nm(pid);
+    if(!dp&&cp){ wfOut.push(`- NEW wireframe for page **${pname}** (${Object.keys(cp.screens||{}).length} screens) — build this UI; open the map for the full layout.`); return; }
+    if(!cp) return;
+    const sIds=[...new Set([...Object.keys((dp&&dp.screens)||{}),...Object.keys(cp.screens||{})])];
+    sIds.forEach(sid=>{
+      const ds=((dp&&dp.screens)||{})[sid], cs=(cp.screens||{})[sid];
+      const sname=(cs||ds||{}).title||sid;
+      const tagM=(cs&&cs.modal)?" [MODAL screen]":"";
+      if(!ds&&cs){ const els=[...flat(cs).values()]; wfOut.push(`- **${pname} › ${sname}**${tagM}: NEW screen with ${els.length} components: ${els.map(el=>`"${el.label||el.t1||el.id}"`).join(", ")}`); return; }
+      if(!cs){ wfOut.push(`- **${pname} › ${sname}**: screen REMOVED — delete this UI.`); return; }
+      const dm=flat(ds), cm=flat(cs);
+      [...cm.values()].filter(el=>!dm.has(el.id)).forEach(el=>wfOut.push(`- **${pname} › ${sname}**${tagM}: ADD component ${elDesc(el)}`));
+      [...dm.values()].filter(el=>!cm.has(el.id)).forEach(el=>wfOut.push(`- **${pname} › ${sname}**${tagM}: REMOVE component ${elDesc(el)}`));
+      [...cm.values()].filter(el=>dm.has(el.id)&&elSig(dm.get(el.id))!==elSig(el)).forEach(el=>wfOut.push(`- **${pname} › ${sname}**${tagM}: CHANGE component "${dm.get(el.id).label||el.id}" → now ${elDesc(el)}`));
+    });
+  });
+  const edgesOf=id=>state.edges.filter(e=>e.from===id||e.to===id);
+  const ts=new Date(), pad=v=>String(v).padStart(2,"0");
+  const when=`${ts.getFullYear()}-${pad(ts.getMonth()+1)}-${pad(ts.getDate())} ${pad(ts.getHours())}:${pad(ts.getMinutes())}`;
+  const L=[];
+  L.push(`# Lagbot — work order from the system map`);
+  L.push(``,`Generated ${when} by ${editorNameQuiet()} from the team's live architecture map.`);
+  L.push(``,`## How to read this`,
+    `This file translates the team's edits on the Lagbot system map into requested engineering work on the actual Lagbot codebase (WhatsApp → Evolution API → Node backend → AI agents → REST/Supabase → Expo app).`,
+    `- **planned** = does not exist yet — the team is asking you to BUILD it.`,
+    `- **gap** = exists but broken or missing — the team is asking you to FIX it.`,
+    `- Node positions/layout moves are cosmetic and excluded.`,
+    `- Cross-reference docs/frontend-map.md, docs/backend-map.md and docs/screens/*.md in the map repo for the as-is architecture. Confirm with the team before any destructive change.`);
+  const sec=(title,items,intro)=>{ L.push(``,`## ${title}`,``); if(intro){L.push(intro,``);} if(!items.length){L.push(`_None._`); return;} items.forEach(i=>L.push(i)); };
+  sec("1. New components to build (added to the map)", addedNodes.map(n=>{
+    const why=recReason["n:"+n.id];
+    const conns=edgesOf(n.id).map(e=>`  - wire: ${briefEdge(e)}${recReason["e:"+e.from+">"+e.to]?` — why: ${recReason["e:"+e.from+">"+e.to]}`:""}`);
+    return [`- **${n.label}**${n.sub?` — ${n.sub}`:""} · ${typ(n.type)} in layer "${lay(n.layer)}" · status: ${st(n)}${why?`\n  - why: ${why}`:""}`,...conns].join("\n");
+  }));
+  sec("2. New connections to wire (between existing components)",
+    addedEdges.filter(e=>dn.has(e.from)&&dn.has(e.to)).map(e=>`- ${briefEdge(e)}${recReason["e:"+e.from+">"+e.to]?` — why: ${recReason["e:"+e.from+">"+e.to]}`:""}`),
+    `Both endpoints already exist in the codebase; the team wants them connected:`);
+  sec("3. Removed from the architecture",
+    [...removedNodes.map(n=>`- Component **${n.label}**${n.sub?` (${n.sub})`:""} was deleted from the map.`),
+     ...removedEdges.map(e=>`- Connection ${briefEdge(e)} was deleted from the map.`)],
+    `The team removed these — confirm intent, then decommission the corresponding code:`);
+  sec("4. Changed components / statuses",
+    [...editedNodes.map(n=>{ const o=dn.get(n.id); const bits=[];
+       if(o.label!==n.label) bits.push(`renamed "${o.label}" → "${n.label}"`);
+       if((o.sub||"")!==(n.sub||"")) bits.push(`description "${o.sub||"—"}" → "${n.sub||"—"}"`);
+       if(st(o)!==st(n)) bits.push(`status ${st(o)} → ${st(n)}${st(n)==="active"?" (team says this is now built)":st(n)==="planned"?" (team wants this built)":" (team flags this as broken/missing)"}`);
+       return `- **${n.label}**: ${bits.join("; ")}`; }),
+     ...editedEdges.map(e=>{ const o=de.get(e.id); const bits=[];
+       if((o.label||"")!==(e.label||"")) bits.push(`label "${o.label||"—"}" → "${e.label||"—"}"`);
+       if(st(o)!==st(e)) bits.push(`status ${st(o)} → ${st(e)}`);
+       return `- Connection ${briefEdge(e)}: ${bits.join("; ")}`; })]);
+  sec("5. UI / wireframe changes", wfOut, `The team edited the page wireframes ([MODAL screen] = sheet/overlay, not a full page):`);
+  sec("6. Open gaps flagged on the map", state.nodes.filter(n=>st(n)==="gap").map(n=>{
+    const kb=GAP_KB[n.id]||{};
+    return `- **${n.label}**${n.sub?` — ${n.sub}`:""}${kb.what?`\n  - problem: ${kb.what}`:""}${kb.fix?`\n  - recommended fix: ${kb.fix}`:""}`;
+  }), `Known problem areas already flagged (pre-existing — fix when prioritised):`);
+  L.push(``,`## 7. Signed change log`,``,`| When | Who | What |`,`|---|---|---|`);
+  const logs=(state.changelog||[]).slice().reverse();
+  if(logs.length) logs.forEach(c=>L.push(`| ${c.at} | ${c.by||"—"} | ${String(c.msg).replace(/\|/g,"\\|")} |`));
+  else L.push(`| — | — | nothing logged yet |`);
+  L.push(``);
+  return L.join("\n");
+}
+$("btnExport").onclick=()=>{ scrim.classList.add("show"); $("exportModal").classList.add("show"); };
+$("exportBrief").onclick=()=>{
+  const ts=new Date(), pad=v=>String(v).padStart(2,"0");
+  dlFile(buildAgentBrief(),`lagbot-agent-brief-${ts.getFullYear()}-${pad(ts.getMonth()+1)}-${pad(ts.getDate())}.md`,"text/markdown");
+  closeModals(); toast("Agent brief exported — hand the .md to your coding agent");
+};
+$("exportJson").onclick=()=>{
+  dlFile(JSON.stringify(state,null,2),"lagbot-system-map.json","application/json");
+  closeModals(); toast("Exported lagbot-system-map.json");
 };
 $("btnImport").onclick=()=>$("fileImport").click();
 $("fileImport").addEventListener("change",ev=>{
@@ -3565,7 +3676,7 @@ $("panelToggle").onclick=()=>{
 
 /* help modal */
 function openHelp(){ scrim.classList.add("show"); helpModal.classList.add("show"); }
-function closeModals(){ scrim.classList.remove("show"); helpModal.classList.remove("show"); aiKeyModal.classList.remove("show"); $("logModal").classList.remove("show"); $("syncModal").classList.remove("show"); }
+function closeModals(){ scrim.classList.remove("show"); helpModal.classList.remove("show"); aiKeyModal.classList.remove("show"); $("logModal").classList.remove("show"); $("syncModal").classList.remove("show"); $("exportModal").classList.remove("show"); }
 $("btnHelp").onclick=openHelp;
 scrim.addEventListener("click",closeModals);
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeModals));
@@ -3597,7 +3708,7 @@ window.addEventListener("keydown",ev=>{
     }
   }
   else if(ev.key==="Escape"){
-    if(helpModal.classList.contains("show")||aiKeyModal.classList.contains("show")||$("logModal").classList.contains("show")||$("syncModal").classList.contains("show")) closeModals();
+    if(helpModal.classList.contains("show")||aiKeyModal.classList.contains("show")||$("logModal").classList.contains("show")||$("syncModal").classList.contains("show")||$("exportModal").classList.contains("show")) closeModals();
     else if(connect.on) setConnect(false);
     else if(aiPanelEl.classList.contains("open")) aiClose();
     else if(drawer.classList.contains("open")) closeDrawer();
