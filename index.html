@@ -310,6 +310,9 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
 #wfFlow .fchip:hover{border-color:var(--page);color:var(--page)}
 #wfFlow .fchip.on{border-color:var(--page);color:var(--page);background:rgba(232,133,61,.08)}
 #wfFlow .fchip.add{border-style:dashed}
+#wfFlow .fchip.modalchip{border-style:dashed;color:var(--ext)}
+#wfFlow .fchip.modalchip.on{border-color:var(--page);color:var(--page)}
+.wf-scrimhint{font-family:var(--mono);font-size:6.5px;letter-spacing:.14em;color:var(--ink-soft);text-align:center;text-transform:uppercase;padding:2px 0 7px;border-bottom:1px dashed #D2C6A8;margin-bottom:6px}
 #wfFlow .farrow{color:var(--mute);font-size:10px}
 #traceBar .tgo{color:var(--page);font-family:var(--mono);font-size:9px;letter-spacing:.06em}
 
@@ -1146,7 +1149,7 @@ function defaultState(){ return {
         [{id:"d_c2", label:"Recent chat row (unread)", kind:"chatCard", t1:"Adaeze Okonkwo", dt:"1h", t2:"How much is delivery to Lekki?", badge:"1", bar:"or", nav:"page:page_chats", links:["db_conversations"]}],
         [{id:"d_tabs", label:"Floating dock · Home active", kind:"tabbar", t1:"home", links:["page_chats","page_inventory","page_sales","page_wallet"]}]
       ]},
-      alerts:{title:"Alerts", rows:[
+      alerts:{title:"Alerts", modal:true, rows:[
         [{id:"al_t", label:"Alerts bottom sheet", kind:"pageTitle", t2:"Notifications", t1:"Alerts", links:[]}],
         [{id:"al_c", label:"Status line", kind:"caption", t1:"2 items need your attention.", links:[]}],
         [{id:"al_1", label:"Out of / low tokens row", kind:"linkrow", t1:"● Tokens running low — top up before Lagbot pauses", or:1, nav:"page:page_settings:usage", links:["db_tokens"]}],
@@ -1180,7 +1183,7 @@ function defaultState(){ return {
         [{id:"t_sug", label:"Lagbot Suggests strip — 3 chips fill the composer", kind:"suggest", t1:"Lagbot suggests", t2:"David's still in Benin but I can definitely handle this for you…", links:["api_conversations","agent_reply"], note:"manual mode only · customer spoke last"}],
         [{id:"t_cmp", label:"Composer — sending flips chat to manual", kind:"composer", links:["api_whatsapp"], note:"optimistic bubble · logs human_interventions"}]
       ]},
-      customer:{title:"Customer", rows:[
+      customer:{title:"Customer", modal:true, rows:[
         [{id:"cs_h", label:"Customer profile sheet", kind:"headerBack", t1:"Johnny Lee", t2:"Customer profile", av:"JL", links:["db_conversations"]}],
         [{id:"cs_st", label:"Stats — total spent · messages · first seen", kind:"kv", links:["db_conversations","db_sales"]}],
         [{id:"cs_dt", label:"Details — phone · email · address (extracted from chat)", kind:"list", links:["db_conversations"]}],
@@ -1201,7 +1204,7 @@ function defaultState(){ return {
         [{id:"i_e", label:"Empty state", kind:"empty", t1:"No products yet", t2:"Tap the + button to add your first product.", links:["db_products"]}],
         [{id:"i_tabs", label:"Floating dock · Inventory active", kind:"tabbar", t1:"inventory", links:["page_dashboard","page_chats","page_sales","page_wallet"]}]
       ]},
-      detail:{title:"Product sheet", rows:[
+      detail:{title:"Product sheet", modal:true, rows:[
         [{id:"pd_h", label:"Detail sheet — dark header + image frame", kind:"headerBack", t1:"Closet Installation", t2:"Others", av:"▣", links:["db_products"]}],
         [{id:"pd_kv", label:"Stat row — stock · price · status", kind:"kv", links:["db_products"]}],
         [{id:"pd_e", label:"Edit Product → editor", kind:"cta", t1:"Edit Product", nav:"editor", links:["db_products"]}],
@@ -1223,7 +1226,7 @@ function defaultState(){ return {
         [{id:"im_c", label:"CSV format row", kind:"choice", t1:"CSV", t2:"Spreadsheet exports — most stock apps", links:["api_import"]}],
         [{id:"im_x", label:"Excel format row", kind:"choice", t1:"Excel", t2:".xlsx files straight from your laptop", links:["api_import"]}],
         [{id:"im_p", label:"PDF format row — AI extracts rows", kind:"choice", t1:"PDF", t2:"Price lists & catalogues — Claude reads them", links:["api_import","agent_import"]}],
-        [{id:"im_t", label:"Need a template? → CSV template modal", kind:"linkrow", t1:"ℹ Need a template?", links:[]}],
+        [{id:"im_t", label:"Need a template? link", kind:"linkrow", t1:"ℹ Need a template?", links:[], note:"opens a small modal with a CSV template"}],
         [{id:"im_s", label:"Preview phase", kind:"section", t1:"Preview", r:"tap rows to deselect", links:["api_import"]}],
         [{id:"im_l", label:"Parsed rows table + skipped-row errors", kind:"list", links:["api_import"]}],
         [{id:"im_b", label:"Import N → progress bar → done screen", kind:"cta", t1:"Import 24 products", nav:"stock", links:["db_products"], note:"inserts happen from the app, then 'Go to Inventory'"}]
@@ -1244,14 +1247,25 @@ function defaultState(){ return {
         [{id:"s_l1", label:"Pending sale card → detail sheet", kind:"ledger", t1:"Mrs. Adekoya", t2:"Steel security door · 3h ago", amt:"+₦62,000", tag:"Pending", nav:"pending", links:["db_sales"]}],
         [{id:"s_cm", label:"Completed section (manual + receipt-verified merged)", kind:"section", t1:"Completed", r:"24H", links:["db_sales"]}],
         [{id:"s_ce", label:"Completed empty state", kind:"empty", t1:"No completed sales yet.", t2:"Pending sales move here the moment they are settled.", links:["db_sales"]}],
+        [{id:"s_l2", label:"Completed sale card → confirmed sheet", kind:"ledger", t1:"Tunde Bakare", t2:"Installation deposit · yesterday", amt:"+₦18,000", tag:"Confirmed", nav:"confirmed", links:["db_sales"]}],
         [{id:"s_tabs", label:"Floating dock · Sales active", kind:"tabbar", t1:"sales", links:["page_dashboard","page_chats","page_inventory","page_wallet"]}]
       ]},
-      pending:{title:"Sale sheet", rows:[
+      pending:{title:"Pending sale", modal:true, rows:[
         [{id:"sp_h", label:"Pending detail sheet", kind:"headerBack", t1:"Mrs. Adekoya", t2:"Pending sale", av:"MA", links:["db_sales"]}],
         [{id:"sp_kv", label:"Product · amount · delivery address · notes", kind:"kv", links:["db_sales"]}],
-        [{id:"sp_lk", label:"Link a product — AI-detected pre-filled", kind:"bar", links:["db_products","agent_sale"]}],
-        [{id:"sp_cf", label:"Confirm Sale", kind:"cta", t1:"Confirm Sale", links:["api_sales"], note:"THE only stock decrement — idempotent"}],
-        [{id:"sp_pt", label:"Push to Team (on confirmed sales)", kind:"ctaLine", t1:"Push to Team", links:["api_whatsapp","db_team"], note:"team picker sheet — sends sale info via WhatsApp"}]
+        [{id:"sp_lk", label:"Link a product — AI-detected pre-filled · Select/Change", kind:"bar", links:["db_products","agent_sale"], note:"opens ProductPickerSheet (nested modal)"}],
+        [{id:"sp_cf", label:"Confirm Sale", kind:"cta", t1:"Confirm Sale", nav:"sales", links:["api_sales"], note:"THE only stock decrement — idempotent"}]
+      ]},
+      confirmed:{title:"Confirmed sale", modal:true, rows:[
+        [{id:"cf_h", label:"Confirmed detail sheet", kind:"headerBack", t1:"Tunde Bakare", t2:"Confirmed sale", av:"TB", links:["db_sales"]}],
+        [{id:"cf_b", label:"Badge — Receipt Verified or Manually Confirmed", kind:"caption", t1:"✓ Receipt Verified · or · Manually Confirmed", links:["agent_receipt","db_sales"]}],
+        [{id:"cf_kv", label:"Amount · product/address/notes — or receipt bank fields", kind:"kv", links:["db_sales"]}],
+        [{id:"cf_pt", label:"Push to Team → team picker", kind:"ctaLine", t1:"Push to Team", nav:"teampick", links:["db_team"]}]
+      ]},
+      teampick:{title:"Team picker", modal:true, rows:[
+        [{id:"tp_h", label:"Push to Team sheet", kind:"headerBack", t1:"Push to Team", t2:"Send sale info via WhatsApp", av:"👥", links:["db_team"]}],
+        [{id:"tp_l", label:"Member rows — role avatar · Send → Sent ✓", kind:"list", links:["db_team","api_whatsapp"]}],
+        [{id:"tp_e", label:"Empty state", kind:"empty", t1:"No team members yet.", t2:"Go to Sales ▸ Teams to add members.", links:["db_team"]}]
       ]},
       teams:{title:"Teams", rows:[
         [{id:"tm_t", label:"Page title", kind:"pageTitle", t2:"Sales", t1:"Your Team", links:[]}],
@@ -1259,7 +1273,7 @@ function defaultState(){ return {
         [{id:"tm_seg", label:"Segment back to Sales", kind:"seg2", t1:"Sales,Teams", on:1, nav:"sales", links:[]}],
         [{id:"tm_r", label:"Roster section", kind:"section", t1:"Roster", r:"your team", links:["db_team"]}],
         [{id:"tm_e", label:"Roster empty state", kind:"empty", t1:"No team members yet.", t2:"Add a driver, admin, or sales agent so Lagbot can route customers.", links:["db_team"]}],
-        [{id:"tm_add", label:"Add member sheet — name · 5 role chips · WhatsApp number", kind:"cta", t1:"＋ Add team member", links:["db_team"]}],
+        [{id:"tm_add", label:"＋ Add team member → sheet", kind:"cta", t1:"＋ Add team member", nav:"addmember", links:["db_team"]}],
         [{id:"tm_rr", label:"Routing Rules section", kind:"section", t1:"Routing rules", b:"2", bi:1, r:"auto handoff", links:["db_team"]}],
         [{id:"tm_re", label:"Rules empty state", kind:"empty", t1:"No routing rules yet.", t2:"Add one so Lagbot pushes customer details to the right role automatically.", links:["db_team"]}],
         [{id:"tm_r1", label:"Rule row (sentence style) → editor", kind:"ruleCard", t1:"Order ready for delivery", t2:"Send address + preferred time to", role:"Delivery driver", tpl:"\"Hey {team_member}, delivery for {custo…\"", nav:"rule", links:["db_team","api_routing","svc_routing"], note:"Active/Paused chip toggles · X deletes"}],
@@ -1271,7 +1285,15 @@ function defaultState(){ return {
         [{id:"tm_c3", label:"Connector · Bolt", kind:"connector", t1:"Bolt", t2:"Driver dispatch · curb-to-curb", links:[], note:"'Coming soon' alert — not wired"}],
         [{id:"tm_tabs", label:"Floating dock · Sales active", kind:"tabbar", t1:"sales", links:["page_dashboard","page_chats","page_inventory","page_wallet"]}]
       ]},
-      rule:{title:"Rule editor", rows:[
+      addmember:{title:"Add member", modal:true, rows:[
+        [{id:"am_h", label:"Add team member sheet", kind:"headerBack", t1:"Add team member", t2:"Team", av:"＋", links:["db_team"]}],
+        [{id:"am_c", label:"Subtitle", kind:"caption", t1:"Lagbot will hand off customer details to this contact on WhatsApp when a matching routing rule fires.", links:[]}],
+        [{id:"am_n", label:"Name input — 'e.g. Adaeze Okonkwo'", kind:"input", links:["db_team"]}],
+        [{id:"am_r", label:"Role chips ×5", kind:"pillsT", t1:"Driver,Sales agent,Manager,Team lead,Employee", links:["db_team"]}],
+        [{id:"am_w", label:"WhatsApp contact — '+234 800 000 0000'", kind:"input", links:["db_team"], note:"International format works best"}],
+        [{id:"am_sv", label:"Save member / Cancel", kind:"cta", t1:"Save member", nav:"teams", links:["db_team"]}]
+      ]},
+      rule:{title:"Rule editor", modal:true, rows:[
         [{id:"rl_h", label:"Rule editor sheet", kind:"headerBack", t1:"New rule", t2:"Routing", av:"⚡", links:["api_routing"]}],
         [{id:"rl_ev", label:"WHEN THIS HAPPENS — 8 event chips", kind:"pillsT", t1:"Order ready,Paid,Refund,Escalation,Quote,Low stock,New enquiry,After-hours", links:["svc_routing"]}],
         [{id:"rl_ro", label:"ROUTE TO ROLE — or a specific person", kind:"pillsT", t1:"Driver,Sales agent,Manager,Team lead,Employee", links:["db_team"]}],
@@ -1303,7 +1325,7 @@ function defaultState(){ return {
         [{id:"ws_b", label:"Add bank account CTA → Settings ▸ Bank", kind:"cta", t1:"Add bank account", nav:"page:page_settings:bank", links:["db_business"]}],
         [{id:"ws_f", label:"Trust footer", kind:"caption", t1:"Powered by Paystack. Naira-first. Bank-grade encryption.", links:["ext_paystack"]}]
       ]},
-      withdraw:{title:"Withdraw", rows:[
+      withdraw:{title:"Withdraw", modal:true, rows:[
         [{id:"ww_h", label:"Withdraw modal", kind:"headerBack", t1:"How much to your bank?", t2:"Withdraw", av:"₦", links:["api_wallet"]}],
         [{id:"ww_bk", label:"Bank line", kind:"caption", t1:"Access Bank · ****4848", links:["db_business"]}],
         [{id:"ww_a", label:"₦ amount input + MAX button", kind:"input", links:["api_wallet"]}],
@@ -1340,10 +1362,16 @@ function defaultState(){ return {
       ]},
       verify:{title:"Verify", rows:[
         [{id:"vf_t", label:"Title", kind:"pageTitle", t2:"Auth", t1:"Enter the 6-digit code", links:[]}],
-        [{id:"vf_c", label:"Sent-to line + Change Email sheet", kind:"caption", t1:"Sent to you****@gmail.com · Change Email", links:["sb_auth"]}],
+        [{id:"vf_c", label:"Sent-to line · Change Email → sheet", kind:"caption", t1:"Sent to you****@gmail.com · Change Email", nav:"changemail", links:["sb_auth"]}],
         [{id:"vf_o", label:"OTP boxes — paste-aware, auto-advance", kind:"otp", links:["sb_auth"]}],
         [{id:"vf_r", label:"Resend (45s cooldown)", kind:"linkrow", t1:"Didn't get it? Resend code", links:["sb_auth"]}],
         [{id:"vf_b", label:"Verify → Onboarding", kind:"cta", t1:"Verify", nav:"page:page_onboarding", links:["sb_auth"]}]
+      ]},
+      changemail:{title:"Change email", modal:true, rows:[
+        [{id:"ce_t", label:"Change Email sheet", kind:"pageTitle", t2:"Verify", t1:"Change Email", links:[]}],
+        [{id:"ce_c", label:"Body", kind:"caption", t1:"Enter the email you'd like the verification code sent to.", links:[]}],
+        [{id:"ce_i", label:"New email address input", kind:"input", links:["sb_auth"]}],
+        [{id:"ce_b", label:"Save / Cancel", kind:"cta", t1:"Save", nav:"verify", links:["sb_auth"]}]
       ]}
     }},
 
@@ -1472,7 +1500,7 @@ function defaultState(){ return {
         [{id:"g_nt", label:"Notifications row", kind:"linkrow", t1:"Notifications — push alerts for paused chats", nav:"notifications", links:["db_business"]}],
         [{id:"g_pv", label:"Privacy & Security row", kind:"linkrow", t1:"Privacy & Security — password and account", nav:"privacy", links:["sb_auth"]}],
         [{id:"g_bl", label:"Blocked Contacts row", kind:"linkrow", t1:"Blocked Contacts — numbers Lagbot won't reply to", nav:"blocked", links:["db_business"]}],
-        [{id:"g_so", label:"Sign out → confirm modal", kind:"ctaLine", t1:"Sign out", links:["sb_auth"]}]
+        [{id:"g_so", label:"Sign out → confirm modal", kind:"ctaLine", t1:"Sign out", nav:"signout", links:["sb_auth"]}]
       ]},
       profile:{title:"Profile", rows:[
         [{id:"pf_h", label:"Header", kind:"headerBack", t1:"Profile Settings", t2:"Manage your account information", av:"👤", links:["db_business"]}],
@@ -1526,10 +1554,15 @@ function defaultState(){ return {
         [{id:"u_m", label:"Free tokens today meter + refill countdown", kind:"meterCard", links:["db_tokens","svc_token"]}],
         [{id:"u_k", label:"Breakdown — free · rolled · bonus · purchased", kind:"kv", links:["db_tokens"]}],
         [{id:"u_s", label:"Token store section", kind:"section", t1:"Token store", links:[]}],
-        [{id:"u_p", label:"Packs — Starter 5k · Growth 25k · Scale 100k", kind:"pillsT", t1:"Starter ₦4k,Growth ₦18.75k,Scale ₦70k", links:["api_wallet","ext_paystack"]}],
-        [{id:"u_py", label:"Payment sheet — Card | Bank transfer", kind:"seg2", t1:"Card,Bank transfer", on:0, links:["ext_paystack"]}],
-        [{id:"u_go", label:"Continue to Paystack", kind:"cta", t1:"Continue to Paystack", links:["api_wallet","ext_paystack"], note:"⚠ purchase/init endpoint not live — 'Checkout not connected yet'"}],
+        [{id:"u_p", label:"Pack cards — tap one → payment sheet opens", kind:"pillsT", t1:"Starter ₦4k,Growth ₦18.75k,Scale ₦70k", nav:"paysheet", links:["db_tokens"]}],
         [{id:"u_f", label:"Footnote", kind:"caption", t1:"Purchased tokens never expire. Payments handled securely by Paystack.", links:[]}]
+      ]},
+      paysheet:{title:"Payment", modal:true, rows:[
+        [{id:"ps_h", label:"Payment sheet — opens after tapping a pack", kind:"headerBack", t1:"Starter pack", t2:"Token store", av:"⚡", links:["api_wallet"]}],
+        [{id:"ps_s", label:"Pack summary — 5,000 tokens | ₦4,000", kind:"bar", links:[]}],
+        [{id:"ps_p", label:"Pay with — Card | Bank transfer", kind:"seg2", t1:"Card,Bank transfer", on:0, links:["ext_paystack"]}],
+        [{id:"ps_go", label:"Continue to Paystack → opens browser checkout", kind:"cta", t1:"Continue to Paystack", links:["api_wallet","ext_paystack"], note:"⚠ purchase/init endpoint not live — 'Checkout not connected yet'"}],
+        [{id:"ps_x", label:"Cancel", kind:"ctaLine", t1:"Cancel", nav:"usage", links:[]}]
       ]},
       privacy:{title:"Privacy", rows:[
         [{id:"pv_h", label:"Header", kind:"headerBack", t1:"Privacy & Security", t2:"Password and account", av:"🔒", links:["sb_auth"]}],
@@ -1543,7 +1576,19 @@ function defaultState(){ return {
         [{id:"bl_h", label:"Header", kind:"headerBack", t1:"Blocked Contacts", t2:"Lagbot won't reply to this list", av:"🚫", links:["db_business"]}],
         [{id:"bl_e", label:"Empty state", kind:"empty", t1:"No one blocked yet", t2:"Tap 'Add contact' below to keep numbers out of Lagbot's reply loop.", links:["db_business"]}],
         [{id:"bl_l", label:"Blocked rows + Unblock chips", kind:"list", links:["db_business"]}],
-        [{id:"bl_a", label:"Add contact → picker (recent chats + device contacts)", kind:"cta", t1:"Add contact to block list", links:["db_business","db_conversations"]}]
+        [{id:"bl_a", label:"Add contact → picker modal", kind:"cta", t1:"Add contact to block list", nav:"picker", links:["db_business"]}]
+      ]},
+      picker:{title:"Block contacts", modal:true, rows:[
+        [{id:"pk_h", label:"Contact picker modal", kind:"headerBack", t1:"Block Contacts", t2:"Multi-select", av:"🚫", links:["db_business"]}],
+        [{id:"pk_s", label:"Search name or number…", kind:"input", links:[]}],
+        [{id:"pk_1", label:"RECENT CONVERSATIONS rows", kind:"list", links:["db_conversations"]}],
+        [{id:"pk_2", label:"DEVICE CONTACTS rows", kind:"list", links:[], note:"permission denied → 'Only people who have messaged you appear here'"}],
+        [{id:"pk_d", label:"Done (N) → saves block list", kind:"cta", t1:"Done", nav:"blocked", links:["db_business"]}]
+      ]},
+      signout:{title:"Sign out?", modal:true, rows:[
+        [{id:"so_t", label:"Sign-out confirm modal", kind:"pageTitle", t2:"Settings", t1:"Sign Out?", links:[]}],
+        [{id:"so_c", label:"Body", kind:"caption", t1:"Are you sure you want to sign out?", links:[]}],
+        [{id:"so_b", label:"Cancel | Sign Out → login", kind:"seg2", t1:"Cancel,Sign Out", on:1, nav:"hub", links:["sb_auth"]}]
       ]}
     }}
   }
@@ -2578,11 +2623,17 @@ function renderFlow(wf){
   const ids=Object.keys(wf.screens);
   let h="";
   if(screenHist.length) h+=`<button class="fchip" data-back="1" title="Back">‹</button><span class="farrow">·</span>`;
-  h+=ids.map(id=>`<button class="fchip${id===curScreen?" on":""}" data-screen="${id}">${esc((wf.screens[id].title||id))}${editWF&&id===curScreen&&ids.length>1?' <span data-delscreen="1" title="Delete screen">✕</span>':""}</button>`).join(`<span class="farrow">⇢</span>`);
+  h+=ids.map(id=>`<button class="fchip${id===curScreen?" on":""}${wf.screens[id].modal?" modalchip":""}" data-screen="${id}" title="${wf.screens[id].modal?"Modal / sheet — overlays the previous screen":"Page"}">${wf.screens[id].modal?"◍ ":""}${esc((wf.screens[id].title||id))}${editWF&&id===curScreen?' <span data-modalflag="1" title="Toggle page ↔ modal">◍</span>':""}${editWF&&id===curScreen&&ids.length>1?' <span data-delscreen="1" title="Delete screen">✕</span>':""}</button>`).join(`<span class="farrow">⇢</span>`);
   if(editWF) h+=`<span class="farrow">·</span><button class="fchip add" data-addscreen="1" title="Add screen">＋</button>`;
   flow.innerHTML=h;
   flow.querySelectorAll("[data-screen]").forEach(b=>b.onclick=ev=>{
     if(ev.target && ev.target.dataset && ev.target.dataset.delscreen){ delScreen(b.dataset.screen); return; }
+    if(ev.target && ev.target.dataset && ev.target.dataset.modalflag){
+      const sc2=wf.screens[b.dataset.screen]; if(!sc2) return;
+      if(sc2.modal) delete sc2.modal; else sc2.modal=true;
+      logChange(`Marked screen "${sc2.title||b.dataset.screen}" as ${sc2.modal?"a modal/sheet":"a page"}`);
+      renderWF(); autosave(); return;
+    }
     const id=b.dataset.screen;
     if(id===curScreen){
       if(editWF){
@@ -2610,7 +2661,7 @@ function renderWF(){
   $("drawerTitle").textContent=n.label;
   const total=sc.rows.reduce((s,r)=>s+r.length,0);
   const linked=sc.rows.reduce((s,r)=>s+r.filter(e=>(e.links||[]).length).length,0);
-  $("drawerSub").textContent=`${sc.title||curScreen} · ${total} elements · ${linked} wired${editWF?" · editing":""}`;
+  $("drawerSub").textContent=`${sc.title||curScreen}${sc.modal?" · ◍ modal overlay":""} · ${total} elements · ${linked} wired${editWF?" · editing":""}`;
   renderFlow(wf);
   $("drawerHint").innerHTML=editWF
     ? `Edit mode — tap an element to retitle it, change its text, rewire its backend links, or point it at another screen. <b>＋</b> adds a screen; tap the current chip to rename it.`
@@ -2618,8 +2669,9 @@ function renderWF(){
   $("drawerEdit").classList.toggle("on",editWF);
   $("btnAddEl").style.display=editWF?"block":"none";
   wfStack.classList.toggle("editing",editWF);
-  wfStack.innerHTML=sc.rows.map(row=>`<div class="wf-row">${row.map(elHTML).join("")}</div>`).join("")
-    || `<div style="text-align:center;color:var(--ink-soft);font-family:var(--mono);font-size:9px;letter-spacing:.14em;padding:30px 0">EMPTY SCREEN — SWITCH TO ✎ EDIT</div>`;
+  wfStack.innerHTML=(sc.modal?`<div class="wf-scrimhint">▒ modal — overlays the previous screen · tap outside closes</div>`:"")
+    + (sc.rows.map(row=>`<div class="wf-row">${row.map(elHTML).join("")}</div>`).join("")
+    || `<div style="text-align:center;color:var(--ink-soft);font-family:var(--mono);font-size:9px;letter-spacing:.14em;padding:30px 0">EMPTY SCREEN — SWITCH TO ✎ EDIT</div>`);
   if(!editWF){ elInspector.style.display="none"; editingEl=null; }
 }
 
@@ -2916,7 +2968,15 @@ function mergeNewDefaults(s){
     const stamp=ts.getFullYear()+"-"+String(ts.getMonth()+1).padStart(2,"0")+"-"+String(ts.getDate()).padStart(2,"0")+" "+String(ts.getHours()).padStart(2,"0")+":"+String(ts.getMinutes()).padStart(2,"0")+":"+String(ts.getSeconds()).padStart(2,"0");
     s.changelog.push({at:stamp, by:"System", msg:"Wireframes rebuilt from app code @aef6e84 — flows added (onboarding steps, editor/import inside Inventory); Admins page removed (now redirects to Sales ▸ Teams)"});
   }
-  s.meta.mergeRev=3;
+  if((s.meta.mergeRev||0)<4){
+    /* rev 4 — modals/sheets are their own ◍ screens, never inlined on pages */
+    s.wireframes = clone(d.wireframes);
+    s.changelog=Array.isArray(s.changelog)?s.changelog:[];
+    const t4=new Date();
+    const st4=t4.getFullYear()+"-"+String(t4.getMonth()+1).padStart(2,"0")+"-"+String(t4.getDate()).padStart(2,"0")+" "+String(t4.getHours()).padStart(2,"0")+":"+String(t4.getMinutes()).padStart(2,"0")+":"+String(t4.getSeconds()).padStart(2,"0");
+    s.changelog.push({at:st4, by:"System", msg:"Wireframes corrected: modals/sheets are now their own ◍ screens — token payment sheet, confirmed-sale sheet, team picker, add member, contact picker, sign-out, change email"});
+  }
+  s.meta.mergeRev=4;
 }
 
 /* ════════════════════════════ Circuit — the AI prompt bar ════════════════════════════ */
@@ -2950,7 +3010,7 @@ function buildMapContext(){
     if(!pg||!wf||!wf.screens) return;
     lines.push(`# ${pg.label} (${pid})`);
     Object.keys(wf.screens).forEach(sid=>{
-      lines.push(`## screen ${sid} "${wf.screens[sid].title||sid}"`);
+      lines.push(`## screen ${sid} "${wf.screens[sid].title||sid}"${wf.screens[sid].modal?" (◍ MODAL/SHEET — overlays the previous screen, NOT a page)":""}`);
       (wf.screens[sid].rows||[]).forEach(row=>row.forEach(el=>{
         lines.push(`- ${el.id} | ${el.kind} | ${String(el.t1||el.label||"").slice(0,70)}${el.nav?` | →${el.nav}`:""}${(el.links||[]).length?` | links:${el.links.join(",")}`:""}${el.note?` | ⚠${String(el.note).slice(0,50)}`:""}`);
       }));
@@ -3248,7 +3308,7 @@ async function askClaude(q){
   const docs=await fetchScreenDocs(q);
   const body={
     model:aiModel(), max_tokens:5000,
-    system:AI_PERSONA+"\n\nReply via the JSON schema. 'answer' is for David. Proposals: use EXACT node ids in from/to. For kind 'node' fill nodeLabel/nodeSub/nodeType/nodeLayer. For kind 'element' (a new UI component on an app wireframe) fill elPage/elScreen/elAfter/elKind/elText/elText2/elLinks and put a short designer note in 'label' — reuse the wireframe kinds you can see in the map data, match the page's existing copy tone, place CTAs above the tab bar, and NEVER restyle, move or remove existing components unless asked. When a feature needs both backend and frontend, propose the FULL PACKAGE in one answer, backend first: node(s) → line(s) → element(s), and explain the flow in 'answer'. Use empty strings for fields that don't apply. Maximum 4 proposals; zero is fine.",
+    system:AI_PERSONA+"\n\nReply via the JSON schema. 'answer' is for David. Proposals: use EXACT node ids in from/to. For kind 'node' fill nodeLabel/nodeSub/nodeType/nodeLayer. For kind 'element' (a new UI component on an app wireframe) fill elPage/elScreen/elAfter/elKind/elText/elText2/elLinks and put a short designer note in 'label' — reuse the wireframe kinds you can see in the map data, match the page's existing copy tone, place CTAs above the tab bar, and NEVER restyle, move or remove existing components unless asked. CRITICAL — pages vs modals: screens marked ◍ MODAL are overlays (bottom sheets / confirm modals), not pages. Content that belongs to a modal goes on that modal's screen; content that belongs to the page goes on the page screen — never mix them (e.g. the token payment sheet is a modal AFTER tapping a pack, so payment UI never sits inline on the Tokens page). If the right modal screen doesn't exist yet, say so in 'answer' and place the trigger element on the page instead. Check the FRONTEND CODE NOTES for what is a modal in the real app. When a feature needs both backend and frontend, propose the FULL PACKAGE in one answer, backend first: node(s) → line(s) → element(s), and explain the flow in 'answer'. Use empty strings for fields that don't apply. Maximum 4 proposals; zero is fine.",
     output_config:{format:{type:"json_schema", schema:AI_SCHEMA}},
     messages:[{role:"user", content: buildMapContext()
       +(docs?"\n\nFRONTEND CODE NOTES (distilled from the real app code — ground truth for layout, copy and design):\n"+docs:"")

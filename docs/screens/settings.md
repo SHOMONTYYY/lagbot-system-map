@@ -7,7 +7,7 @@ Back · "Settings" title
 2. CONNECTORS card — WhatsApp row ("Connected and routing messages" green dot + "Disconnect" link | "Not connected" red dot, attention tint, → whatsapp-connect) · Bank Details row ("{bank} · ****{last4}" green | "Add your payout account" attention, → bank-details)
 3. PREFERENCES card — Lagbot Persona ("Customise how the AI sounds") · Business Info ("What Lagbot knows about you — and your hours")
 4. APP card — Appearance switch ("Dark mode"/"Light mode", local only) · Tokens ("Usage, daily allowance and store") · Notifications ("Push alerts for paused chats") · Privacy & Security ("Password and account") · Blocked Contacts ("Numbers Lagbot won't reply to")
-5. "Sign out" danger pill → modal "Sign Out? / Are you sure you want to sign out?" Cancel | Sign Out
+5. "Sign out" danger pill → confirm MODAL "Sign Out? / Are you sure you want to sign out?" Cancel | Sign Out
 
 ## PROFILE
 "Profile Settings" / "Manage your account information" · Profile Picture (initials only — upload not implemented) · "Your Name" · "Email Address" READ-ONLY (verification flow doesn't exist) · "Phone Number" +234 · "Business Address" · Save Changes/Cancel → business.update + config upsert + auth.updateUser + POST /api/settings/refresh → "Saved / Profile updated."
@@ -53,7 +53,7 @@ Back · "Settings" title
 3. Balance breakdown — Free left today · Rolled over (if >0) · Bonus · Purchased
 4. Token store — 3 packs: STARTER 5,000 ₦4,000 · GROWTH 25,000 ₦18,750 · SCALE 100,000 ₦70,000
 5. Footnote "Purchased tokens never expire. Payments are handled securely by Paystack."
-6. Payment sheet — "{pack} pack" + summary + Pay with: Card ("Debit or credit card") | Bank transfer ("Pay from your bank app") + "Continue to Paystack" → api.initTokenPurchase → opens authorizationUrl → on return refreshTokens + "Almost there…" · on error "Checkout not connected yet — The payment service for token packs has not gone live yet…" (BACKEND ROUTE MISSING)
+6. Payment sheet (MODAL — opens only after tapping a pack; NOT inline on this page) — "{pack} pack" + summary + Pay with: Card ("Debit or credit card") | Bank transfer ("Pay from your bank app") + "Continue to Paystack" → api.initTokenPurchase → opens authorizationUrl → on return refreshTokens + "Almost there…" · on error "Checkout not connected yet — The payment service for token packs has not gone live yet…" (BACKEND ROUTE MISSING)
 
 ## PRIVACY & SECURITY
 "Manage your password here" · Current Password · New Password ("At least 6 characters") · Confirm New Password · Save → auth.updateUser → "Password updated"
