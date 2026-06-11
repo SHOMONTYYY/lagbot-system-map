@@ -131,11 +131,21 @@ input,select,textarea{font-family:inherit}
   background:rgba(16,24,19,.92);border:1px solid var(--line);border-radius:var(--radius);
   padding:11px 13px;backdrop-filter:blur(4px);max-width:230px;
 }
-#legend h4{font-family:var(--mono);font-size:8.5px;letter-spacing:.26em;color:var(--mute);text-transform:uppercase;margin-bottom:8px}
-.lg-row{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:10.5px;color:var(--cream-dim)}
+#legend h4{font-family:var(--mono);font-size:8.5px;letter-spacing:.26em;color:var(--mute);text-transform:uppercase;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;user-select:none}
+#legend h4:hover{color:var(--cream-dim)}
+#legend.collapsed h4{margin-bottom:0}
+#legend.collapsed .lg-row,#legend.collapsed .hint{display:none}
+.lg-row{display:flex;align-items:center;gap:8px;margin:4px -4px;padding:1px 4px;font-size:10.5px;color:var(--cream-dim);cursor:pointer;border-radius:5px;border:1px solid transparent}
+.lg-row:hover{color:var(--cream);background:rgba(237,229,211,.05)}
+.lg-row.active{color:var(--cream);background:rgba(242,169,92,.10);border-color:rgba(242,169,92,.35)}
 .lg-swatch{width:9px;height:9px;border-radius:3px;flex:none}
 .lg-line{width:18px;height:0;border-top:2px dashed var(--warn);flex:none}
 #legend .hint{margin-top:9px;padding-top:8px;border-top:1px solid var(--line-soft);font-size:9.5px;line-height:1.5;color:var(--mute)}
+
+/* ───────────────────────── live cursors ───────────────────────── */
+.rcursor{pointer-events:none;transition:opacity .4s}
+.rcursor.fading{opacity:0}
+.rcursor .rc-name{font-family:var(--mono);font-size:9px;letter-spacing:.06em;fill:#0E1612}
 
 /* ───────────────────────── trace bar ───────────────────────── */
 #traceBar{
@@ -730,7 +740,7 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
     <button class="tbtn" id="btnFit" title="Fit the whole map on screen">⌖</button>
     <button class="tbtn" id="btnZoomOut" title="Zoom out">−</button>
     <button class="tbtn" id="btnZoomIn" title="Zoom in">+</button>
-    <button class="tbtn" id="btnExport" title="Export the map as a JSON file">⤓</button>
+    <button class="tbtn" id="btnExport" title="Export — coding-agent brief (.md) or JSON backup">⤓</button>
     <button class="tbtn" id="btnImport" title="Import a map JSON file">⤒</button>
     <button class="tbtn danger" id="btnReset" title="Reset to the original map">↺</button>
     <button class="tbtn" id="btnSync" title="Team sync via Supabase">☁ Sync</button>
@@ -764,22 +774,23 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
       <g id="nodesG"></g>
       <g id="flowNums"></g>
       <path id="ghost" d="" visibility="hidden"/>
+      <g id="cursorsG"></g>
     </g>
   </svg>
 </div>
 
 <aside id="legend">
-  <h4>Legend</h4>
-  <div class="lg-row"><span class="lg-swatch" style="background:#8E9AA8"></span>External system</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#4FA97E"></span>Backend service</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#7CC49C"></span>REST API surface</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#4A968F"></span>Supabase data</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#AC92DA"></span>Live channel (push / realtime)</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#E8853D"></span>Frontend page</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#D9A05B"></span>App core (Expo client)</div>
-  <div class="lg-row"><span class="lg-swatch" style="background:#5EA2E8"></span>AI agent (Claude-powered)</div>
-  <div class="lg-row"><span class="lg-line"></span>Gap / planned (not live yet)</div>
-  <div class="hint">Click a node to spotlight it · drag to move · double-click an orange page to open its wireframe.</div>
+  <h4 id="legendHead">Legend <span id="legendCaret">▾</span></h4>
+  <div class="lg-row" data-cat="external"><span class="lg-swatch" style="background:#8E9AA8"></span>External system</div>
+  <div class="lg-row" data-cat="service"><span class="lg-swatch" style="background:#4FA97E"></span>Backend service</div>
+  <div class="lg-row" data-cat="api"><span class="lg-swatch" style="background:#7CC49C"></span>REST API surface</div>
+  <div class="lg-row" data-cat="db"><span class="lg-swatch" style="background:#4A968F"></span>Supabase data</div>
+  <div class="lg-row" data-cat="channel"><span class="lg-swatch" style="background:#AC92DA"></span>Live channel (push / realtime)</div>
+  <div class="lg-row" data-cat="page"><span class="lg-swatch" style="background:#E8853D"></span>Frontend page</div>
+  <div class="lg-row" data-cat="client"><span class="lg-swatch" style="background:#D9A05B"></span>App core (Expo client)</div>
+  <div class="lg-row" data-cat="agent"><span class="lg-swatch" style="background:#5EA2E8"></span>AI agent (Claude-powered)</div>
+  <div class="lg-row" data-cat="gapplanned"><span class="lg-line"></span>Gap / planned (not live yet)</div>
+  <div class="hint">Click a legend row to highlight its whole category · click a node to spotlight it · drag to move · double-click an orange page to open its wireframe.</div>
 </aside>
 
 <div id="traceBar" role="status">
@@ -853,6 +864,17 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
   </div>
   <div id="hackMode" class="note" style="font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-bottom:10px"></div>
   <div id="hackBody"></div>
+</div>
+
+<div class="modal" id="exportModal">
+  <button class="mclose" data-close>✕</button>
+  <div class="eyebrow">Export</div>
+  <h3>What do you want to export?</h3>
+  <div class="note" style="margin-top:6px;margin-bottom:12px">The <b>agent brief</b> is a Markdown work order for a coding agent: every change the team drew on this map since the baseline — new components, new connections, removals, wireframe edits, open gaps — written as instructions, with the signed change log. The <b>JSON backup</b> is the full map for ⤒ Import.</div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <button class="pbtn accent" id="exportBrief" style="padding:12px">⌘ Coding-agent brief (.md)</button>
+    <button class="pbtn" id="exportJson" style="padding:12px">JSON backup (for ⤒ Import)</button>
+  </div>
 </div>
 
 <div class="modal" id="syncModal">
@@ -974,7 +996,7 @@ unused routes, Admins screen duplicates Sales▸Teams.
     <div class="hrow"><b>Edit wireframe</b><span>✎ turns on edit mode: add screens with the ＋ chip, tap a component to edit every property (text, badges, amounts, stats…), <b>drag components</b> to reorder — they snap between rows, or side-by-side when dropped on a row's right edge. + Add element places new components (bubbles, buttons, text, stats…), then wire them to backend nodes.</span></div>
     <div class="hrow"><b>Search</b><span>Type to dim everything except matching nodes.</span></div>
     <div class="hrow"><b>Keys</b><span>F fit · + / − zoom · Del removes selection · Esc closes / cancels.</span></div>
-    <div class="hrow"><b>Saving</b><span>Every change persists automatically. Export / Import moves the whole map as JSON; Reset restores the original Lagbot map.</span></div>
+    <div class="hrow"><b>Saving</b><span>Every change persists automatically. ⤓ Export offers a coding-agent brief (.md work order of all team changes) or a JSON backup; ⤒ Import restores a JSON backup; Reset restores the original Lagbot map.</span></div>
   </div>
 </div>
 <div id="profileOverlay">
@@ -1770,7 +1792,7 @@ document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==
 /* ════════════════════════════ team sync via Supabase ════════════════════════════ */
 const SYNC_DOC_ID="lagbot";
 const CLIENT_ID="c_"+Math.random().toString(36).slice(2);
-let sb=null, sbChannel=null, syncOn=false;
+let sb=null, sbChannel=null, curChannel=null, curReady=false, syncOn=false;
 function editorNameQuiet(){ try{ return sessionStorage.getItem("lagbot:editor")||"Unknown"; }catch(e){ return "Unknown"; } }
 function syncCfg(){
   const d=window.TEAM_CONFIG||{};
@@ -1780,13 +1802,18 @@ function syncCfg(){
   }
   catch(e){ return {url:String(d.supabaseUrl||"").trim().replace(/\/+$/,""), key:String(d.supabaseAnonKey||"").trim()}; }
 }
-function syncInit(){
+function syncTeardown(){
   if(sbChannel&&sb){ try{ sb.removeChannel(sbChannel); }catch(e){} }
-  sb=null; sbChannel=null; syncOn=false;
+  if(curChannel&&sb){ try{ sb.removeChannel(curChannel); }catch(e){} }
+  sbChannel=null; curChannel=null; curReady=false; syncOn=false; cursorsClear();
+}
+function syncInit(){
+  syncTeardown();
+  sb=null;
   const c=syncCfg();
   if(!c.url||!c.key) return;
   if(!window.supabase){ toast("Couldn't load the sync library — check your internet","warn"); return; }
-  try{ sb=window.supabase.createClient(c.url,c.key); syncOn=true; }catch(e){ sb=null; return; }
+  try{ sb=window.supabase.createClient(c.url,c.key,{realtime:{params:{eventsPerSecond:25}}}); syncOn=true; }catch(e){ sb=null; return; }
   sbChannel=sb.channel("sysmap-live")
     .on("postgres_changes",{event:"*",schema:"public",table:"sysmap",filter:"id=eq."+SYNC_DOC_ID},payload=>{
       const row=payload.new;
@@ -1794,6 +1821,10 @@ function syncInit(){
       applyRemote(row);
     })
     .subscribe();
+  curChannel=sb.channel("sysmap-cursors",{config:{broadcast:{self:false}}})
+    .on("broadcast",{event:"cursor"},({payload})=>cursorSeen(payload))
+    .on("broadcast",{event:"cursor-gone"},({payload})=>cursorDrop(payload&&payload.id))
+    .subscribe(s=>{ curReady=(s==="SUBSCRIBED"); });
 }
 function applyRemote(row){
   try{
@@ -1820,9 +1851,50 @@ async function cloudSave(){
   }catch(e){ return false; }
 }
 
+/* ════════════════════════════ live cursors ════════════════════════════ */
+const CURSOR_COLORS={Andre:"var(--svc)",David:"var(--page)",Joseph:"var(--chan)"};
+const cursors={};
+let curLast=0, curX=null, curY=null;
+function cursorPlace(c){ c.g.setAttribute("transform",`translate(${c.x},${c.y}) scale(${1/view.k})`); }
+function cursorsRescale(){ for(const id in cursors) cursorPlace(cursors[id]); }
+function cursorSeen(p){
+  if(!p||!p.id||p.id===CLIENT_ID||typeof p.x!=="number"||typeof p.y!=="number") return;
+  let c=cursors[p.id];
+  if(c&&c.name!==p.name){ cursorDrop(p.id); c=null; }
+  if(!c){
+    const col=CURSOR_COLORS[p.name]||"var(--mute)";
+    const g=svgEl("g",{class:"rcursor"},$("cursorsG"));
+    svgEl("path",{d:"M0 0 L0 13.5 L3.6 10.4 L6 15.6 L8.3 14.5 L5.9 9.5 L10.4 9 Z",fill:col,stroke:"#0E1612","stroke-width":"1"},g);
+    const name=String(p.name||"Unknown");
+    svgEl("rect",{x:11,y:12,width:name.length*5.6+10,height:14,rx:7,fill:col},g);
+    const t=svgEl("text",{x:16,y:22,class:"rc-name"},g);
+    t.textContent=name;
+    c=cursors[p.id]={g,x:0,y:0,timer:null,name:p.name};
+  }
+  c.x=p.x; c.y=p.y;
+  c.g.classList.remove("fading");
+  cursorPlace(c);
+  clearTimeout(c.timer);
+  c.timer=setTimeout(()=>{ c.g.classList.add("fading"); c.timer=setTimeout(()=>cursorDrop(p.id),450); },5000);
+}
+function cursorDrop(id){ const c=cursors[id]; if(!c) return; clearTimeout(c.timer); try{ c.g.remove(); }catch(e){} delete cursors[id]; }
+function cursorsClear(){ for(const id in cursors) cursorDrop(id); }
+function cursorBye(){ if(syncOn&&curChannel&&curReady){ try{ curChannel.send({type:"broadcast",event:"cursor-gone",payload:{id:CLIENT_ID}}); }catch(e){} } }
+mapEl.addEventListener("pointermove",ev=>{
+  if(!syncOn||!curChannel||!curReady) return;
+  const now=performance.now();
+  if(now-curLast<40) return;
+  const p=worldPt(ev.clientX,ev.clientY);
+  if(p.x===curX&&p.y===curY) return;
+  curLast=now; curX=p.x; curY=p.y;
+  try{ curChannel.send({type:"broadcast",event:"cursor",payload:{id:CLIENT_ID,name:editorNameQuiet(),x:p.x,y:p.y}}); }catch(e){}
+});
+window.addEventListener("pagehide",cursorBye);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") cursorBye(); });
+
 /* ════════════════════════════ view (pan/zoom) ════════════════════════════ */
 const view={x:60,y:60,k:1};
-function applyView(){ viewport.setAttribute("transform",`translate(${view.x},${view.y}) scale(${view.k})`); }
+function applyView(){ viewport.setAttribute("transform",`translate(${view.x},${view.y}) scale(${view.k})`); cursorsRescale(); }
 function worldPt(cx,cy){ const r=mapEl.getBoundingClientRect(); return {x:(cx-r.left-view.x)/view.k, y:(cy-r.top-view.y)/view.k}; }
 function zoomAt(cx,cy,f){
   const r=mapEl.getBoundingClientRect();
@@ -2031,8 +2103,26 @@ function refreshClasses(){
     if(e.dir==="both") el.line.setAttribute("marker-start",edgeMarker(e,lit||sel));
   });
 }
-function setFocus(nodes,edges){ focus={nodes,edges}; refreshClasses(); }
-function clearFocus(){ focus=null; clearFlowNums(); hideTrace(); refreshClasses(); }
+function setFocus(nodes,edges){ legendOff(); focus={nodes,edges}; refreshClasses(); }
+function clearFocus(){ legendOff(); focus=null; clearFlowNums(); hideTrace(); refreshClasses(); }
+/* legend rows highlight a whole category */
+let legendSel=null;
+function legendOff(){ legendSel=null; document.querySelectorAll("#legend .lg-row.active").forEach(r=>r.classList.remove("active")); }
+function legendPick(row){
+  const t=row.dataset.cat;
+  if(legendSel===t){ clearFocus(); return; }
+  let nset, eset=new Set();
+  if(t==="gapplanned"){
+    nset=new Set(state.nodes.filter(n=>n.status==="gap"||n.status==="planned").map(n=>n.id));
+    state.edges.forEach(e=>{ if(e.status==="gap"||e.status==="planned") eset.add(e.id); });
+  } else {
+    nset=new Set(state.nodes.filter(n=>n.type===t).map(n=>n.id));
+  }
+  if(!nset.size&&!eset.size){ toast("Nothing on the map in that category yet"); return; }
+  setFocus(nset,eset);
+  legendSel=t; row.classList.add("active");
+}
+document.querySelectorAll("#legend .lg-row").forEach(r=>{ r.onclick=()=>legendPick(r); });
 
 /* ════════════════════════════ numbered flow tracing ════════════════════════════ */
 let activeFlow=null;
@@ -3607,7 +3697,7 @@ $("syncSave").onclick=async ()=>{
     toast("Connected — loaded the team's shared map");
   } else {
     const ok=await cloudSave();
-    if(!ok){ $("syncStatus").textContent="Connected, but couldn't write to the sysmap table — run the SQL from lagbot-map-team-sync.sql in the Supabase SQL editor, then try again."; syncOn=false; return; }
+    if(!ok){ $("syncStatus").textContent="Connected, but couldn't write to the sysmap table — run the SQL from lagbot-map-team-sync.sql in the Supabase SQL editor, then try again."; syncTeardown(); return; }
     toast("Connected — your map is now the team's shared map");
   }
   logChange("Connected this device to team sync");
@@ -3935,13 +4025,113 @@ $("btnConnect").onclick=()=>setConnect(!connect.on);
 $("btnFit").onclick=fitView;
 $("btnZoomIn").onclick=()=>{ const r=mapEl.getBoundingClientRect(); zoomAt(r.left+(r.width-panelPad())/2,r.top+r.height/2,1.22); };
 $("btnZoomOut").onclick=()=>{ const r=mapEl.getBoundingClientRect(); zoomAt(r.left+(r.width-panelPad())/2,r.top+r.height/2,1/1.22); };
-$("btnExport").onclick=()=>{
-  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+/* ════════════════ export — coding-agent brief (.md) or JSON backup ════════════════ */
+function dlFile(content,name,type){
+  const blob=new Blob([content],{type});
   const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob); a.download="lagbot-system-map.json";
+  a.href=URL.createObjectURL(blob); a.download=name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-  toast("Exported lagbot-system-map.json");
+}
+function buildAgentBrief(){
+  const d=defaultState();
+  const dn=new Map(d.nodes.map(n=>[n.id,n])), de=new Map(d.edges.map(e=>[e.id,e]));
+  const cn=new Map(state.nodes.map(n=>[n.id,n])), ce=new Map(state.edges.map(e=>[e.id,e]));
+  const nm=id=>{ const n=cn.get(id)||dn.get(id); return n?n.label:id; };
+  const lay=id=>{ const L=LAYERS.find(l=>l.id===id); return L?L.name:id; };
+  const typ=t=>(TYPES[t]||{}).label||t;
+  const st=x=>(x.status||"active");
+  const briefEdge=e=>`${nm(e.from)} → ${nm(e.to)}${e.label?` ("${e.label}")`:""}${st(e)!=="active"?` [${st(e)}]`:""}`;
+  const recReason={};
+  Object.keys(GAP_KB).forEach(k=>(GAP_KB[k].recs||[]).forEach(r=>{
+    if(r.kind==="node"&&r.node) recReason["n:"+r.node.id]=r.reason;
+    if(r.kind==="edge") recReason["e:"+r.from+">"+r.to]=r.reason;
+  }));
+  const addedNodes=state.nodes.filter(n=>!dn.has(n.id));
+  const removedNodes=d.nodes.filter(n=>!cn.has(n.id));
+  const editedNodes=state.nodes.filter(n=>{ const o=dn.get(n.id); return o&&(o.label!==n.label||(o.sub||"")!==(n.sub||"")||st(o)!==st(n)); });
+  const addedEdges=state.edges.filter(e=>!de.has(e.id));
+  const removedEdges=d.edges.filter(e=>!ce.has(e.id));
+  const editedEdges=state.edges.filter(e=>{ const o=de.get(e.id); return o&&((o.label||"")!==(e.label||"")||st(o)!==st(e)); });
+  const flat=s=>{ const out=new Map(); ((s&&s.rows)||[]).forEach(row=>row.forEach(el=>out.set(el.id,el))); return out; };
+  const elSig=el=>[el.kind,el.label,el.t1||"",el.t2||"",el.note||""].join("|");
+  const elDesc=el=>`"${el.label||el.t1||el.id}" (${el.kind}${el.t1?`, text: "${el.t1}"`:""}${el.note?`, note: ${el.note}`:""})`;
+  const wfOut=[];
+  const pageIds=[...new Set([...Object.keys(d.wireframes||{}),...Object.keys(state.wireframes||{})])];
+  pageIds.forEach(pid=>{
+    const dp=(d.wireframes||{})[pid], cp=(state.wireframes||{})[pid];
+    const pname=nm(pid);
+    if(!dp&&cp){ wfOut.push(`- NEW wireframe for page **${pname}** (${Object.keys(cp.screens||{}).length} screens) — build this UI; open the map for the full layout.`); return; }
+    if(!cp) return;
+    const sIds=[...new Set([...Object.keys((dp&&dp.screens)||{}),...Object.keys(cp.screens||{})])];
+    sIds.forEach(sid=>{
+      const ds=((dp&&dp.screens)||{})[sid], cs=(cp.screens||{})[sid];
+      const sname=(cs||ds||{}).title||sid;
+      const tagM=(cs&&cs.modal)?" [MODAL screen]":"";
+      if(!ds&&cs){ const els=[...flat(cs).values()]; wfOut.push(`- **${pname} › ${sname}**${tagM}: NEW screen with ${els.length} components: ${els.map(el=>`"${el.label||el.t1||el.id}"`).join(", ")}`); return; }
+      if(!cs){ wfOut.push(`- **${pname} › ${sname}**: screen REMOVED — delete this UI.`); return; }
+      const dm=flat(ds), cm=flat(cs);
+      [...cm.values()].filter(el=>!dm.has(el.id)).forEach(el=>wfOut.push(`- **${pname} › ${sname}**${tagM}: ADD component ${elDesc(el)}`));
+      [...dm.values()].filter(el=>!cm.has(el.id)).forEach(el=>wfOut.push(`- **${pname} › ${sname}**${tagM}: REMOVE component ${elDesc(el)}`));
+      [...cm.values()].filter(el=>dm.has(el.id)&&elSig(dm.get(el.id))!==elSig(el)).forEach(el=>wfOut.push(`- **${pname} › ${sname}**${tagM}: CHANGE component "${dm.get(el.id).label||el.id}" → now ${elDesc(el)}`));
+    });
+  });
+  const edgesOf=id=>state.edges.filter(e=>e.from===id||e.to===id);
+  const ts=new Date(), pad=v=>String(v).padStart(2,"0");
+  const when=`${ts.getFullYear()}-${pad(ts.getMonth()+1)}-${pad(ts.getDate())} ${pad(ts.getHours())}:${pad(ts.getMinutes())}`;
+  const L=[];
+  L.push(`# Lagbot — work order from the system map`);
+  L.push(``,`Generated ${when} by ${editorNameQuiet()} from the team's live architecture map.`);
+  L.push(``,`## How to read this`,
+    `This file translates the team's edits on the Lagbot system map into requested engineering work on the actual Lagbot codebase (WhatsApp → Evolution API → Node backend → AI agents → REST/Supabase → Expo app).`,
+    `- **planned** = does not exist yet — the team is asking you to BUILD it.`,
+    `- **gap** = exists but broken or missing — the team is asking you to FIX it.`,
+    `- Node positions/layout moves are cosmetic and excluded.`,
+    `- Cross-reference docs/frontend-map.md, docs/backend-map.md and docs/screens/*.md in the map repo for the as-is architecture. Confirm with the team before any destructive change.`);
+  const sec=(title,items,intro)=>{ L.push(``,`## ${title}`,``); if(intro){L.push(intro,``);} if(!items.length){L.push(`_None._`); return;} items.forEach(i=>L.push(i)); };
+  sec("1. New components to build (added to the map)", addedNodes.map(n=>{
+    const why=recReason["n:"+n.id];
+    const conns=edgesOf(n.id).map(e=>`  - wire: ${briefEdge(e)}${recReason["e:"+e.from+">"+e.to]?` — why: ${recReason["e:"+e.from+">"+e.to]}`:""}`);
+    return [`- **${n.label}**${n.sub?` — ${n.sub}`:""} · ${typ(n.type)} in layer "${lay(n.layer)}" · status: ${st(n)}${why?`\n  - why: ${why}`:""}`,...conns].join("\n");
+  }));
+  sec("2. New connections to wire (between existing components)",
+    addedEdges.filter(e=>dn.has(e.from)&&dn.has(e.to)).map(e=>`- ${briefEdge(e)}${recReason["e:"+e.from+">"+e.to]?` — why: ${recReason["e:"+e.from+">"+e.to]}`:""}`),
+    `Both endpoints already exist in the codebase; the team wants them connected:`);
+  sec("3. Removed from the architecture",
+    [...removedNodes.map(n=>`- Component **${n.label}**${n.sub?` (${n.sub})`:""} was deleted from the map.`),
+     ...removedEdges.map(e=>`- Connection ${briefEdge(e)} was deleted from the map.`)],
+    `The team removed these — confirm intent, then decommission the corresponding code:`);
+  sec("4. Changed components / statuses",
+    [...editedNodes.map(n=>{ const o=dn.get(n.id); const bits=[];
+       if(o.label!==n.label) bits.push(`renamed "${o.label}" → "${n.label}"`);
+       if((o.sub||"")!==(n.sub||"")) bits.push(`description "${o.sub||"—"}" → "${n.sub||"—"}"`);
+       if(st(o)!==st(n)) bits.push(`status ${st(o)} → ${st(n)}${st(n)==="active"?" (team says this is now built)":st(n)==="planned"?" (team wants this built)":" (team flags this as broken/missing)"}`);
+       return `- **${n.label}**: ${bits.join("; ")}`; }),
+     ...editedEdges.map(e=>{ const o=de.get(e.id); const bits=[];
+       if((o.label||"")!==(e.label||"")) bits.push(`label "${o.label||"—"}" → "${e.label||"—"}"`);
+       if(st(o)!==st(e)) bits.push(`status ${st(o)} → ${st(e)}`);
+       return `- Connection ${briefEdge(e)}: ${bits.join("; ")}`; })]);
+  sec("5. UI / wireframe changes", wfOut, `The team edited the page wireframes ([MODAL screen] = sheet/overlay, not a full page):`);
+  sec("6. Open gaps flagged on the map", state.nodes.filter(n=>st(n)==="gap").map(n=>{
+    const kb=GAP_KB[n.id]||{};
+    return `- **${n.label}**${n.sub?` — ${n.sub}`:""}${kb.what?`\n  - problem: ${kb.what}`:""}${kb.fix?`\n  - recommended fix: ${kb.fix}`:""}`;
+  }), `Known problem areas already flagged (pre-existing — fix when prioritised):`);
+  L.push(``,`## 7. Signed change log`,``,`| When | Who | What |`,`|---|---|---|`);
+  const logs=(state.changelog||[]).slice().reverse();
+  if(logs.length) logs.forEach(c=>L.push(`| ${c.at} | ${c.by||"—"} | ${String(c.msg).replace(/\|/g,"\\|")} |`));
+  else L.push(`| — | — | nothing logged yet |`);
+  L.push(``);
+  return L.join("\n");
+}
+$("btnExport").onclick=()=>{ scrim.classList.add("show"); $("exportModal").classList.add("show"); };
+$("exportBrief").onclick=()=>{
+  const ts=new Date(), pad=v=>String(v).padStart(2,"0");
+  dlFile(buildAgentBrief(),`lagbot-agent-brief-${ts.getFullYear()}-${pad(ts.getMonth()+1)}-${pad(ts.getDate())}.md`,"text/markdown");
+  closeModals(); toast("Agent brief exported — hand the .md to your coding agent");
+};
+$("exportJson").onclick=()=>{
+  dlFile(JSON.stringify(state,null,2),"lagbot-system-map.json","application/json");
+  closeModals(); toast("Exported lagbot-system-map.json");
 };
 $("btnImport").onclick=()=>$("fileImport").click();
 $("fileImport").addEventListener("change",ev=>{
@@ -3963,7 +4153,7 @@ $("btnReset").onclick=()=>{
   state=clone(defaultState()); clearFocusAll();
   rebuild(); fitView(); renderPanel(); autosave(); toast("Reset to default map");
 };
-function clearFocusAll(){ selection=null; focus=null; hideTrace(); closeDrawer(); setConnect(false); }
+function clearFocusAll(){ legendOff(); selection=null; focus=null; hideTrace(); closeDrawer(); setConnect(false); }
 
 $("panelToggle").onclick=()=>{
   const hidden=panel.classList.toggle("hidden");
@@ -3973,7 +4163,7 @@ $("panelToggle").onclick=()=>{
 
 /* help modal */
 function openHelp(){ scrim.classList.add("show"); helpModal.classList.add("show"); }
-function closeModals(){ scrim.classList.remove("show"); helpModal.classList.remove("show"); aiKeyModal.classList.remove("show"); $("logModal").classList.remove("show"); $("syncModal").classList.remove("show"); $("hackModal").classList.remove("show"); }
+function closeModals(){ scrim.classList.remove("show"); helpModal.classList.remove("show"); aiKeyModal.classList.remove("show"); $("logModal").classList.remove("show"); $("syncModal").classList.remove("show"); $("hackModal").classList.remove("show"); $("exportModal").classList.remove("show"); }
 $("btnHelp").onclick=openHelp;
 scrim.addEventListener("click",closeModals);
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeModals));
@@ -4005,7 +4195,7 @@ window.addEventListener("keydown",ev=>{
     }
   }
   else if(ev.key==="Escape"){
-    if(helpModal.classList.contains("show")||aiKeyModal.classList.contains("show")||$("logModal").classList.contains("show")||$("syncModal").classList.contains("show")||$("hackModal").classList.contains("show")) closeModals();
+    if(helpModal.classList.contains("show")||aiKeyModal.classList.contains("show")||$("logModal").classList.contains("show")||$("syncModal").classList.contains("show")||$("hackModal").classList.contains("show")||$("exportModal").classList.contains("show")) closeModals();
     else if(hackBusy) { /* let the attack finish */ }
     else if(connect.on) setConnect(false);
     else if(aiPanelEl.classList.contains("open")) aiClose();
@@ -4013,6 +4203,15 @@ window.addEventListener("keydown",ev=>{
     else { clearFocus(); clearSelection(); }
   }
 });
+
+/* ════════════════════════════ legend collapse ════════════════════════════ */
+function setLegendOpen(open){
+  $("legend").classList.toggle("collapsed",!open);
+  $("legendCaret").textContent=open?"▾":"▸";
+  try{ localStorage.setItem("lagbot:legendOpen",open?"1":"0"); }catch(e){}
+}
+$("legendHead").addEventListener("click",()=>setLegendOpen($("legend").classList.contains("collapsed")));
+(function(){ let v="1"; try{ v=localStorage.getItem("lagbot:legendOpen")||"1"; }catch(e){} setLegendOpen(v!=="0"); })();
 
 /* ════════════════════════════ init ════════════════════════════ */
 (async function init(){
