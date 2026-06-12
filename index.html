@@ -1862,6 +1862,7 @@ function ensureShape(s){
   });
   s.meta = s.meta || {name:"Lagbot — Backend ⇄ Frontend Circuit", v:1};
   s.seclog = Array.isArray(s.seclog)?s.seclog:[];
+  s.notes = Array.isArray(s.notes)?s.notes:[];
   s.nodes.forEach(n=>{ n.x=+n.x||0; n.y=+n.y||0; if(!TYPES[n.type]) n.type="service"; });
   s.edges = s.edges.filter(e=>e && e.from && e.to);
   return s;
@@ -2461,9 +2462,20 @@ function panelOverview(){
     <hr class="sep">
     <div class="note" style="margin-bottom:10px"><b>Click</b> a node to spotlight what it touches. <b>Double-click</b> an orange page to open its app wireframe — tap an element to trace its circuit (↗ calls, ↘ feeds), tap <b>⇢</b> elements twice to follow the flow. <b>Drag</b> anything to rearrange — it autosaves.</div>
     <div class="warnbox">⚠ Amber dashed = known gap or Phase 2/3 item (wallet withdraw, token purchase, Paystack…). Click one for the detail.</div>
-    <div class="btnrow"><button class="pbtn accent" id="pbAdd">+ Add node</button><button class="pbtn" id="pbFit">⌖ Fit view</button></div>`;
+    <div class="btnrow"><button class="pbtn accent" id="pbAdd">+ Add node</button><button class="pbtn" id="pbFit">⌖ Fit view</button></div>
+    <div class="btnrow"><button class="pbtn" id="pbNote" title="Jot a note for the team — it rides along in the ⤓ export brief">✎ Note for export${(state.notes||[]).length?` (${state.notes.length})`:""}</button></div>`;
   $("pbAdd").onclick=panelAddNode;
   $("pbFit").onclick=fitView;
+  $("pbNote").onclick=()=>{
+    const t=(prompt("Note something down — it'll appear in the ⤓ export brief:")||"").trim();
+    if(!t) return;
+    const ts=new Date(),pad=v=>String(v).padStart(2,"0");
+    const at=`${ts.getFullYear()}-${pad(ts.getMonth()+1)}-${pad(ts.getDate())} ${pad(ts.getHours())}:${pad(ts.getMinutes())}`;
+    state.notes=Array.isArray(state.notes)?state.notes:[];
+    state.notes.push({at,by:currentEditor(),text:t.slice(0,500)});
+    logChange(`Added export note: "${t.slice(0,80)}"`);
+    autosave(); renderPanel(); toast("Note saved — it's in the next export brief");
+  };
 }
 function statusSelect(cur){
   const opts=[["active","Active / built"],["gap","Gap — missing"],["planned","Planned — Phase 2/3"]];
@@ -4667,6 +4679,8 @@ function buildAgentBrief(){
     `- Node positions/layout moves are cosmetic and excluded.`,
     `- Cross-reference docs/frontend-map.md, docs/backend-map.md and docs/screens/*.md in the map repo for the as-is architecture. Confirm with the team before any destructive change.`);
   const sec=(title,items,intro)=>{ L.push(``,`## ${title}`,``); if(intro){L.push(intro,``);} if(!items.length){L.push(`_None._`); return;} items.forEach(i=>L.push(i)); };
+  const notes=(state.notes||[]);
+  if(notes.length) sec("Team notes", notes.map(n=>`- ${n.text} _(${n.by||"—"}, ${n.at||"—"})_`), `Free-form notes the team jotted from the System overview — read these first:`);
   sec("1. New components to build (added to the map)", addedNodes.map(n=>{
     const why=recReason["n:"+n.id];
     const conns=edgesOf(n.id).map(e=>`  - wire: ${briefEdge(e)}${recReason["e:"+e.from+">"+e.to]?` — why: ${recReason["e:"+e.from+">"+e.to]}`:""}`);
