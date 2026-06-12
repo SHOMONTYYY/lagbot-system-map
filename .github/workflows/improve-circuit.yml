@@ -1,0 +1,64 @@
+name: Improve the Circuit
+
+# Fired by /api/improve (repository_dispatch). Runs a SANDBOXED coding agent
+# that edits the MAP app (index.html / api / tools / docs) and opens a Pull
+# Request for the team to review and merge. It NEVER merges, has NO access to
+# the Lagbot codebase, and is restricted to file-editing tools (no shell, no
+# network) so it cannot read or exfiltrate secrets.
+
+on:
+  repository_dispatch:
+    types: [improve-circuit]
+  workflow_dispatch:
+    inputs:
+      instruction:
+        description: "What should the Circuit change about itself?"
+        required: true
+      author:
+        description: "Who is asking"
+        required: false
+        default: "maintainer"
+
+permissions:
+  contents: write          # to push the agent's branch (NOT main — protect main in repo settings)
+  pull-requests: write     # to open the PR
+
+concurrency:
+  group: improve-circuit
+  cancel-in-progress: false
+
+jobs:
+  improve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run the sandboxed coding agent
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # file-editing tools ONLY — no Bash, no network — so the agent cannot
+          # read env secrets or send anything out. It can only edit repo files.
+          claude_args: "--allowedTools Edit,Read,Write,Glob,Grep --disallowedTools Bash,WebFetch,WebSearch"
+          prompt: |
+            You are improving "Circuit", a single-file web app (index.html) with
+            serverless functions in api/ and tools in tools/.
+
+            Make ONLY this change, requested by "${{ github.event.client_payload.author }}${{ inputs.author }}":
+            ----
+            ${{ github.event.client_payload.instruction }}${{ inputs.instruction }}
+            ----
+
+            Rules:
+            - Keep it minimal and focused on exactly what was asked; match the
+              existing terse code style.
+            - You may edit index.html, files under api/ (except api/improve.js),
+              docs/, and tools/ EXCEPT tools/sync-from-code.mjs.
+            - NEVER edit: any .github/** file, api/improve.js,
+              tools/sync-from-code.mjs, or team-config*. NEVER add code that
+              writes to or calls the Lagbot codebase, and never weaken a secret
+              scanner or a read-only guarantee.
+            - Open a Pull Request with a clear title and a summary of what and
+              why. DO NOT merge — a human reviews and merges.

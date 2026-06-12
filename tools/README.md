@@ -65,3 +65,31 @@ Note: the facts are *structure* (routes, guards, tables, services, screens), so
 the site redeploys when the **structure** changes — a new route, table, screen,
 or changed auth guard. Edits inside a function body don't move the facts and
 won't trigger a deploy (by design).
+
+## ⟐ Improve the Circuit (self-editing)
+
+The in-app **⟐ Improve** panel lets the team ask the Circuit to change its own
+code. Flow: panel → `/api/improve` → fires the `improve-circuit.yml` workflow →
+a sandboxed coding agent edits the repo and **opens a PR** → a human merges →
+auto-deploy ships it. It never merges itself and never touches the Lagbot
+codebase.
+
+Safety design (no passcode, but hardened):
+- The agent runs with **file-editing tools only — no shell, no network** — so it
+  cannot read or exfiltrate secrets even from a hostile request.
+- `guard-protected-paths.yml` **fails any agent PR** that touches `.github/**`,
+  `api/improve.js`, `tools/sync-from-code.mjs`, or `team-config*`.
+- `/api/improve` refuses (fail-closed) when 3 agent PRs are already open.
+
+One-time setup:
+1. **ANTHROPIC_API_KEY** as a map-repo **Actions secret** (the workflow needs
+   it). Use a **dedicated, spend-capped** Anthropic key here.
+2. **GH_DISPATCH_TOKEN** as a Vercel env var — a fine-grained PAT, this repo
+   only, **Contents: Read and write** (to send the dispatch + read open PRs).
+3. **Protect `main`** (Settings → Branches → add rule): require a pull request
+   and at least one approval before merging, and require the **Guard protected
+   paths** check. This is the backstop that makes "a human merges" real — with
+   it, nothing reaches the live site without your review.
+
+Before relying on it, trigger one verification run (Actions → *Improve the
+Circuit* → Run workflow) and confirm it only edited files and opened a PR.

@@ -836,6 +836,7 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
     <button class="tbtn" id="btnSync" title="Team sync via Supabase">☁ Sync</button>
     <button class="tbtn danger" id="btnHack" title="Hackathon — red-team self-audit of the architecture">⚔ Hackathon</button>
     <button class="tbtn" id="btnLog" title="Change log — who changed what">≡ Log</button>
+    <button class="tbtn" id="btnImprove" title="Ask the Circuit to improve its own code — opens a pull request your team reviews">⟐ Improve</button>
     <button class="tbtn" id="btnHelp" title="Help">?</button>
   </nav>
   <input type="file" id="fileImport" accept="application/json" style="display:none">
@@ -963,6 +964,16 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
   </div>
   <div id="hackMode" class="note" style="font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-bottom:10px"></div>
   <div id="hackBody"></div>
+</div>
+
+<div class="modal" id="improveModal">
+  <button class="mclose" data-close>✕</button>
+  <div class="eyebrow">Improve the Circuit</div>
+  <h3>Ask the Circuit to change itself</h3>
+  <div class="note" style="margin-top:6px;margin-bottom:10px">Describe a change to <b>this app's own code</b> (a new button, a fix, a tweak). A sandboxed coding agent makes it and opens a <b>pull request</b> — nothing goes live until your team reviews and <b>merges</b> it. That merge is the approval.</div>
+  <textarea id="improveText" rows="4" placeholder="e.g. Add a button that exports the change log as CSV" style="width:100%;background:var(--pane2);border:1px solid var(--line);border-radius:8px;color:var(--cream);padding:10px;font-family:inherit;font-size:12px;resize:vertical"></textarea>
+  <div class="btnrow" style="margin-top:10px"><button class="pbtn accent" id="improveSend" style="padding:11px">⟐ Draft a pull request</button></div>
+  <div id="improveStatus" class="note" style="margin-top:10px"></div>
 </div>
 
 <div class="modal" id="exportModal">
@@ -4711,6 +4722,19 @@ function buildAgentBrief(){
   return L.join("\n");
 }
 $("btnExport").onclick=()=>{ scrim.classList.add("show"); $("exportModal").classList.add("show"); };
+$("btnImprove").onclick=()=>{ $("improveStatus").textContent=""; scrim.classList.add("show"); $("improveModal").classList.add("show"); $("improveText").focus(); };
+$("improveSend").onclick=async ()=>{
+  const instruction=$("improveText").value.trim();
+  if(instruction.length<8){ $("improveStatus").style.color="var(--warn)"; $("improveStatus").textContent="Describe the change in a bit more detail."; return; }
+  $("improveSend").disabled=true; $("improveStatus").style.color="var(--mute)"; $("improveStatus").textContent="Sending to the coding agent…";
+  try{
+    const r=await fetch("/api/improve",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({instruction,author:editorNameQuiet()})});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok){ $("improveStatus").style.color="var(--svc)"; $("improveStatus").textContent=j.message||"On it — a pull request is being drafted."; $("improveText").value=""; }
+    else { $("improveStatus").style.color="var(--warn)"; $("improveStatus").textContent=j.error||`Couldn't start (HTTP ${r.status}).`; }
+  }catch(e){ $("improveStatus").style.color="var(--warn)"; $("improveStatus").textContent="Network error — this only works on the hosted site, not file://."; }
+  $("improveSend").disabled=false;
+};
 $("exportBrief").onclick=()=>{
   const ts=new Date(), pad=v=>String(v).padStart(2,"0");
   dlFile(buildAgentBrief(),`lagbot-agent-brief-${ts.getFullYear()}-${pad(ts.getMonth()+1)}-${pad(ts.getDate())}.md`,"text/markdown");
@@ -4756,7 +4780,7 @@ $("panelToggle").onclick=()=>{
 
 /* help modal */
 function openHelp(){ scrim.classList.add("show"); helpModal.classList.add("show"); }
-function closeModals(){ scrim.classList.remove("show"); helpModal.classList.remove("show"); aiKeyModal.classList.remove("show"); $("logModal").classList.remove("show"); $("syncModal").classList.remove("show"); $("hackModal").classList.remove("show"); $("exportModal").classList.remove("show"); $("viewModal").classList.remove("show"); }
+function closeModals(){ scrim.classList.remove("show"); helpModal.classList.remove("show"); aiKeyModal.classList.remove("show"); $("logModal").classList.remove("show"); $("syncModal").classList.remove("show"); $("hackModal").classList.remove("show"); $("exportModal").classList.remove("show"); $("improveModal").classList.remove("show"); $("viewModal").classList.remove("show"); }
 $("btnHelp").onclick=openHelp;
 scrim.addEventListener("click",closeModals);
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeModals));
@@ -4788,7 +4812,7 @@ window.addEventListener("keydown",ev=>{
     }
   }
   else if(ev.key==="Escape"){
-    if(helpModal.classList.contains("show")||aiKeyModal.classList.contains("show")||$("logModal").classList.contains("show")||$("syncModal").classList.contains("show")||$("hackModal").classList.contains("show")||$("exportModal").classList.contains("show")) closeModals();
+    if(helpModal.classList.contains("show")||aiKeyModal.classList.contains("show")||$("logModal").classList.contains("show")||$("syncModal").classList.contains("show")||$("hackModal").classList.contains("show")||$("exportModal").classList.contains("show")||$("improveModal").classList.contains("show")) closeModals();
     else if(hackBusy) { /* let the attack finish */ }
     else if(connect.on) setConnect(false);
     else if(aiPanelEl.classList.contains("open")) aiClose();

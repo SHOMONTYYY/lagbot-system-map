@@ -1,0 +1,33 @@
+name: Guard protected paths
+
+# Fails an agent-authored PR (branch prefix "claude") if it touches files that
+# are its own safety rails — workflows, the trigger endpoint, the read-only
+# codebase sync, or team config. Make this a REQUIRED status check on main so a
+# prompt-injected agent PR can't weaken its own guardrails past review.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    if: startsWith(github.head_ref, 'claude')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Block edits to protected paths
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          changed="$(git diff --name-only "$base" "$head")"
+          echo "Changed files:"; echo "$changed"
+          if echo "$changed" | grep -E '^(\.github/|api/improve\.js$|tools/sync-from-code\.mjs$|team-config)' ; then
+            echo "::error::This agent PR touches a protected path (workflow / endpoint / codebase-sync / team-config). Blocked."
+            exit 1
+          fi
+          echo "OK — no protected paths touched."
