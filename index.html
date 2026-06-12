@@ -4723,7 +4723,14 @@ function buildAgentBrief(){
   return L.join("\n");
 }
 $("btnExport").onclick=()=>{ scrim.classList.add("show"); $("exportModal").classList.add("show"); };
-$("btnImprove").onclick=()=>{ $("improveStatus").textContent=""; scrim.classList.add("show"); $("improveModal").classList.add("show"); $("improveText").focus(); };
+$("btnImprove").onclick=()=>{
+  $("improveStatus").textContent="";
+  try{ const saved=localStorage.getItem("lagbot:maintcode")||""; $("improveCode").value=saved; }catch(e){}
+  const hasCode=!!$("improveCode").value;
+  $("improveCode").style.display=hasCode?"none":""; // remembered → hide the field
+  scrim.classList.add("show"); $("improveModal").classList.add("show");
+  (hasCode?$("improveText"):$("improveCode")).focus();
+};
 $("improveSend").onclick=async ()=>{
   const instruction=$("improveText").value.trim();
   if(instruction.length<8){ $("improveStatus").style.color="var(--warn)"; $("improveStatus").textContent="Describe the change in a bit more detail."; return; }
@@ -4731,8 +4738,8 @@ $("improveSend").onclick=async ()=>{
   try{
     const r=await fetch("/api/improve",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({instruction,author:editorNameQuiet(),code:$("improveCode").value})});
     const j=await r.json().catch(()=>({}));
-    if(r.ok){ $("improveStatus").style.color="var(--svc)"; $("improveStatus").textContent=j.message||"On it — a pull request is being drafted."; $("improveText").value=""; }
-    else { $("improveStatus").style.color="var(--warn)"; $("improveStatus").textContent=j.error||`Couldn't start (HTTP ${r.status}).`; }
+    if(r.ok){ try{ localStorage.setItem("lagbot:maintcode",$("improveCode").value); }catch(e){} $("improveStatus").style.color="var(--svc)"; $("improveStatus").textContent=j.message||"On it — a pull request is being drafted."; $("improveText").value=""; }
+    else { if(r.status===401){ try{ localStorage.removeItem("lagbot:maintcode"); }catch(e){} $("improveCode").style.display=""; $("improveCode").focus(); } $("improveStatus").style.color="var(--warn)"; $("improveStatus").textContent=j.error||`Couldn't start (HTTP ${r.status}).`; }
   }catch(e){ $("improveStatus").style.color="var(--warn)"; $("improveStatus").textContent="Network error — this only works on the hosted site, not file://."; }
   $("improveSend").disabled=false;
 };
