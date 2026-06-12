@@ -96,14 +96,16 @@ input,select,textarea{font-family:inherit}
 .edge .hit{stroke:transparent;stroke-width:16;fill:none;cursor:pointer}
 .edge .line{stroke:#3C4B42;stroke-width:1.3;fill:none;opacity:.55;transition:opacity .18s,stroke .18s}
 .edge:hover .line{stroke:#6E8E7D;opacity:.95;stroke-width:1.8}
-.edge.gap .line, .edge.planned .line{stroke:var(--warn);stroke-dasharray:3 5;opacity:.5}
+.edge.gap .line{stroke:var(--danger);stroke-dasharray:4 4;opacity:.65}
+.edge.planned .line{stroke:var(--warn);stroke-dasharray:1 5;stroke-linecap:round;opacity:.55}
 .edge.selected .line{stroke:var(--current);opacity:1;stroke-width:2.2}
 .edge.lit .line{
   stroke:var(--current);opacity:1;stroke-width:2.2;
   stroke-dasharray:7 7;animation:flow 1.1s linear infinite;
   filter:drop-shadow(0 0 5px rgba(242,169,92,.55));
 }
-.edge.lit.gap .line{stroke:var(--warn)}
+.edge.lit.gap .line{stroke:var(--danger)}
+.edge.lit.planned .line{stroke:var(--warn)}
 .edge.dim .line{opacity:.07}
 .edge.dim .hit{pointer-events:none}
 @keyframes flow{to{stroke-dashoffset:-14}}
@@ -146,7 +148,8 @@ input,select,textarea{font-family:inherit}
 .lg-row:hover{color:var(--cream);background:rgba(237,229,211,.05)}
 .lg-row.active{color:var(--cream);background:rgba(242,169,92,.10);border-color:rgba(242,169,92,.35)}
 .lg-swatch{width:9px;height:9px;border-radius:3px;flex:none}
-.lg-line{width:18px;height:0;border-top:2px dashed var(--warn);flex:none}
+.lg-line{width:18px;height:0;border-top:2px dotted var(--warn);flex:none}
+.lg-line.gap{border-top:2px dashed var(--danger)}
 #legend .hint{margin-top:9px;padding-top:8px;border-top:1px solid var(--line-soft);font-size:9.5px;line-height:1.5;color:var(--mute)}
 
 /* ───────────────────────── live cursors ───────────────────────── */
@@ -881,7 +884,8 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
   <div class="lg-row" data-cat="page"><span class="lg-swatch" style="background:#E8853D"></span>Frontend page</div>
   <div class="lg-row" data-cat="client"><span class="lg-swatch" style="background:#D9A05B"></span>App core (Expo client)</div>
   <div class="lg-row" data-cat="agent"><span class="lg-swatch" style="background:#5EA2E8"></span>AI agent (Claude-powered)</div>
-  <div class="lg-row" data-cat="gapplanned"><span class="lg-line"></span>Gap / planned (not live yet)</div>
+  <div class="lg-row" data-cat="gap"><span class="lg-line gap"></span>Gap — missing / broken</div>
+  <div class="lg-row" data-cat="planned"><span class="lg-line"></span>Planned — Phase 2/3</div>
   <div class="hint">Click a legend row to highlight its whole category · click a node to spotlight it · drag to move · double-click an orange page to open its wireframe.</div>
 </aside>
 
@@ -2082,7 +2086,12 @@ function buildNode(n){
   const g=svgEl("g",{class:"node","data-id":n.id, transform:`translate(${n.x},${n.y})`});
   const color=TYPES[n.type].color;
   const body=svgEl("rect",{class:"body",width:NODE_W,height:NODE_H,rx:9,stroke:color,"stroke-opacity":.55},g);
-  if(n.status==="gap"||n.status==="planned") body.setAttribute("stroke-dasharray","4 4");
+  if(n.status==="gap"||n.status==="planned"){
+    body.setAttribute("stroke-dasharray", n.status==="gap"?"4 4":"1 5");
+    body.setAttribute("stroke", n.status==="gap"?"var(--danger)":"var(--warn)");
+    body.setAttribute("stroke-opacity",".9");
+    if(n.status==="planned") body.setAttribute("stroke-linecap","round");
+  }
   svgEl("rect",{class:"accent",x:0,y:0,width:3,height:NODE_H,fill:color},g);
   const chip=svgEl("text",{class:"chip",x:14,y:15,fill:color},g); chip.textContent=chipText(n);
   const title=svgEl("text",{class:"title",x:14,y:32},g); title.textContent=n.label;
@@ -2090,7 +2099,7 @@ function buildNode(n){
   sub.textContent=(n.sub||"").length>40 ? n.sub.slice(0,39)+"…" : (n.sub||"");
   let wfm=null, gm=null;
   if(n.wf){ wfm=svgEl("text",{class:"wfmark",x:NODE_W-12,y:15,"text-anchor":"end"},g); wfm.textContent="▣ WIREFRAME"; }
-  if(n.status==="gap"||n.status==="planned"){ gm=svgEl("text",{class:"gapmark",x:NODE_W-12,y:NODE_H-8,"text-anchor":"end"},g); gm.textContent=n.status==="gap"?"⚠ gap":"◌ planned"; }
+  if(n.status==="gap"||n.status==="planned"){ gm=svgEl("text",{class:"gapmark",x:NODE_W-12,y:NODE_H-8,"text-anchor":"end",fill:n.status==="gap"?"var(--danger)":"var(--warn)"},g); gm.textContent=n.status==="gap"?"⚠ gap":"◷ planned"; }
   const tt=svgEl("title",{},g); tt.textContent=`${n.label} — ${n.sub||""}`;
   nodesG.appendChild(g);
   nodeEls.set(n.id,{g,body,chip,title,sub,tt});
@@ -2252,9 +2261,9 @@ function legendPick(row){
   const t=row.dataset.cat;
   if(legendSel===t){ clearFocus(); return; }
   let nset, eset=new Set();
-  if(t==="gapplanned"){
-    nset=new Set(state.nodes.filter(n=>n.status==="gap"||n.status==="planned").map(n=>n.id));
-    state.edges.forEach(e=>{ if(e.status==="gap"||e.status==="planned") eset.add(e.id); });
+  if(t==="gap"||t==="planned"){
+    nset=new Set(state.nodes.filter(n=>n.status===t).map(n=>n.id));
+    state.edges.forEach(e=>{ if(e.status===t) eset.add(e.id); });
   } else {
     nset=new Set(state.nodes.filter(n=>n.type===t).map(n=>n.id));
   }
@@ -2461,7 +2470,7 @@ function panelOverview(){
     <div class="kvline"><span>Planned (Phase 2/3)</span><b>${planned}</b></div>
     <hr class="sep">
     <div class="note" style="margin-bottom:10px"><b>Click</b> a node to spotlight what it touches. <b>Double-click</b> an orange page to open its app wireframe — tap an element to trace its circuit (↗ calls, ↘ feeds), tap <b>⇢</b> elements twice to follow the flow. <b>Drag</b> anything to rearrange — it autosaves.</div>
-    <div class="warnbox">⚠ Amber dashed = known gap or Phase 2/3 item (wallet withdraw, token purchase, Paystack…). Click one for the detail.</div>
+    <div class="warnbox"><b style="color:var(--danger)">⚠ Red dashed</b> = a known gap (missing / broken). <b style="color:var(--warn)">◷ Amber dotted</b> = planned (Phase 2/3). Click a legend row to highlight each, or a node for the detail.</div>
     <div class="btnrow"><button class="pbtn accent" id="pbAdd">+ Add node</button><button class="pbtn" id="pbFit">⌖ Fit view</button></div>
     <div class="btnrow"><button class="pbtn" id="pbNote" title="Jot a note for the team — it rides along in the ⤓ export brief">✎ Note for export${(state.notes||[]).length?` (${state.notes.length})`:""}</button></div>`;
   $("pbAdd").onclick=panelAddNode;
@@ -2623,7 +2632,7 @@ function wireGapReport(n, recs){
         }
       }
       logChange(r.kind==="node"?`Added planned node "${r.node.label}" (gap-report recommendation on ${n.label})`:`Drew planned line ${(nodeById(r.from)||{}).label||r.from} → ${(nodeById(r.to)||{}).label||r.to} (gap-report recommendation)`);
-      rebuild(); autosave(); toast("Added as planned — amber dashed on the map");
+      rebuild(); autosave(); toast("Added as planned — amber dotted on the map");
       selectNode(n.id);
     };
   });
