@@ -996,6 +996,23 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
   <div id="exportStatus" class="note" style="margin-top:10px"></div>
 </div>
 
+<div class="modal" id="resetModal">
+  <button class="mclose" data-close>✕</button>
+  <div class="eyebrow" style="color:var(--danger)">↺ Reset</div>
+  <h3>Reset the map to what?</h3>
+  <div class="note" style="margin-top:6px;margin-bottom:12px">Pick a point to roll back to — nothing happens until you choose. The change log, security log, Hackathon history and notes are always kept.</div>
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div id="resetBaselineWrap">
+      <button class="pbtn accent" id="resetBaseline" style="padding:11px;width:100%">↺ To the code-synced baseline</button>
+      <div class="note" style="font-size:10px;margin-top:4px">Keeps the architecture pulled from the codebase; drops only manual drawing edits made since the last ⟳ From code.</div>
+    </div>
+    <div>
+      <button class="pbtn ghost-danger" id="resetDefault" style="padding:11px;width:100%">⚠ To the original Lagbot map</button>
+      <div class="note" style="font-size:10px;margin-top:4px">The hardcoded starting point — drops everything, including code-synced changes.</div>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="syncModal">
   <button class="mclose" data-close>✕</button>
   <div class="eyebrow">Team sync</div>
@@ -4863,15 +4880,21 @@ $("fileImport").addEventListener("change",ev=>{
 });
 $("btnReset").onclick=()=>{
   const b=state&&state.baseline, hasBase=b&&Array.isArray(b.nodes)&&b.nodes.length;
-  if(!confirm(hasBase
-    ? "Reset to the last code-synced baseline? Only manual drawing edits made since the last ⟳ From code will be lost — the code-synced architecture, change log, security log and Hackathon history are kept."
-    : "Reset the map to the original Lagbot architecture? Your drawing edits will be lost (the change log, security log and Hackathon history are kept).")) return;
-  const keep={seclog:(state&&state.seclog)||[], hackathon:(state&&state.hackathon)||[], changelog:(state&&state.changelog)||[], notes:(state&&state.notes)||[], baseline:state&&state.baseline};
-  const base=hasBase ? {nodes:clone(b.nodes), edges:clone(b.edges||[]), wireframes:clone(b.wireframes||{})} : clone(defaultState());
-  state=ensureShape(Object.assign(base,keep)); clearFocusAll();
-  logChange(hasBase?"Reset the map to the code-synced baseline":"Reset the map to the default architecture");
-  rebuild(); fitView(); renderPanel(); autosave(); toast(hasBase?"Reset to the code-synced baseline — logs kept":"Reset to default map — logs kept");
+  $("resetBaselineWrap").style.display=hasBase?"":"none";
+  scrim.classList.add("show"); $("resetModal").classList.add("show");
 };
+function doReset(toDefault){
+  const b=state&&state.baseline, hasBase=!toDefault&&b&&Array.isArray(b.nodes)&&b.nodes.length;
+  const keep={seclog:(state&&state.seclog)||[], hackathon:(state&&state.hackathon)||[], changelog:(state&&state.changelog)||[], notes:(state&&state.notes)||[]};
+  if(!toDefault) keep.baseline=state&&state.baseline; /* keep the baseline when resetting to it; drop it when going to the original */
+  const base=hasBase ? {nodes:clone(b.nodes), edges:clone(b.edges||[]), wireframes:clone(b.wireframes||{})} : clone(defaultState());
+  state=ensureShape(Object.assign(base,keep)); clearFocusAll(); closeModals();
+  logChange(hasBase?"Reset the map to the code-synced baseline":"Reset the map to the original architecture");
+  rebuild(); fitView(); renderPanel(); autosave();
+  toast(hasBase?"Reset to the code-synced baseline — logs kept":"Reset to the original map — logs kept");
+}
+$("resetBaseline").onclick=()=>doReset(false);
+$("resetDefault").onclick=()=>doReset(true);
 function clearFocusAll(){ legendOff(); selection=null; focus=null; hideTrace(); closeDrawer(); setConnect(false); }
 
 $("panelToggle").onclick=()=>{
@@ -4882,7 +4905,7 @@ $("panelToggle").onclick=()=>{
 
 /* help modal */
 function openHelp(){ scrim.classList.add("show"); helpModal.classList.add("show"); }
-function closeModals(){ scrim.classList.remove("show"); helpModal.classList.remove("show"); aiKeyModal.classList.remove("show"); $("logModal").classList.remove("show"); $("syncModal").classList.remove("show"); $("hackModal").classList.remove("show"); $("exportModal").classList.remove("show"); $("improveModal").classList.remove("show"); $("viewModal").classList.remove("show"); }
+function closeModals(){ scrim.classList.remove("show"); helpModal.classList.remove("show"); aiKeyModal.classList.remove("show"); $("logModal").classList.remove("show"); $("syncModal").classList.remove("show"); $("hackModal").classList.remove("show"); $("exportModal").classList.remove("show"); $("improveModal").classList.remove("show"); $("resetModal").classList.remove("show"); $("viewModal").classList.remove("show"); }
 $("btnHelp").onclick=openHelp;
 scrim.addEventListener("click",closeModals);
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeModals));
@@ -4914,7 +4937,7 @@ window.addEventListener("keydown",ev=>{
     }
   }
   else if(ev.key==="Escape"){
-    if(helpModal.classList.contains("show")||aiKeyModal.classList.contains("show")||$("logModal").classList.contains("show")||$("syncModal").classList.contains("show")||$("hackModal").classList.contains("show")||$("exportModal").classList.contains("show")||$("improveModal").classList.contains("show")) closeModals();
+    if(helpModal.classList.contains("show")||aiKeyModal.classList.contains("show")||$("logModal").classList.contains("show")||$("syncModal").classList.contains("show")||$("hackModal").classList.contains("show")||$("exportModal").classList.contains("show")||$("improveModal").classList.contains("show")||$("resetModal").classList.contains("show")) closeModals();
     else if(hackBusy) { /* let the attack finish */ }
     else if(connect.on) setConnect(false);
     else if(aiPanelEl.classList.contains("open")) aiClose();
