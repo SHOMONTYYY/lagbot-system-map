@@ -4338,7 +4338,7 @@ function buildVectors(){
           title:"Token enforcement is disabled — unbounded AI spend", severity:"high", node:"svc_token",
           detail:"Tokens are counted but never enforced (enforcement_enabled=false). A malicious or runaway customer can rack up unlimited Claude costs because nothing stops Nova replying when the balance hits zero.",
           fix:"Turn on <b>enforcement</b> once the purchase flow ships, and add a hard daily ceiling per business so spend can't run away.",
-          mut:{edges: edgeExists("svc_pipeline","svc_token")?[]:[{from:"svc_pipeline",to:"svc_token",label:"enforce gate — block turn at 0",status:"gap"}], setStatus:[]}
+          mut:{edges: edgeExists("svc_pipeline","svc_token")?[]:[{from:"svc_pipeline",to:"svc_token",label:"enforce gate — block turn at 0",status:"planned"}], setStatus:[]}
         }]};
       }},
     {key:"money", name:"Attack the money-out path", target:["page_wallet","api_wallet","ext_paystack","api_account"],
@@ -4349,7 +4349,7 @@ function buildVectors(){
           fix:"When building it: require <b>re-auth + payout-bank match</b> + Paystack transfer with idempotency.", mut:{}});
         if(has("api_account")) f.push({title:"Delete Account bypasses the compliant backend route", severity:"high", node:"api_account",
           detail:"The app deletes the business row directly from the phone instead of calling /api/account/delete. That leaves the auth user and the WhatsApp (Evolution) instance behind — an orphaned, half-deleted account, and not App-Store-compliant.",
-          fix:"Point Delete Account at <b>POST /api/account/delete</b> so the Evolution instance, all tenant tables and the auth user are removed together.", mut:{setStatus:[{id:"api_account",status:"gap"}]}});
+          fix:"Point Delete Account at <b>POST /api/account/delete</b> so the Evolution instance, all tenant tables and the auth user are removed together.", mut:{}});
         return {steps:[
           {action:"Trigger a withdrawal to an attacker-controlled bank account.", result:"No withdraw endpoint exists yet — nothing to hit.", blocked:true},
           {action:"Inspect the account-deletion path for data left behind.", result:"Delete Account skips the backend route — auth user + WhatsApp instance survive.", blocked:false}
@@ -4531,7 +4531,7 @@ function applyFix(f){
     state.seclog.push(rec);
   }
   logChange(`Applied Hackathon fix: ${title}`);
-  rebuild(); autosave();
+  rebuild(); renderPanel(); autosave();
   toast(n?"Fix added to the map — autosaved":"Recorded in the security log — autosaved");
 }
 
