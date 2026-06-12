@@ -50,7 +50,7 @@ export default async function handler(req, res) {
     body: JSON.stringify({ event_type: "improve-circuit", client_payload: { instruction, author } }),
   });
   if (!d.ok && d.status !== 204) return res.status(502).json({ error: "Couldn't start the job — try again shortly." });
-  return res.status(200).json({ ok: true, message: "On it — the Circuit is drafting a pull request. It'll appear under Pull requests for your team to review and merge." });
+  return res.status(200).json({ ok: true, message: "On it — the Circuit is making your change. It'll auto-merge and deploy to the live site in a minute or two; refresh to see it." });
 }
 
 function safeJson(s) { try { return JSON.parse(s); } catch { return {}; } }
