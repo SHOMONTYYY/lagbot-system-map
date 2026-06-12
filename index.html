@@ -1000,8 +1000,15 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
   <button class="mclose" data-close>✕</button>
   <div class="eyebrow" style="color:var(--danger)">↺ Reset</div>
   <h3>Reset the map to what?</h3>
-  <div class="note" style="margin-top:6px;margin-bottom:12px">Pick a point to roll back to — nothing happens until you choose. The change log, security log, Hackathon history and notes are always kept.</div>
+  <div class="note" style="margin-top:6px;margin-bottom:12px">Pick a point to roll back to — nothing happens until you choose. Restore points are auto-saved as you work; the change log, security log, Hackathon history and notes are always kept.</div>
   <div style="display:flex;flex-direction:column;gap:14px">
+    <div id="resetHistoryWrap">
+      <label class="note" style="font-size:10px">↶ A recent restore point (auto-saved as you work · this device)</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <select id="resetHistory" style="flex:1;min-width:0;background:var(--pane2);border:1px solid var(--line);border-radius:8px;color:var(--cream);padding:9px;font-family:inherit;font-size:11px"></select>
+        <button class="pbtn" id="resetToPoint" style="flex:none;padding:9px 14px">Restore</button>
+      </div>
+    </div>
     <div id="resetBaselineWrap">
       <button class="pbtn accent" id="resetBaseline" style="padding:11px;width:100%">↺ To the code-synced baseline</button>
       <div class="note" style="font-size:10px;margin-top:4px">Keeps the architecture pulled from the codebase; drops only manual drawing edits made since the last ⟳ From code.</div>
@@ -1916,6 +1923,26 @@ function autosave(){
       setDot(localOk?"Saved":"Session only", localOk?"ok":"warn");
     }
   },400);
+  snapshotHistory(false);
+}
+/* ── rolling restore points (this device, localStorage) ── */
+let lastSnapAt=0;
+function loadHistory(){ try{ return JSON.parse(localStorage.getItem("lagbot:history")||"[]"); }catch(e){ return []; } }
+function saveHistory(h){ try{ localStorage.setItem("lagbot:history", JSON.stringify(h)); }catch(e){ try{ localStorage.setItem("lagbot:history", JSON.stringify(h.slice(-5))); }catch(e2){} } }
+function snapshotHistory(force){
+  if(!state||!state.nodes) return;
+  const now=Date.now();
+  if(!force && now-lastSnapAt<120000) return;   /* throttle: at most one snapshot / 2 min */
+  lastSnapAt=now;
+  const ts=new Date(), pad=v=>String(v).padStart(2,"0");
+  const at=`${ts.getFullYear()}-${pad(ts.getMonth()+1)}-${pad(ts.getDate())} ${pad(ts.getHours())}:${pad(ts.getMinutes())}`;
+  const lastLog=(state.changelog&&state.changelog.length)?state.changelog[state.changelog.length-1].msg:"";
+  const label=`${state.nodes.length} nodes · ${(state.edges||[]).length} lines${lastLog?` — ${String(lastLog).slice(0,52)}`:""}`;
+  const h=loadHistory();
+  if(h.length){ const prev=h[h.length-1]; if(prev.doc&&JSON.stringify(prev.doc.nodes)===JSON.stringify(state.nodes)&&JSON.stringify(prev.doc.edges)===JSON.stringify(state.edges)) return; } /* skip if unchanged */
+  h.push({at, label, doc:{nodes:clone(state.nodes), edges:clone(state.edges), wireframes:clone(state.wireframes)}});
+  while(h.length>12) h.shift();
+  saveHistory(h);
 }
 /* hard flush — guarantees the latest state lands in storage even if the page
    is reloaded or closed before the debounced save fires */
@@ -4881,9 +4908,24 @@ $("fileImport").addEventListener("change",ev=>{
 $("btnReset").onclick=()=>{
   const b=state&&state.baseline, hasBase=b&&Array.isArray(b.nodes)&&b.nodes.length;
   $("resetBaselineWrap").style.display=hasBase?"":"none";
+  const h=loadHistory().slice().reverse(); /* newest first */
+  $("resetHistory").innerHTML=h.map((p,i)=>`<option value="${h.length-1-i}">${esc(p.at)} · ${esc(p.label)}</option>`).join("");
+  $("resetHistoryWrap").style.display=h.length?"":"none";
   scrim.classList.add("show"); $("resetModal").classList.add("show");
 };
+$("resetToPoint").onclick=()=>{
+  const idx=+$("resetHistory").value; const h=loadHistory(); const pt=h[idx];
+  if(!pt||!pt.doc){ toast("Couldn't load that restore point","warn"); return; }
+  snapshotHistory(true); /* capture current state first so this restore can itself be undone */
+  const keep={seclog:(state&&state.seclog)||[], hackathon:(state&&state.hackathon)||[], changelog:(state&&state.changelog)||[], notes:(state&&state.notes)||[], baseline:state&&state.baseline};
+  state=ensureShape(Object.assign({nodes:clone(pt.doc.nodes), edges:clone(pt.doc.edges||[]), wireframes:clone(pt.doc.wireframes||{})}, keep));
+  clearFocusAll(); closeModals();
+  logChange(`Reset the map to the restore point from ${pt.at}`);
+  rebuild(); fitView(); renderPanel(); autosave();
+  toast(`Restored to ${pt.at} — logs kept`);
+};
 function doReset(toDefault){
+  snapshotHistory(true); /* snapshot the about-to-be-replaced map so a reset can be undone */
   const b=state&&state.baseline, hasBase=!toDefault&&b&&Array.isArray(b.nodes)&&b.nodes.length;
   const keep={seclog:(state&&state.seclog)||[], hackathon:(state&&state.hackathon)||[], changelog:(state&&state.changelog)||[], notes:(state&&state.notes)||[]};
   if(!toDefault) keep.baseline=state&&state.baseline; /* keep the baseline when resetting to it; drop it when going to the original */
