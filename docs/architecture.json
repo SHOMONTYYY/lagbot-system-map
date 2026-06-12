@@ -1,0 +1,1571 @@
+{
+  "nodes": [
+    {
+      "id": "ch:whatsapp",
+      "label": "WhatsApp (customer)",
+      "kind": "channel",
+      "layer": "external"
+    },
+    {
+      "id": "ch:evolution",
+      "label": "Evolution API gateway",
+      "kind": "channel",
+      "layer": "external"
+    },
+    {
+      "id": "ch:expo",
+      "label": "Expo Push (exp.host)",
+      "kind": "channel",
+      "layer": "external"
+    },
+    {
+      "id": "ch:anthropic",
+      "label": "Anthropic Claude API",
+      "kind": "channel",
+      "layer": "external"
+    },
+    {
+      "id": "ext:supabase-auth",
+      "label": "Supabase Auth",
+      "kind": "auth",
+      "layer": "external"
+    },
+    {
+      "id": "wh:evolution",
+      "label": "POST /webhook/evolution",
+      "kind": "webhook",
+      "layer": "edge"
+    },
+    {
+      "id": "svc:evolution-api.client",
+      "label": "evolution-api.client",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "createInstance",
+        "startConnection",
+        "getConnectionState",
+        "disconnectInstance",
+        "deleteInstance",
+        "listInstances",
+        "setWebhook",
+        "sendText",
+        "sendTyping",
+        "downloadMedia"
+      ],
+      "purpose": "Evolution API Client"
+    },
+    {
+      "id": "svc:evolution-webhook.handler",
+      "label": "evolution-webhook.handler",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "createEvolutionWebhookHandler"
+      ],
+      "purpose": "Evolution API Webhook Handler"
+    },
+    {
+      "id": "svc:file-parser",
+      "label": "file-parser",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "FileParser"
+      ],
+      "purpose": "File Parser Service"
+    },
+    {
+      "id": "svc:llm.service",
+      "label": "llm.service",
+      "kind": "agent",
+      "layer": "svc",
+      "exports": [
+        "LLMService"
+      ],
+      "purpose": "LLM Service — Multi-tier AI routing"
+    },
+    {
+      "id": "svc:message-pipeline.service",
+      "label": "message-pipeline.service",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "MessagePipeline"
+      ],
+      "purpose": "Message Pipeline — Multi-tenant"
+    },
+    {
+      "id": "svc:nova-rules",
+      "label": "nova-rules",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "parseNovaOutput",
+        "enforceRules",
+        "detectForcedHandoff",
+        "HANDOFF_REASON_LABELS"
+      ],
+      "purpose": "Nova rule layer — pure, dependency-free helpers shared by the message"
+    },
+    {
+      "id": "svc:routing-engine.service",
+      "label": "routing-engine.service",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "RoutingEngine"
+      ],
+      "purpose": "Routing engine (Feature 3): fires Sales+Teams routing rules by sending"
+    },
+    {
+      "id": "svc:sales.helpers",
+      "label": "sales.helpers",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "normalizeDetectedItems",
+        "clampQty",
+        "resolveItems",
+        "summarizeItems",
+        "itemsForDecrement"
+      ],
+      "purpose": "Sale line-item helpers — pure, dependency-free; shared by the message"
+    },
+    {
+      "id": "svc:token.service",
+      "label": "token.service",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "TokenService"
+      ],
+      "purpose": "Token billing service — Phase 1 (core metering + free tier)."
+    },
+    {
+      "id": "tbl:user_profiles",
+      "label": "user_profiles",
+      "kind": "table",
+      "layer": "data",
+      "columns": 8
+    },
+    {
+      "id": "tbl:subscriptions",
+      "label": "subscriptions",
+      "kind": "table",
+      "layer": "data",
+      "columns": 11
+    },
+    {
+      "id": "tbl:ai_behavior_settings",
+      "label": "ai_behavior_settings",
+      "kind": "table",
+      "layer": "data",
+      "columns": 12
+    },
+    {
+      "id": "tbl:ai_tone_metrics",
+      "label": "ai_tone_metrics",
+      "kind": "table",
+      "layer": "data",
+      "columns": 8
+    },
+    {
+      "id": "tbl:frequently_asked_questions",
+      "label": "frequently_asked_questions",
+      "kind": "table",
+      "layer": "data",
+      "columns": 20
+    },
+    {
+      "id": "tbl:budget_tracking",
+      "label": "budget_tracking",
+      "kind": "table",
+      "layer": "data",
+      "columns": 10
+    },
+    {
+      "id": "tbl:lead_reminders",
+      "label": "lead_reminders",
+      "kind": "table",
+      "layer": "data",
+      "columns": 9
+    },
+    {
+      "id": "tbl:inventory_imports",
+      "label": "inventory_imports",
+      "kind": "table",
+      "layer": "data",
+      "columns": 10
+    },
+    {
+      "id": "tbl:heartbeat_logs",
+      "label": "heartbeat_logs",
+      "kind": "table",
+      "layer": "data",
+      "columns": 5
+    },
+    {
+      "id": "tbl:weekly_reports",
+      "label": "weekly_reports",
+      "kind": "table",
+      "layer": "data",
+      "columns": 7
+    },
+    {
+      "id": "tbl:messages",
+      "label": "messages",
+      "kind": "table",
+      "layer": "data",
+      "columns": 5
+    },
+    {
+      "id": "tbl:conversations",
+      "label": "conversations",
+      "kind": "table",
+      "layer": "data",
+      "columns": 13
+    },
+    {
+      "id": "tbl:businesses",
+      "label": "businesses",
+      "kind": "table",
+      "layer": "data",
+      "columns": 2
+    },
+    {
+      "id": "tbl:message_count_realtime",
+      "label": "message_count_realtime",
+      "kind": "table",
+      "layer": "data",
+      "columns": 8
+    },
+    {
+      "id": "tbl:business_config",
+      "label": "business_config",
+      "kind": "table",
+      "layer": "data",
+      "columns": 3
+    },
+    {
+      "id": "tbl:wallets",
+      "label": "wallets",
+      "kind": "table",
+      "layer": "data",
+      "columns": 11
+    },
+    {
+      "id": "tbl:wallet_transactions",
+      "label": "wallet_transactions",
+      "kind": "table",
+      "layer": "data",
+      "columns": 14
+    },
+    {
+      "id": "tbl:wallet_withdrawal_accounts",
+      "label": "wallet_withdrawal_accounts",
+      "kind": "table",
+      "layer": "data",
+      "columns": 8
+    },
+    {
+      "id": "tbl:conversation_state",
+      "label": "conversation_state",
+      "kind": "table",
+      "layer": "data",
+      "columns": 10
+    },
+    {
+      "id": "tbl:products",
+      "label": "products",
+      "kind": "table",
+      "layer": "data",
+      "columns": 2
+    },
+    {
+      "id": "tbl:routing_rules",
+      "label": "routing_rules",
+      "kind": "table",
+      "layer": "data",
+      "columns": 8
+    },
+    {
+      "id": "tbl:vendor_token_state",
+      "label": "vendor_token_state",
+      "kind": "table",
+      "layer": "data",
+      "columns": 9
+    },
+    {
+      "id": "tbl:token_ledger",
+      "label": "token_ledger",
+      "kind": "table",
+      "layer": "data",
+      "columns": 9
+    },
+    {
+      "id": "tbl:token_config",
+      "label": "token_config",
+      "kind": "table",
+      "layer": "data",
+      "columns": 9
+    },
+    {
+      "id": "tbl:pending_sales",
+      "label": "pending_sales",
+      "kind": "table",
+      "layer": "data",
+      "columns": 1
+    },
+    {
+      "id": "tbl:ai_accuracy_metrics",
+      "label": "ai_accuracy_metrics",
+      "kind": "table",
+      "layer": "data",
+      "columns": 6
+    },
+    {
+      "id": "tbl:skills",
+      "label": "skills",
+      "kind": "table",
+      "layer": "data",
+      "columns": 4
+    },
+    {
+      "id": "tbl:user_skills",
+      "label": "user_skills",
+      "kind": "table",
+      "layer": "data",
+      "columns": 8
+    },
+    {
+      "id": "tbl:sales_records",
+      "label": "sales_records",
+      "kind": "table",
+      "layer": "data",
+      "columns": 7
+    },
+    {
+      "id": "tbl:response_time_metrics",
+      "label": "response_time_metrics",
+      "kind": "table",
+      "layer": "data",
+      "columns": 6
+    },
+    {
+      "id": "tbl:customer_satisfaction",
+      "label": "customer_satisfaction",
+      "kind": "table",
+      "layer": "data",
+      "columns": 6
+    },
+    {
+      "id": "tbl:human_interventions",
+      "label": "human_interventions",
+      "kind": "table",
+      "layer": "data",
+      "columns": 5
+    },
+    {
+      "id": "route:GET /",
+      "label": "GET /",
+      "kind": "route",
+      "layer": "api",
+      "guards": []
+    },
+    {
+      "id": "route:GET /api/status",
+      "label": "GET /api/status",
+      "kind": "route",
+      "layer": "api",
+      "guards": []
+    },
+    {
+      "id": "route:GET /healthz",
+      "label": "GET /healthz",
+      "kind": "route",
+      "layer": "api",
+      "guards": []
+    },
+    {
+      "id": "route:POST /webhook/evolution",
+      "label": "POST /webhook/evolution",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "webhookHandler"
+      ]
+    },
+    {
+      "id": "route:POST /webhook/evolution/:secret",
+      "label": "POST /webhook/evolution/:secret",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "webhookHandler"
+      ]
+    },
+    {
+      "id": "route:POST /api/whatsapp/pairing-code",
+      "label": "POST /api/whatsapp/pairing-code",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness",
+        "rateLimitBusiness"
+      ]
+    },
+    {
+      "id": "tbl:whatsapp_connections",
+      "label": "whatsapp_connections",
+      "kind": "table",
+      "layer": "data"
+    },
+    {
+      "id": "route:GET /api/whatsapp/status",
+      "label": "GET /api/whatsapp/status",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:POST /api/whatsapp/send",
+      "label": "POST /api/whatsapp/send",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:POST /api/whatsapp/disconnect",
+      "label": "POST /api/whatsapp/disconnect",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:POST /api/test/push",
+      "label": "POST /api/test/push",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:POST /api/ai/pause",
+      "label": "POST /api/ai/pause",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:POST /api/ai/resume",
+      "label": "POST /api/ai/resume",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:POST /api/settings/refresh",
+      "label": "POST /api/settings/refresh",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:GET /api/dashboard/message-count",
+      "label": "GET /api/dashboard/message-count",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:GET /api/dashboard/ai-accuracy",
+      "label": "GET /api/dashboard/ai-accuracy",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:GET /api/dashboard/recent-conversations",
+      "label": "GET /api/dashboard/recent-conversations",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:GET /api/dashboard/budget",
+      "label": "GET /api/dashboard/budget",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:GET /api/stats",
+      "label": "GET /api/stats",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "tbl:daily_stats",
+      "label": "daily_stats",
+      "kind": "table",
+      "layer": "data"
+    },
+    {
+      "id": "route:POST /api/auth/signup",
+      "label": "POST /api/auth/signup",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "validateBody"
+      ]
+    },
+    {
+      "id": "route:POST /api/auth/create-business",
+      "label": "POST /api/auth/create-business",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth"
+      ]
+    },
+    {
+      "id": "route:POST /api/account/delete",
+      "label": "POST /api/account/delete",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth"
+      ]
+    },
+    {
+      "id": "route:POST /api/auth/login",
+      "label": "POST /api/auth/login",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "validateBody"
+      ]
+    },
+    {
+      "id": "route:GET /api/auth/me",
+      "label": "GET /api/auth/me",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth"
+      ]
+    },
+    {
+      "id": "route:GET /api/sales/pending",
+      "label": "GET /api/sales/pending",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:GET /api/sales/confirmed",
+      "label": "GET /api/sales/confirmed",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:POST /api/sales/:id/confirm",
+      "label": "POST /api/sales/:id/confirm",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "ext:rpc:decrement_product_stock",
+      "label": "decrement_product_stock()",
+      "kind": "rpc",
+      "layer": "data"
+    },
+    {
+      "id": "route:POST /api/products/import",
+      "label": "POST /api/products/import",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness",
+        "rateLimitBusiness",
+        "importUpload"
+      ]
+    },
+    {
+      "id": "route:POST /api/routing-rules",
+      "label": "POST /api/routing-rules",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:PATCH /api/routing-rules/:id",
+      "label": "PATCH /api/routing-rules/:id",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:DELETE /api/routing-rules/:id",
+      "label": "DELETE /api/routing-rules/:id",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:PATCH /api/conversations/:id/archive",
+      "label": "PATCH /api/conversations/:id/archive",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:POST /api/conversations/:id/smart-replies",
+      "label": "POST /api/conversations/:id/smart-replies",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:GET /api/wallet",
+      "label": "GET /api/wallet",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "ext:rpc:increment_message_count",
+      "label": "increment_message_count()",
+      "kind": "rpc",
+      "layer": "data"
+    },
+    {
+      "id": "ext:rpc:increment_budget",
+      "label": "increment_budget()",
+      "kind": "rpc",
+      "layer": "data"
+    },
+    {
+      "id": "tbl:team_members",
+      "label": "team_members",
+      "kind": "table",
+      "layer": "data"
+    },
+    {
+      "id": "client:api",
+      "label": "src/services/api.ts",
+      "kind": "client",
+      "layer": "app"
+    },
+    {
+      "id": "client:database",
+      "label": "src/services/database.ts",
+      "kind": "client",
+      "layer": "app"
+    },
+    {
+      "id": "scr:app/(onboarding)/setup.tsx",
+      "label": "app/(onboarding)/setup.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:app/(product)/import.tsx",
+      "label": "app/(product)/import.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:app/(tabs)/chats.tsx",
+      "label": "app/(tabs)/chats.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:app/(tabs)/sales.tsx",
+      "label": "app/(tabs)/sales.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:app/(tabs)/settings.tsx",
+      "label": "app/(tabs)/settings.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:app/(tabs)/wallet.tsx",
+      "label": "app/(tabs)/wallet.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:src/components/chats/SmartReplyStrip.tsx",
+      "label": "src/components/chats/SmartReplyStrip.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:src/components/sales/PendingDetailSheet.tsx",
+      "label": "src/components/sales/PendingDetailSheet.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:src/components/sales/TeamPickerSheet.tsx",
+      "label": "src/components/sales/TeamPickerSheet.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:src/context/AppContext.tsx",
+      "label": "src/context/AppContext.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:src/hooks/useClawdbotMessages.ts",
+      "label": "src/hooks/useClawdbotMessages.ts",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:src/hooks/useDashboard.ts",
+      "label": "src/hooks/useDashboard.ts",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:src/hooks/useSales.ts",
+      "label": "src/hooks/useSales.ts",
+      "kind": "screen",
+      "layer": "app"
+    }
+  ],
+  "edges": [
+    {
+      "from": "ch:whatsapp",
+      "to": "ch:evolution",
+      "kind": "channel",
+      "label": "inbound msg"
+    },
+    {
+      "from": "ch:evolution",
+      "to": "wh:evolution",
+      "kind": "channel",
+      "label": "webhook POST"
+    },
+    {
+      "from": "route:POST /webhook/evolution",
+      "to": "svc:evolution-webhook.handler",
+      "kind": "route-service",
+      "label": "webhookHandler"
+    },
+    {
+      "from": "route:POST /webhook/evolution/:secret",
+      "to": "svc:evolution-webhook.handler",
+      "kind": "route-service",
+      "label": "webhookHandler"
+    },
+    {
+      "from": "route:POST /api/whatsapp/pairing-code",
+      "to": "svc:evolution-api.client",
+      "kind": "route-service",
+      "label": "evolutionClient"
+    },
+    {
+      "from": "route:POST /api/whatsapp/pairing-code",
+      "to": "tbl:whatsapp_connections",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:GET /api/whatsapp/status",
+      "to": "svc:evolution-api.client",
+      "kind": "route-service",
+      "label": "evolutionClient"
+    },
+    {
+      "from": "route:GET /api/whatsapp/status",
+      "to": "tbl:whatsapp_connections",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/whatsapp/send",
+      "to": "svc:evolution-api.client",
+      "kind": "route-service",
+      "label": "evolutionClient"
+    },
+    {
+      "from": "route:POST /api/whatsapp/send",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/whatsapp/send",
+      "to": "tbl:messages",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/whatsapp/send",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/whatsapp/disconnect",
+      "to": "svc:evolution-api.client",
+      "kind": "route-service",
+      "label": "evolutionClient"
+    },
+    {
+      "from": "route:POST /api/test/push",
+      "to": "tbl:business_config",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/test/push",
+      "to": "ch:expo",
+      "kind": "route-http",
+      "label": "expo"
+    },
+    {
+      "from": "route:POST /api/ai/pause",
+      "to": "svc:llm.service",
+      "kind": "route-service",
+      "label": "llm"
+    },
+    {
+      "from": "route:POST /api/ai/pause",
+      "to": "tbl:business_config",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/ai/resume",
+      "to": "svc:llm.service",
+      "kind": "route-service",
+      "label": "llm"
+    },
+    {
+      "from": "route:POST /api/ai/resume",
+      "to": "tbl:business_config",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/settings/refresh",
+      "to": "svc:llm.service",
+      "kind": "route-service",
+      "label": "llm"
+    },
+    {
+      "from": "route:GET /api/dashboard/message-count",
+      "to": "tbl:message_count_realtime",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/dashboard/ai-accuracy",
+      "to": "tbl:ai_accuracy_metrics",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/dashboard/recent-conversations",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/dashboard/budget",
+      "to": "tbl:budget_tracking",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/stats",
+      "to": "tbl:daily_stats",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/stats",
+      "to": "tbl:budget_tracking",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/stats",
+      "to": "tbl:response_time_metrics",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/auth/signup",
+      "to": "tbl:businesses",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/auth/signup",
+      "to": "tbl:user_profiles",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/auth/signup",
+      "to": "ext:supabase-auth",
+      "kind": "route-auth",
+      "label": "signUp"
+    },
+    {
+      "from": "route:POST /api/auth/create-business",
+      "to": "tbl:businesses",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/auth/create-business",
+      "to": "tbl:businesses",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/auth/create-business",
+      "to": "tbl:business_config",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/account/delete",
+      "to": "svc:evolution-api.client",
+      "kind": "route-service",
+      "label": "evolutionClient"
+    },
+    {
+      "from": "route:POST /api/account/delete",
+      "to": "tbl:businesses",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/account/delete",
+      "to": "tbl:businesses",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/account/delete",
+      "to": "tbl:user_profiles",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/account/delete",
+      "to": "ext:supabase-auth",
+      "kind": "route-auth",
+      "label": "admin.deleteUser"
+    },
+    {
+      "from": "route:POST /api/auth/login",
+      "to": "tbl:businesses",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/auth/login",
+      "to": "ext:supabase-auth",
+      "kind": "route-auth",
+      "label": "signInWithPassword"
+    },
+    {
+      "from": "route:GET /api/auth/me",
+      "to": "tbl:user_profiles",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/auth/me",
+      "to": "tbl:businesses",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/sales/pending",
+      "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/sales/confirmed",
+      "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/sales/:id/confirm",
+      "to": "svc:routing-engine.service",
+      "kind": "route-service",
+      "label": "routingEngine"
+    },
+    {
+      "from": "route:POST /api/sales/:id/confirm",
+      "to": "svc:sales.helpers",
+      "kind": "route-service",
+      "label": "itemsForDecrement"
+    },
+    {
+      "from": "route:POST /api/sales/:id/confirm",
+      "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/sales/:id/confirm",
+      "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/sales/:id/confirm",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/sales/:id/confirm",
+      "to": "tbl:business_config",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/sales/:id/confirm",
+      "to": "tbl:products",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/sales/:id/confirm",
+      "to": "ext:rpc:decrement_product_stock",
+      "kind": "ext:rpc:decrement_product_stock",
+      "label": "route-rpc"
+    },
+    {
+      "from": "route:POST /api/sales/:id/confirm",
+      "to": "ch:expo",
+      "kind": "route-http",
+      "label": "expo"
+    },
+    {
+      "from": "route:POST /api/products/import",
+      "to": "ch:anthropic",
+      "kind": "route-http",
+      "label": "anthropic"
+    },
+    {
+      "from": "route:POST /api/routing-rules",
+      "to": "tbl:routing_rules",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:PATCH /api/routing-rules/:id",
+      "to": "tbl:routing_rules",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:DELETE /api/routing-rules/:id",
+      "to": "tbl:routing_rules",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:PATCH /api/conversations/:id/archive",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:PATCH /api/conversations/:id/archive",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/smart-replies",
+      "to": "svc:llm.service",
+      "kind": "route-service",
+      "label": "llm"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/smart-replies",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/smart-replies",
+      "to": "tbl:messages",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/wallet",
+      "to": "tbl:wallets",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "wh:evolution",
+      "to": "svc:message-pipeline.service",
+      "kind": "webhook-service",
+      "label": "handleIncoming"
+    },
+    {
+      "from": "svc:evolution-webhook.handler",
+      "to": "svc:message-pipeline.service",
+      "kind": "service-service",
+      "label": "handleIncoming"
+    },
+    {
+      "from": "svc:evolution-webhook.handler",
+      "to": "svc:evolution-api.client",
+      "kind": "service-service",
+      "label": "require"
+    },
+    {
+      "from": "svc:evolution-webhook.handler",
+      "to": "tbl:whatsapp_connections",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:llm.service",
+      "to": "svc:sales.helpers",
+      "kind": "service-service",
+      "label": "require"
+    },
+    {
+      "from": "svc:llm.service",
+      "to": "tbl:businesses",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:llm.service",
+      "to": "tbl:ai_behavior_settings",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:llm.service",
+      "to": "tbl:business_config",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:llm.service",
+      "to": "tbl:products",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:llm.service",
+      "to": "tbl:user_skills",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:llm.service",
+      "to": "ch:anthropic",
+      "kind": "service-http",
+      "label": "anthropic"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "svc:evolution-api.client",
+      "kind": "service-service",
+      "label": "require"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "svc:nova-rules",
+      "kind": "service-service",
+      "label": "require"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "svc:sales.helpers",
+      "kind": "service-service",
+      "label": "require"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "svc:token.service",
+      "kind": "service-service",
+      "label": "inject"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "svc:llm.service",
+      "kind": "service-service",
+      "label": "inject"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:business_config",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:conversations",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:conversations",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:messages",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:pending_sales",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:pending_sales",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:messages",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:response_time_metrics",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:ai_accuracy_metrics",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:conversation_state",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "ext:rpc:increment_message_count",
+      "kind": "service-rpc",
+      "label": ""
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "ext:rpc:increment_budget",
+      "kind": "service-rpc",
+      "label": ""
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "ch:expo",
+      "kind": "service-http",
+      "label": "expo"
+    },
+    {
+      "from": "svc:routing-engine.service",
+      "to": "svc:evolution-api.client",
+      "kind": "service-service",
+      "label": "require"
+    },
+    {
+      "from": "svc:routing-engine.service",
+      "to": "tbl:routing_rules",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:routing-engine.service",
+      "to": "tbl:team_members",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:token.service",
+      "to": "tbl:token_config",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:token.service",
+      "to": "tbl:vendor_token_state",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:token.service",
+      "to": "tbl:vendor_token_state",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:token.service",
+      "to": "tbl:token_ledger",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:token.service",
+      "to": "tbl:conversations",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:token.service",
+      "to": "tbl:token_ledger",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:token.service",
+      "to": "tbl:conversations",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:evolution-api.client",
+      "to": "ch:evolution",
+      "kind": "service-http",
+      "label": "axios"
+    },
+    {
+      "from": "scr:app/(onboarding)/setup.tsx",
+      "to": "route:POST /api/whatsapp/pairing-code",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(onboarding)/setup.tsx",
+      "to": "route:GET /api/whatsapp/status",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(onboarding)/setup.tsx",
+      "to": "route:POST /api/auth/create-business",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(product)/import.tsx",
+      "to": "route:POST /api/products/import",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/chats.tsx",
+      "to": "route:PATCH /api/conversations/:id/archive",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/chats.tsx",
+      "to": "route:POST /api/whatsapp/send",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/sales.tsx",
+      "to": "route:POST /api/routing-rules",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/sales.tsx",
+      "to": "route:PATCH /api/routing-rules/:id",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/sales.tsx",
+      "to": "route:DELETE /api/routing-rules/:id",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/settings.tsx",
+      "to": "route:POST /api/settings/refresh",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/settings.tsx",
+      "to": "route:GET /api/whatsapp/status",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/settings.tsx",
+      "to": "route:POST /api/whatsapp/pairing-code",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/settings.tsx",
+      "to": "route:POST /api/whatsapp/disconnect",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/settings.tsx",
+      "to": "route:POST /api/account/delete",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/wallet.tsx",
+      "to": "route:GET /api/wallet",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/chats/SmartReplyStrip.tsx",
+      "to": "route:POST /api/conversations/:id/smart-replies",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/PendingDetailSheet.tsx",
+      "to": "route:POST /api/sales/:id/confirm",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/TeamPickerSheet.tsx",
+      "to": "route:POST /api/whatsapp/send",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/context/AppContext.tsx",
+      "to": "route:POST /api/ai/resume",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/context/AppContext.tsx",
+      "to": "route:POST /api/ai/pause",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/hooks/useClawdbotMessages.ts",
+      "to": "route:GET /api/whatsapp/status",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/hooks/useDashboard.ts",
+      "to": "route:POST /api/sales/:id/confirm",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/hooks/useSales.ts",
+      "to": "route:POST /api/sales/:id/confirm",
+      "kind": "screen-route",
+      "label": ""
+    }
+  ]
+}

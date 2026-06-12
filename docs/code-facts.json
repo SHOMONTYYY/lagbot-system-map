@@ -1,238 +1,64 @@
 {
-  "source": "github.com/Joseph-Banke/lagbot-mobile-main",
-  "note": "Auto-generated structural facts (read-only). No source code is copied here.",
+  "source": "lagbot-codebase (read-only clone)",
+  "note": "Auto-generated structural graph (read-only). No source code is copied here.",
   "routes": [
     {
-      "method": "POST",
-      "path": "/api/account/delete",
-      "guards": [
-        "requireAuth"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "POST",
-      "path": "/api/ai/pause",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "POST",
-      "path": "/api/ai/resume",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "POST",
-      "path": "/api/auth/create-business",
-      "guards": [
-        "requireAuth"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "POST",
-      "path": "/api/auth/login",
-      "guards": [
-        "validateBody",
-        "email",
-        "password"
-      ],
-      "file": "backend/server.js"
-    },
-    {
       "method": "GET",
-      "path": "/api/auth/me",
-      "guards": [
-        "requireAuth"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "POST",
-      "path": "/api/auth/signup",
-      "guards": [
-        "validateBody",
-        "email",
-        "password",
-        "businessName"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "PATCH",
-      "path": "/api/conversations/:id/archive",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "POST",
-      "path": "/api/conversations/:id/smart-replies",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "GET",
-      "path": "/api/dashboard/ai-accuracy",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "GET",
-      "path": "/api/dashboard/budget",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "GET",
-      "path": "/api/dashboard/message-count",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "GET",
-      "path": "/api/dashboard/recent-conversations",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "POST",
-      "path": "/api/products/import",
-      "guards": [
-        "requireAuth",
-        "requireBusiness",
-        "rateLimitBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/routing-rules/:id",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "PATCH",
-      "path": "/api/routing-rules/:id",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "POST",
-      "path": "/api/routing-rules",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "POST",
-      "path": "/api/sales/:id/confirm",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "GET",
-      "path": "/api/sales/confirmed",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "GET",
-      "path": "/api/sales/pending",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "POST",
-      "path": "/api/settings/refresh",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "GET",
-      "path": "/api/stats",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
+      "path": "/",
+      "guards": [],
+      "services": [],
+      "tables": [],
+      "rpcs": [],
+      "auth": [],
+      "http": []
     },
     {
       "method": "GET",
       "path": "/api/status",
       "guards": [],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "POST",
-      "path": "/api/test/push",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
+      "services": [],
+      "tables": [],
+      "rpcs": [],
+      "auth": [],
+      "http": []
     },
     {
       "method": "GET",
-      "path": "/api/wallet",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
-      ],
-      "file": "backend/server.js"
+      "path": "/healthz",
+      "guards": [],
+      "services": [],
+      "tables": [],
+      "rpcs": [],
+      "auth": [],
+      "http": []
     },
     {
       "method": "POST",
-      "path": "/api/whatsapp/disconnect",
+      "path": "/webhook/evolution",
       "guards": [
-        "requireAuth",
-        "requireBusiness"
+        "webhookHandler"
       ],
-      "file": "backend/server.js"
+      "services": [
+        "webhookHandler"
+      ],
+      "tables": [],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/webhook/evolution/:secret",
+      "guards": [
+        "webhookHandler"
+      ],
+      "services": [
+        "webhookHandler"
+      ],
+      "tables": [],
+      "rpcs": [],
+      "auth": [],
+      "http": []
     },
     {
       "method": "POST",
@@ -242,16 +68,18 @@
         "requireBusiness",
         "rateLimitBusiness"
       ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "POST",
-      "path": "/api/whatsapp/send",
-      "guards": [
-        "requireAuth",
-        "requireBusiness"
+      "services": [
+        "evolutionClient"
       ],
-      "file": "backend/server.js"
+      "tables": [
+        {
+          "table": "whatsapp_connections",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
     },
     {
       "method": "GET",
@@ -260,66 +88,1137 @@
         "requireAuth",
         "requireBusiness"
       ],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "GET",
-      "path": "/",
-      "guards": [],
-      "file": "backend/server.js"
-    },
-    {
-      "method": "GET",
-      "path": "/healthz",
-      "guards": [],
-      "file": "backend/server.js"
+      "services": [
+        "evolutionClient"
+      ],
+      "tables": [
+        {
+          "table": "whatsapp_connections",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
     },
     {
       "method": "POST",
-      "path": "/webhook/evolution/:secret",
+      "path": "/api/whatsapp/send",
       "guards": [
-        "webhookHandler"
+        "requireAuth",
+        "requireBusiness"
       ],
-      "file": "backend/server.js"
+      "services": [
+        "evolutionClient"
+      ],
+      "tables": [
+        {
+          "table": "conversations",
+          "op": "read"
+        },
+        {
+          "table": "messages",
+          "op": "write"
+        },
+        {
+          "table": "conversations",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
     },
     {
       "method": "POST",
-      "path": "/webhook/evolution",
+      "path": "/api/whatsapp/disconnect",
       "guards": [
-        "webhookHandler"
+        "requireAuth",
+        "requireBusiness"
       ],
-      "file": "backend/server.js"
+      "services": [
+        "evolutionClient"
+      ],
+      "tables": [],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/test/push",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "business_config",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": [
+        "expo"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/ai/pause",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [
+        "llm"
+      ],
+      "tables": [
+        {
+          "table": "business_config",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/ai/resume",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [
+        "llm"
+      ],
+      "tables": [
+        {
+          "table": "business_config",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/settings/refresh",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [
+        "llm"
+      ],
+      "tables": [],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/message-count",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "message_count_realtime",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/ai-accuracy",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "ai_accuracy_metrics",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/recent-conversations",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "conversations",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/budget",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "budget_tracking",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/stats",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "daily_stats",
+          "op": "read"
+        },
+        {
+          "table": "budget_tracking",
+          "op": "read"
+        },
+        {
+          "table": "response_time_metrics",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/signup",
+      "guards": [
+        "validateBody"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "businesses",
+          "op": "write"
+        },
+        {
+          "table": "user_profiles",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [
+        "signUp"
+      ],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/create-business",
+      "guards": [
+        "requireAuth"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "businesses",
+          "op": "read"
+        },
+        {
+          "table": "businesses",
+          "op": "write"
+        },
+        {
+          "table": "business_config",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/account/delete",
+      "guards": [
+        "requireAuth"
+      ],
+      "services": [
+        "evolutionClient"
+      ],
+      "tables": [
+        {
+          "table": "businesses",
+          "op": "read"
+        },
+        {
+          "table": "businesses",
+          "op": "write"
+        },
+        {
+          "table": "user_profiles",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [
+        "admin.deleteUser"
+      ],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "guards": [
+        "validateBody"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "businesses",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [
+        "signInWithPassword"
+      ],
+      "http": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "guards": [
+        "requireAuth"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "user_profiles",
+          "op": "read"
+        },
+        {
+          "table": "businesses",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/sales/pending",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "pending_sales",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/sales/confirmed",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "pending_sales",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/sales/:id/confirm",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [
+        "routingEngine",
+        "itemsForDecrement"
+      ],
+      "tables": [
+        {
+          "table": "pending_sales",
+          "op": "read"
+        },
+        {
+          "table": "pending_sales",
+          "op": "write"
+        },
+        {
+          "table": "conversations",
+          "op": "write"
+        },
+        {
+          "table": "business_config",
+          "op": "read"
+        },
+        {
+          "table": "products",
+          "op": "read"
+        }
+      ],
+      "rpcs": [
+        "decrement_product_stock"
+      ],
+      "auth": [],
+      "http": [
+        "expo"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/products/import",
+      "guards": [
+        "requireAuth",
+        "requireBusiness",
+        "rateLimitBusiness",
+        "importUpload"
+      ],
+      "services": [],
+      "tables": [],
+      "rpcs": [],
+      "auth": [],
+      "http": [
+        "anthropic"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/routing-rules",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "routing_rules",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/routing-rules/:id",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "routing_rules",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/routing-rules/:id",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "routing_rules",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/conversations/:id/archive",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "conversations",
+          "op": "read"
+        },
+        {
+          "table": "conversations",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/conversations/:id/smart-replies",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [
+        "llm"
+      ],
+      "tables": [
+        {
+          "table": "conversations",
+          "op": "read"
+        },
+        {
+          "table": "messages",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/wallet",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "wallets",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    }
+  ],
+  "services": [
+    {
+      "name": "evolution-api.client.js",
+      "purpose": "Evolution API Client",
+      "exports": [
+        "createInstance",
+        "startConnection",
+        "getConnectionState",
+        "disconnectInstance",
+        "deleteInstance",
+        "listInstances",
+        "setWebhook",
+        "sendText",
+        "sendTyping",
+        "downloadMedia"
+      ],
+      "requires": [],
+      "di": [],
+      "tables": [],
+      "rpcs": [],
+      "http": []
+    },
+    {
+      "name": "evolution-webhook.handler.js",
+      "purpose": "Evolution API Webhook Handler",
+      "exports": [
+        "createEvolutionWebhookHandler"
+      ],
+      "requires": [
+        "evolution-api.client.js"
+      ],
+      "di": [],
+      "tables": [
+        {
+          "table": "whatsapp_connections",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "http": []
+    },
+    {
+      "name": "file-parser.js",
+      "purpose": "File Parser Service",
+      "exports": [
+        "FileParser"
+      ],
+      "requires": [],
+      "di": [],
+      "tables": [],
+      "rpcs": [],
+      "http": []
+    },
+    {
+      "name": "llm.service.js",
+      "purpose": "LLM Service — Multi-tier AI routing",
+      "exports": [
+        "LLMService"
+      ],
+      "requires": [
+        "sales.helpers.js"
+      ],
+      "di": [],
+      "tables": [
+        {
+          "table": "businesses",
+          "op": "read"
+        },
+        {
+          "table": "ai_behavior_settings",
+          "op": "read"
+        },
+        {
+          "table": "business_config",
+          "op": "read"
+        },
+        {
+          "table": "products",
+          "op": "read"
+        },
+        {
+          "table": "user_skills",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "http": [
+        "anthropic"
+      ]
+    },
+    {
+      "name": "message-pipeline.service.js",
+      "purpose": "Message Pipeline — Multi-tenant",
+      "exports": [
+        "MessagePipeline"
+      ],
+      "requires": [
+        "evolution-api.client.js",
+        "nova-rules.js",
+        "sales.helpers.js"
+      ],
+      "di": [
+        "token.service.js",
+        "llm.service.js"
+      ],
+      "tables": [
+        {
+          "table": "business_config",
+          "op": "read"
+        },
+        {
+          "table": "conversations",
+          "op": "read"
+        },
+        {
+          "table": "conversations",
+          "op": "write"
+        },
+        {
+          "table": "messages",
+          "op": "read"
+        },
+        {
+          "table": "pending_sales",
+          "op": "read"
+        },
+        {
+          "table": "pending_sales",
+          "op": "write"
+        },
+        {
+          "table": "messages",
+          "op": "write"
+        },
+        {
+          "table": "response_time_metrics",
+          "op": "write"
+        },
+        {
+          "table": "ai_accuracy_metrics",
+          "op": "write"
+        },
+        {
+          "table": "conversation_state",
+          "op": "write"
+        }
+      ],
+      "rpcs": [
+        "increment_message_count",
+        "increment_budget"
+      ],
+      "http": [
+        "expo"
+      ]
+    },
+    {
+      "name": "nova-rules.js",
+      "purpose": "Nova rule layer — pure, dependency-free helpers shared by the message",
+      "exports": [
+        "parseNovaOutput",
+        "enforceRules",
+        "detectForcedHandoff",
+        "HANDOFF_REASON_LABELS"
+      ],
+      "requires": [],
+      "di": [],
+      "tables": [],
+      "rpcs": [],
+      "http": []
+    },
+    {
+      "name": "routing-engine.service.js",
+      "purpose": "Routing engine (Feature 3): fires Sales+Teams routing rules by sending",
+      "exports": [
+        "RoutingEngine"
+      ],
+      "requires": [
+        "evolution-api.client.js"
+      ],
+      "di": [],
+      "tables": [
+        {
+          "table": "routing_rules",
+          "op": "read"
+        },
+        {
+          "table": "team_members",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "http": []
+    },
+    {
+      "name": "sales.helpers.js",
+      "purpose": "Sale line-item helpers — pure, dependency-free; shared by the message",
+      "exports": [
+        "normalizeDetectedItems",
+        "clampQty",
+        "resolveItems",
+        "summarizeItems",
+        "itemsForDecrement"
+      ],
+      "requires": [],
+      "di": [],
+      "tables": [],
+      "rpcs": [],
+      "http": []
+    },
+    {
+      "name": "token.service.js",
+      "purpose": "Token billing service — Phase 1 (core metering + free tier).",
+      "exports": [
+        "TokenService"
+      ],
+      "requires": [],
+      "di": [],
+      "tables": [
+        {
+          "table": "token_config",
+          "op": "read"
+        },
+        {
+          "table": "vendor_token_state",
+          "op": "read"
+        },
+        {
+          "table": "vendor_token_state",
+          "op": "write"
+        },
+        {
+          "table": "token_ledger",
+          "op": "read"
+        },
+        {
+          "table": "conversations",
+          "op": "read"
+        },
+        {
+          "table": "token_ledger",
+          "op": "write"
+        },
+        {
+          "table": "conversations",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "http": []
     }
   ],
   "schema": {
-    "tables": [
-      "ai_accuracy_metrics",
-      "ai_behavior_settings",
-      "ai_tone_metrics",
-      "budget_tracking",
-      "conversation_state",
-      "customer_satisfaction",
-      "frequently_asked_questions",
-      "heartbeat_logs",
-      "human_interventions",
-      "inventory_imports",
-      "lead_reminders",
-      "message_count_realtime",
-      "response_time_metrics",
-      "routing_rules",
-      "sales_records",
-      "skills",
-      "subscriptions",
-      "token_config",
-      "token_ledger",
-      "user_profiles",
-      "user_skills",
-      "vendor_token_state",
-      "wallet_transactions",
-      "wallet_withdrawal_accounts",
-      "wallets",
-      "weekly_reports"
-    ],
+    "tables": {
+      "user_profiles": [
+        "id",
+        "user_id",
+        "email",
+        "full_name",
+        "phone_number",
+        "avatar_url",
+        "created_at",
+        "updated_at"
+      ],
+      "subscriptions": [
+        "id",
+        "business_id",
+        "tier",
+        "status",
+        "ai_responses_limit",
+        "ai_responses_used",
+        "products_limit",
+        "skills_limit",
+        "started_at",
+        "expires_at",
+        "created_at"
+      ],
+      "ai_behavior_settings": [
+        "id",
+        "business_id",
+        "tone",
+        "language",
+        "use_emojis",
+        "response_style",
+        "max_response_words",
+        "use_pidgin",
+        "business_hours",
+        "out_of_hours_message",
+        "created_at",
+        "updated_at"
+      ],
+      "ai_tone_metrics": [
+        "id",
+        "business_id",
+        "message_id",
+        "tone_detected",
+        "sentiment",
+        "politeness_score",
+        "formality_score",
+        "created_at"
+      ],
+      "frequently_asked_questions": [
+        "id",
+        "business_id",
+        "question_normalized",
+        "question_examples",
+        "frequency_count",
+        "cascade_status",
+        "trigger_phrases",
+        "response_template",
+        "fallback_response",
+        "required_db_lookup",
+        "confidence_threshold",
+        "proposed_by",
+        "validated_by",
+        "hit_count",
+        "escalation_count",
+        "accuracy_score",
+        "deployed_at",
+        "last_audit_at",
+        "created_at",
+        "updated_at"
+      ],
+      "budget_tracking": [
+        "id",
+        "business_id",
+        "date",
+        "tokens_used",
+        "cost_usd",
+        "ollama_messages",
+        "haiku_messages",
+        "sonnet_messages",
+        "tier_breakdown",
+        "created_at"
+      ],
+      "lead_reminders": [
+        "id",
+        "business_id",
+        "conversation_id",
+        "reminder_type",
+        "scheduled_at",
+        "sent",
+        "sent_at",
+        "message",
+        "created_at"
+      ],
+      "inventory_imports": [
+        "id",
+        "business_id",
+        "file_name",
+        "file_type",
+        "total_rows",
+        "successful_rows",
+        "failed_rows",
+        "error_log",
+        "status",
+        "created_at"
+      ],
+      "heartbeat_logs": [
+        "id",
+        "service",
+        "status",
+        "details",
+        "created_at"
+      ],
+      "weekly_reports": [
+        "id",
+        "business_id",
+        "report_type",
+        "report_data",
+        "week_start",
+        "week_end",
+        "created_at"
+      ],
+      "messages": [
+        "handled_by",
+        "routed_to",
+        "classification_tier",
+        "confidence_score",
+        "cost_usd"
+      ],
+      "conversations": [
+        "resolved",
+        "resolved_at",
+        "ai_handled",
+        "pipeline_tag",
+        "pipeline_tag_source",
+        "pipeline_tag_updated_at",
+        "pipeline_stage",
+        "archived_at",
+        "archived_by",
+        "nova_message_count",
+        "tokens_charged",
+        "last_nova_charge_at",
+        "billing_session_started_at"
+      ],
+      "businesses": [
+        "subscription_tier",
+        "owner_user_id"
+      ],
+      "message_count_realtime": [
+        "last_reset_date",
+        "business_id",
+        "today_count",
+        "week_count",
+        "month_count",
+        "all_time_count",
+        "last_message_at",
+        "updated_at"
+      ],
+      "business_config": [
+        "industry",
+        "location",
+        "description"
+      ],
+      "wallets": [
+        "id",
+        "business_id",
+        "paystack_subaccount_code",
+        "paystack_subaccount_id",
+        "bank_name",
+        "bank_code",
+        "account_number",
+        "account_name",
+        "status",
+        "created_at",
+        "updated_at"
+      ],
+      "wallet_transactions": [
+        "id",
+        "business_id",
+        "wallet_id",
+        "paystack_reference",
+        "paystack_transfer_code",
+        "type",
+        "amount_kobo",
+        "status",
+        "description",
+        "customer_phone",
+        "pending_sale_id",
+        "metadata",
+        "created_at",
+        "updated_at"
+      ],
+      "wallet_withdrawal_accounts": [
+        "id",
+        "business_id",
+        "paystack_recipient_code",
+        "bank_code",
+        "account_number",
+        "account_name",
+        "bank_name",
+        "created_at"
+      ],
+      "conversation_state": [
+        "conversation_id",
+        "business_id",
+        "turn_count",
+        "greeted",
+        "deferred_count",
+        "close_attempted",
+        "consecutive_angry_turns",
+        "customer_language",
+        "updated_at",
+        "abuse_count"
+      ],
+      "products": [
+        "sizes",
+        "colors"
+      ],
+      "routing_rules": [
+        "id",
+        "business_id",
+        "event",
+        "target",
+        "template",
+        "enabled",
+        "created_at",
+        "updated_at"
+      ],
+      "vendor_token_state": [
+        "business_id",
+        "free_tokens_remaining",
+        "free_tokens_reset_at",
+        "rolled_free_tokens",
+        "rollover_enabled",
+        "rollover_expires_at",
+        "bonus_tokens",
+        "purchased_tokens",
+        "updated_at"
+      ],
+      "token_ledger": [
+        "id",
+        "business_id",
+        "delta",
+        "bucket",
+        "reason",
+        "conversation_id",
+        "charge_key",
+        "cost_naira",
+        "created_at"
+      ],
+      "token_config": [
+        "id",
+        "sell_price_per_token",
+        "base_tokens_per_customer",
+        "extra_tokens_per_message",
+        "free_tokens_per_day",
+        "conversation_timeout_hours",
+        "max_rollover_tokens",
+        "enforcement_enabled",
+        "updated_at"
+      ],
+      "pending_sales": [
+        "items"
+      ],
+      "ai_accuracy_metrics": [
+        "id",
+        "business_id",
+        "message_id",
+        "response_approved",
+        "user_edited",
+        "created_at"
+      ],
+      "skills": [
+        "id",
+        "description",
+        "config_template",
+        "created_at"
+      ],
+      "user_skills": [
+        "id",
+        "business_id",
+        "skill_id",
+        "is_active",
+        "config",
+        "usage_count",
+        "last_used_at",
+        "created_at"
+      ],
+      "sales_records": [
+        "id",
+        "business_id",
+        "conversation_id",
+        "product_id",
+        "quantity",
+        "sale_date",
+        "created_at"
+      ],
+      "response_time_metrics": [
+        "id",
+        "business_id",
+        "message_id",
+        "time_to_first_response",
+        "time_to_resolution",
+        "created_at"
+      ],
+      "customer_satisfaction": [
+        "id",
+        "business_id",
+        "conversation_id",
+        "rating",
+        "feedback",
+        "created_at"
+      ],
+      "human_interventions": [
+        "id",
+        "business_id",
+        "conversation_id",
+        "reason",
+        "created_at"
+      ]
+    },
     "rlsEnabled": [
       "ai_accuracy_metrics",
       "ai_behavior_settings",
@@ -366,106 +1265,231 @@
       "increment_message_count",
       "protect_business_columns"
     ],
-    "policyCounts": {
-      "businesses": 1,
-      "business_config": 1,
-      "products": 1,
-      "conversations": 1,
-      "messages": 1,
-      "daily_stats": 1,
-      "pending_sales": 2,
-      "confirmed_sales": 2,
-      "team_members": 1,
-      "ai_accuracy_metrics": 1,
-      "skills": 2,
-      "user_skills": 1,
-      "sales_records": 1,
-      "response_time_metrics": 1,
-      "customer_satisfaction": 1,
-      "human_interventions": 1,
-      "whatsapp_connections": 1,
-      "wallets": 1,
-      "wallet_transactions": 1,
-      "wallet_withdrawal_accounts": 1,
-      "conversation_state": 1,
-      "routing_rules": 1,
-      "vendor_token_state": 1,
-      "token_ledger": 1,
-      "token_config": 1
-    }
-  },
-  "services": [
-    {
-      "name": "evolution-api.client.js",
-      "purpose": "Evolution API Client"
-    },
-    {
-      "name": "evolution-webhook.handler.js",
-      "purpose": "Evolution API Webhook Handler"
-    },
-    {
-      "name": "file-parser.js",
-      "purpose": "File Parser Service"
-    },
-    {
-      "name": "llm.service.js",
-      "purpose": "LLM Service — Multi-tier AI routing"
-    },
-    {
-      "name": "message-pipeline.service.js",
-      "purpose": "Message Pipeline — Multi-tenant"
-    },
-    {
-      "name": "nova-rules.js",
-      "purpose": "Nova rule layer — pure, dependency-free helpers shared by the message"
-    },
-    {
-      "name": "routing-engine.service.js",
-      "purpose": "Routing engine (Feature 3): fires Sales+Teams routing rules by sending"
-    },
-    {
-      "name": "sales.helpers.js",
-      "purpose": "Sale line-item helpers — pure, dependency-free; shared by the message"
-    },
-    {
-      "name": "token.service.js",
-      "purpose": "Token billing service — Phase 1 (core metering + free tier)."
-    }
-  ],
-  "screens": {
-    "auth": [
-      "(auth)/index",
-      "(auth)/login",
-      "(auth)/signup",
-      "(auth)/verify"
-    ],
-    "onboarding": [
-      "(onboarding)/activate-skill",
-      "(onboarding)/add-product",
-      "(onboarding)/complete",
-      "(onboarding)/configure-nova",
-      "(onboarding)/index",
-      "(onboarding)/setup",
-      "(onboarding)/whatsapp-info"
-    ],
-    "product": [
-      "(product)/import",
-      "(product)/new"
-    ],
-    "tabs": [
-      "(tabs)/admins",
-      "(tabs)/analytics",
-      "(tabs)/chats",
-      "(tabs)/dashboard",
-      "(tabs)/index",
-      "(tabs)/inventory",
-      "(tabs)/sales",
-      "(tabs)/settings",
-      "(tabs)/skills",
-      "(tabs)/wallet"
-    ],
-    "welcome": [
-      "(welcome)/index"
+    "policies": [
+      {
+        "name": "Allow all for now",
+        "table": "public"
+      },
+      {
+        "name": "owner only",
+        "table": "businesses"
+      },
+      {
+        "name": "owner only",
+        "table": "business_config"
+      },
+      {
+        "name": "owner only",
+        "table": "products"
+      },
+      {
+        "name": "owner only",
+        "table": "conversations"
+      },
+      {
+        "name": "owner only",
+        "table": "messages"
+      },
+      {
+        "name": "owner only",
+        "table": "daily_stats"
+      },
+      {
+        "name": "owner only",
+        "table": "pending_sales"
+      },
+      {
+        "name": "owner only",
+        "table": "confirmed_sales"
+      },
+      {
+        "name": "owner only",
+        "table": "team_members"
+      },
+      {
+        "name": "owner only",
+        "table": "ai_accuracy_metrics"
+      },
+      {
+        "name": "read only",
+        "table": "skills"
+      },
+      {
+        "name": "owner only",
+        "table": "user_skills"
+      },
+      {
+        "name": "owner only",
+        "table": "sales_records"
+      },
+      {
+        "name": "owner only",
+        "table": "response_time_metrics"
+      },
+      {
+        "name": "owner only",
+        "table": "customer_satisfaction"
+      },
+      {
+        "name": "owner only",
+        "table": "human_interventions"
+      },
+      {
+        "name": "owner only",
+        "table": "whatsapp_connections"
+      },
+      {
+        "name": "owner only",
+        "table": "wallets"
+      },
+      {
+        "name": "owner only",
+        "table": "wallet_transactions"
+      },
+      {
+        "name": "owner only",
+        "table": "wallet_withdrawal_accounts"
+      },
+      {
+        "name": "Business owners can read their conversation state",
+        "table": "conversation_state"
+      },
+      {
+        "name": "owner only",
+        "table": "routing_rules"
+      },
+      {
+        "name": "read catalog",
+        "table": "skills"
+      },
+      {
+        "name": "owner read",
+        "table": "vendor_token_state"
+      },
+      {
+        "name": "owner read",
+        "table": "token_ledger"
+      },
+      {
+        "name": "read only",
+        "table": "token_config"
+      },
+      {
+        "name": "owner read",
+        "table": "pending_sales"
+      },
+      {
+        "name": "owner read",
+        "table": "confirmed_sales"
+      }
     ]
-  }
+  },
+  "env": [
+    "PORT",
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_KEY",
+    "SUPABASE_DB_URI",
+    "ANTHROPIC_API_KEY",
+    "EVOLUTION_API_URL",
+    "EVOLUTION_API_KEY",
+    "EVOLUTION_WEBHOOK_SECRET",
+    "WEBHOOK_BASE_URL",
+    "ALLOWED_ORIGINS",
+    "EXPO_PUBLIC_CLAWDBOT_URL",
+    "EXPO_PUBLIC_SUPABASE_URL",
+    "EXPO_PUBLIC_SUPABASE_ANON_KEY"
+  ],
+  "screens": [
+    {
+      "file": "app/(onboarding)/setup.tsx",
+      "routes": [
+        "POST /api/whatsapp/pairing-code",
+        "GET /api/whatsapp/status",
+        "POST /api/auth/create-business"
+      ]
+    },
+    {
+      "file": "app/(product)/import.tsx",
+      "routes": [
+        "POST /api/products/import"
+      ]
+    },
+    {
+      "file": "app/(tabs)/chats.tsx",
+      "routes": [
+        "PATCH /api/conversations/:_/archive",
+        "POST /api/whatsapp/send"
+      ]
+    },
+    {
+      "file": "app/(tabs)/sales.tsx",
+      "routes": [
+        "POST /api/routing-rules",
+        "PATCH /api/routing-rules/:_",
+        "DELETE /api/routing-rules/:_"
+      ]
+    },
+    {
+      "file": "app/(tabs)/settings.tsx",
+      "routes": [
+        "POST /api/settings/refresh",
+        "GET /api/whatsapp/status",
+        "POST /api/whatsapp/pairing-code",
+        "POST /api/whatsapp/disconnect",
+        "POST /api/tokens/purchase/init",
+        "POST /api/account/delete"
+      ]
+    },
+    {
+      "file": "app/(tabs)/wallet.tsx",
+      "routes": [
+        "GET /api/wallet",
+        "POST /api/wallet/withdraw"
+      ]
+    },
+    {
+      "file": "src/components/chats/SmartReplyStrip.tsx",
+      "routes": [
+        "POST /api/conversations/:_/smart-replies"
+      ]
+    },
+    {
+      "file": "src/components/sales/PendingDetailSheet.tsx",
+      "routes": [
+        "POST /api/sales/:_/confirm"
+      ]
+    },
+    {
+      "file": "src/components/sales/TeamPickerSheet.tsx",
+      "routes": [
+        "POST /api/whatsapp/send"
+      ]
+    },
+    {
+      "file": "src/context/AppContext.tsx",
+      "routes": [
+        "POST /api/ai/resume",
+        "POST /api/ai/pause"
+      ]
+    },
+    {
+      "file": "src/hooks/useClawdbotMessages.ts",
+      "routes": [
+        "GET /api/whatsapp/status"
+      ]
+    },
+    {
+      "file": "src/hooks/useDashboard.ts",
+      "routes": [
+        "POST /api/sales/:_/confirm"
+      ]
+    },
+    {
+      "file": "src/hooks/useSales.ts",
+      "routes": [
+        "POST /api/sales/:_/confirm"
+      ]
+    }
+  ]
 }
