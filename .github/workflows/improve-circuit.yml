@@ -22,6 +22,7 @@ on:
 permissions:
   contents: write          # to push the agent's branch (NOT main — protect main in repo settings)
   pull-requests: write     # to open the PR
+  id-token: write          # required by claude-code-action for its own OIDC auth
 
 concurrency:
   group: improve-circuit
