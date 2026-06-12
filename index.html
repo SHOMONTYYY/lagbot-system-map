@@ -972,7 +972,8 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
   <h3>Ask the Circuit to change itself</h3>
   <div class="note" style="margin-top:6px;margin-bottom:10px">Describe a change to <b>this app's own code</b> (a new button, a fix, a tweak). A sandboxed coding agent makes it and opens a <b>pull request</b> — nothing goes live until your team reviews and <b>merges</b> it. That merge is the approval.</div>
   <textarea id="improveText" rows="4" placeholder="e.g. Add a button that exports the change log as CSV" style="width:100%;background:var(--pane2);border:1px solid var(--line);border-radius:8px;color:var(--cream);padding:10px;font-family:inherit;font-size:12px;resize:vertical"></textarea>
-  <div class="btnrow" style="margin-top:10px"><button class="pbtn accent" id="improveSend" style="padding:11px">⟐ Draft a pull request</button></div>
+  <input id="improveCode" type="password" placeholder="Maintainer code" autocomplete="off" style="width:100%;margin-top:8px;background:var(--pane2);border:1px solid var(--line);border-radius:8px;color:var(--cream);padding:9px;font-family:inherit;font-size:12px">
+  <div class="btnrow" style="margin-top:10px"><button class="pbtn accent" id="improveSend" style="padding:11px">⟐ Draft &amp; merge a pull request</button></div>
   <div id="improveStatus" class="note" style="margin-top:10px"></div>
 </div>
 
@@ -4728,7 +4729,7 @@ $("improveSend").onclick=async ()=>{
   if(instruction.length<8){ $("improveStatus").style.color="var(--warn)"; $("improveStatus").textContent="Describe the change in a bit more detail."; return; }
   $("improveSend").disabled=true; $("improveStatus").style.color="var(--mute)"; $("improveStatus").textContent="Sending to the coding agent…";
   try{
-    const r=await fetch("/api/improve",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({instruction,author:editorNameQuiet()})});
+    const r=await fetch("/api/improve",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({instruction,author:editorNameQuiet(),code:$("improveCode").value})});
     const j=await r.json().catch(()=>({}));
     if(r.ok){ $("improveStatus").style.color="var(--svc)"; $("improveStatus").textContent=j.message||"On it — a pull request is being drafted."; $("improveText").value=""; }
     else { $("improveStatus").style.color="var(--warn)"; $("improveStatus").textContent=j.error||`Couldn't start (HTTP ${r.status}).`; }

@@ -19,6 +19,11 @@ export default async function handler(req, res) {
   if (!token) return res.status(503).json({ error: "Not set up yet — add the GH_DISPATCH_TOKEN env var (see tools/README.md)." });
 
   const body = typeof req.body === "string" ? safeJson(req.body) : (req.body || {});
+  // mandatory maintainer code — fail CLOSED. Because a triggered change can
+  // auto-merge + deploy, the public trigger must never work without this.
+  const code = process.env.MAINTAINER_CODE;
+  if (!code) return res.status(503).json({ error: "Not set up yet — set the MAINTAINER_CODE env var to enable the in-app trigger." });
+  if (String(body.code || "") !== code) return res.status(401).json({ error: "Wrong or missing maintainer code." });
   const instruction = String(body.instruction || "").trim();
   const author = String(body.author || "Someone").trim().slice(0, 40);
   if (instruction.length < 8) return res.status(400).json({ error: "Describe the change in a bit more detail." });

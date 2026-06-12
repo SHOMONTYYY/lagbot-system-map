@@ -62,6 +62,7 @@ jobs:
               a later trusted step does that. Do NOT merge anything.
 
       - name: Open a PR from the agent's edits (trusted; agent can't influence)
+        id: pr
         env:
           GH_TOKEN: ${{ github.token }}
           INSTRUCTION: ${{ github.event.client_payload.instruction }}${{ inputs.instruction }}
@@ -90,3 +91,31 @@ jobs:
             printf 'Request:\n\n> '; printf '%s\n\n' "$INSTRUCTION";
             printf 'The agent ran sandboxed (no shell, no network). Review the diff and merge to deploy.\n'; } > /tmp/pr-body.md
           gh pr create --base main --head "$BR" --title "⟐ Improve the Circuit" --body-file /tmp/pr-body.md
+          echo "pr_opened=true" >> "$GITHUB_OUTPUT"
+          echo "branch=$BR" >> "$GITHUB_OUTPUT"
+
+      - name: Auto-merge the PR (set repo variable AUTO_MERGE=false to disable)
+        if: steps.pr.outputs.pr_opened == 'true' && vars.AUTO_MERGE != 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BR="${{ steps.pr.outputs.branch }}"
+          ok=""
+          for i in 1 2 3 4 5 6; do
+            if gh pr merge "$BR" --squash --delete-branch; then ok=1; break; fi
+            echo "PR not mergeable yet — retrying in 5s…"; sleep 5
+          done
+          [ -n "$ok" ] || { echo "::error::Auto-merge did not complete."; exit 1; }
+
+      - name: Deploy the merged change to Vercel
+        if: steps.pr.outputs.pr_opened == 'true' && vars.AUTO_MERGE != 'false'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: team_cjM1iUKNeACcTqQRoUzL4GI0
+          VERCEL_PROJECT_ID: prj_s7VHeKw12A4Q1lx0DBrPKb7ZSZvV
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then echo "::warning::Merged, but VERCEL_TOKEN not set — not deployed."; exit 0; fi
+          git fetch origin main -q && git checkout main && git pull --ff-only origin main
+          npm i -g vercel@latest
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel deploy --prod --token="$VERCEL_TOKEN"
