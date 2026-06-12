@@ -1,10 +1,10 @@
 name: Improve the Circuit
 
-# Fired by /api/improve (repository_dispatch). Runs a SANDBOXED coding agent
-# that edits the MAP app (index.html / api / tools / docs) and opens a Pull
-# Request for the team to review and merge. It NEVER merges, has NO access to
-# the Lagbot codebase, and is restricted to file-editing tools (no shell, no
-# network) so it cannot read or exfiltrate secrets.
+# Fired by /api/improve (repository_dispatch). A SANDBOXED coding agent edits
+# the MAP app's files (no shell, no network — so it cannot read or exfiltrate
+# secrets), then a SEPARATE trusted step the agent can't influence commits the
+# edits and opens a Pull Request. It never merges; a human merges. No access to
+# the Lagbot codebase.
 
 on:
   repository_dispatch:
@@ -36,12 +36,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run the sandboxed coding agent
+      - name: Agent edits files (sandboxed — no shell, no network)
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # file-editing tools ONLY — no Bash, no network — so the agent cannot
-          # read env secrets or send anything out. It can only edit repo files.
           claude_args: "--allowedTools Edit,Read,Write,Glob,Grep --disallowedTools Bash,WebFetch,WebSearch"
           prompt: |
             You are improving "Circuit", a single-file web app (index.html) with
@@ -53,13 +51,41 @@ jobs:
             ----
 
             Rules:
-            - Keep it minimal and focused on exactly what was asked; match the
-              existing terse code style.
+            - Keep it minimal and focused; match the existing terse code style.
             - You may edit index.html, files under api/ (except api/improve.js),
               docs/, and tools/ EXCEPT tools/sync-from-code.mjs.
-            - NEVER edit: any .github/** file, api/improve.js,
-              tools/sync-from-code.mjs, or team-config*. NEVER add code that
-              writes to or calls the Lagbot codebase, and never weaken a secret
-              scanner or a read-only guarantee.
-            - Open a Pull Request with a clear title and a summary of what and
-              why. DO NOT merge — a human reviews and merges.
+            - NEVER edit any .github/** file, api/improve.js,
+              tools/sync-from-code.mjs, or team-config*. Never add code that
+              writes to/calls the Lagbot codebase, and never weaken a secret
+              scanner or read-only guarantee.
+            - Just make the file edits. You do NOT need to commit or open a PR —
+              a later trusted step does that. Do NOT merge anything.
+
+      - name: Open a PR from the agent's edits (trusted; agent can't influence)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INSTRUCTION: ${{ github.event.client_payload.instruction }}${{ inputs.instruction }}
+          AUTHOR: ${{ github.event.client_payload.author }}${{ inputs.author }}
+        run: |
+          set -e
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "The agent made no file changes — nothing to open."
+            exit 0
+          fi
+          # protected-paths guard: never let an agent edit reach these
+          if git status --porcelain | awk '{print $2}' | grep -E '^(\.github/|api/improve\.js|tools/sync-from-code\.mjs|team-config)'; then
+            echo "::error::Agent touched a protected path — refusing to open a PR."
+            exit 1
+          fi
+          BR="claude/improve-${{ github.run_id }}"
+          git config user.name  "lagbot-map-bot"
+          git config user.email "actions@github.com"
+          git checkout -b "$BR"
+          git add -A
+          git commit -m "⟐ Improve the Circuit (requested by ${AUTHOR})"
+          git push origin "$BR"
+          # body via file so the instruction is never on a shell command line
+          { printf 'Autonomous change requested via ⟐ Improve by **%s**.\n\n' "$AUTHOR";
+            printf 'Request:\n\n> '; printf '%s\n\n' "$INSTRUCTION";
+            printf 'The agent ran sandboxed (no shell, no network). Review the diff and merge to deploy.\n'; } > /tmp/pr-body.md
+          gh pr create --base main --head "$BR" --title "⟐ Improve the Circuit" --body-file /tmp/pr-body.md
