@@ -2840,6 +2840,21 @@ function panelAddNode(){
   };
   $("aCancel").onclick=()=>renderPanel();
 }
+/* confirm-free node removal for approved AI proposals (the proposal IS the consent) */
+function removeNodeSilent(id){
+  const n=nodeById(id); if(!n) return null;
+  state.nodes=state.nodes.filter(x=>x.id!==id);
+  state.edges=state.edges.filter(e=>e.from!==id&&e.to!==id);
+  Object.values(state.wireframes).forEach(wf=>{
+    Object.values(wf.screens||{}).forEach(sc=>(sc.rows||[]).forEach(row=>row.forEach(el=>{
+      if(Array.isArray(el.links)) el.links=el.links.filter(l=>l!==id);
+      if(el.nav&&el.nav.indexOf("page:"+id)===0) delete el.nav;
+    })));
+  });
+  delete state.wireframes[id];
+  if(curWF===id) closeDrawer();
+  return n.label;
+}
 function deleteNode(id){
   const n=nodeById(id); if(!n) return;
   if(!confirm(`Delete "${n.label}" and its connections?`)) return;
@@ -4014,7 +4029,24 @@ function renderProposals(props){
       made.push(pid);
       return;
     }
-    if(p.kind==="node"){
+    if(p.kind==="delete"){
+      let title="", warn="";
+      if(p.target){
+        const n=nodeById(p.target);
+        if(!n){ aiAppend("ai-prop done rejected",`<div class="ptag">Proposed removal</div><div class="ptitle">${esc(p.target)}</div><div class="pwarn">⚠ That node isn't on the map.</div><div class="preason">${esc(p.reason||"")}</div><div class="pstate" style="display:block;color:var(--danger)">Skipped</div>`); return; }
+        const ec=state.edges.filter(e=>e.from===p.target||e.to===p.target).length;
+        title=`Remove node “${esc(n.label)}”`; warn=ec?`<div class="pwarn">Also removes ${ec} connection${ec>1?"s":""}.</div>`:"";
+      } else {
+        const a=resolveNodeRef(p.from), b=resolveNodeRef(p.to);
+        const e=a&&b&&state.edges.find(x=>(x.from===a.id&&x.to===b.id)||(x.from===b.id&&x.to===a.id));
+        if(!e){ aiAppend("ai-prop done rejected",`<div class="ptag">Proposed removal</div><div class="ptitle">${esc(p.from||"?")} → ${esc(p.to||"?")}</div><div class="pwarn">⚠ No such connection on the map.</div><div class="preason">${esc(p.reason||"")}</div><div class="pstate" style="display:block;color:var(--danger)">Skipped</div>`); return; }
+        p._edgeId=e.id; title=`Remove line “${esc(a.label)} → ${esc(b.label)}”`;
+      }
+      inner=`<div class="ptag" style="color:var(--danger)">Proposed removal</div>
+        <div class="ptitle">${title}</div>
+        ${warn}
+        <div class="preason">${esc(p.reason||"")}</div>`;
+    } else if(p.kind==="node"){
       const lane=laneName(p.node.layer||"svc");
       inner=`<div class="ptag">Proposed new node</div>
         <div class="ptitle">${esc(p.node.label)}</div>
@@ -4086,6 +4118,22 @@ aiPanelEl.addEventListener("click",ev=>{
     card.classList.add("done"); card.querySelector(".pstate").textContent="Added to the wireframe ✓";
     openDrawer(p.page, p.screen, el.id);
     toast("Component added — autosaved");
+    return;
+  }
+  if(p.kind==="delete"){
+    if(p.target){
+      const lbl=removeNodeSilent(p.target);
+      if(!lbl){ card.classList.add("done","rejected"); card.querySelector(".pstate").textContent="Already gone"; return; }
+      logChange(`Approved AI suggestion: removed node "${lbl}" and its connections`);
+    } else {
+      const e=state.edges.find(x=>x.id===p._edgeId);
+      if(!e){ card.classList.add("done","rejected"); card.querySelector(".pstate").textContent="Already gone"; return; }
+      const a=nodeById(e.from), b=nodeById(e.to);
+      state.edges=state.edges.filter(x=>x.id!==p._edgeId);
+      logChange(`Approved AI suggestion: removed line ${a?a.label:e.from} → ${b?b.label:e.to}`);
+    }
+    selection=null; focus=null; rebuild(); renderPanel(); autosave();
+    card.classList.add("done"); card.querySelector(".pstate").textContent="Removed from the map ✓"; toast("Removed — autosaved");
     return;
   }
   if(p.kind==="node"){
@@ -4185,9 +4233,10 @@ const AI_SCHEMA={
     proposals:{type:"array", description:"0-4 proposed map additions. Empty array if none needed.", items:{
       type:"object", additionalProperties:false,
       properties:{
-        kind:{type:"string", enum:["edge","node","element","edit"]},
-        from:{type:"string", description:"edge only: exact node id; empty string otherwise"},
-        to:{type:"string", description:"edge only: exact node id; empty string otherwise"},
+        kind:{type:"string", enum:["edge","node","element","edit","delete"]},
+        from:{type:"string", description:"edge / delete-edge only: exact node id; empty string otherwise"},
+        to:{type:"string", description:"edge / delete-edge only: exact node id; empty string otherwise"},
+        delTarget:{type:"string", description:"delete only: exact id of an EXISTING node to remove (also removes its connections). To delete a connection instead, set from+to to its endpoints and leave this empty. Empty string for every other kind."},
         label:{type:"string", description:"edge: what flows on this line · element: short designer note; empty string otherwise"},
         status:{type:"string", enum:["active","planned","gap"]},
         reason:{type:"string", description:"why this helps, in plain English"},
@@ -4206,7 +4255,7 @@ const AI_SCHEMA={
         editOp:{type:"string", enum:["move_after","move_before","restyle","retext","relink","remove","none"], description:"edit only: move_after/move_before reorder it next to editRef · restyle changes its shape (elKind) · retext changes elText/elText2 · relink sets elLinks · remove deletes it"},
         editRef:{type:"string", description:"edit only: for move ops, the existing component id to move next to; empty otherwise"}
       },
-      required:["kind","from","to","label","status","reason","nodeLabel","nodeSub","nodeType","nodeLayer","elPage","elScreen","elAfter","elKind","elText","elText2","elLinks","editTarget","editOp","editRef"]
+      required:["kind","from","to","delTarget","label","status","reason","nodeLabel","nodeSub","nodeType","nodeLayer","elPage","elScreen","elAfter","elKind","elText","elText2","elLinks","editTarget","editOp","editRef"]
     }},
     actions:{type:"array", description:"0-3 visual actions that SHOW what your answer explains. The first one auto-plays.", items:{
       type:"object", additionalProperties:false,
@@ -4241,7 +4290,7 @@ async function askClaude(q){
     : textBlock;
   const body={
     model:aiModel(), max_tokens:5000,
-    system:AI_PERSONA+"\n\nReply via the JSON schema. 'answer' is for David. Proposals: use EXACT node ids in from/to. For kind 'node' fill nodeLabel/nodeSub/nodeType/nodeLayer. For kind 'element' (a new UI component on an app wireframe) fill elPage/elScreen/elAfter/elKind/elText/elText2/elLinks and put a short designer note in 'label' — reuse the wireframe kinds you can see in the map data, match the page's existing copy tone, place CTAs above the tab bar. You CAN now change existing components when asked, via kind 'edit': fill editTarget (the existing component id) + editOp (move_after / move_before / restyle / retext / relink / remove) + editRef (for moves, the component to move next to) and use elKind for restyle, elText/elText2 for retext, elLinks for relink. Only edit components the user asked you to change; never reshuffle a screen that already matches the code, and explain each edit in 'reason'. Every edit is still a proposal the user approves. CRITICAL — pages vs modals: screens marked ◍ MODAL are overlays (bottom sheets / confirm modals), not pages. Content that belongs to a modal goes on that modal's screen; content that belongs to the page goes on the page screen — never mix them (e.g. the token payment sheet is a modal AFTER tapping a pack, so payment UI never sits inline on the Tokens page). If the right modal screen doesn't exist yet, say so in 'answer' and place the trigger element on the page instead. Check the FRONTEND CODE NOTES for what is a modal in the real app. When a feature needs both backend and frontend, propose the FULL PACKAGE in one answer, backend first: node(s) → line(s) → element(s), and explain the flow in 'answer'. Use empty strings for fields that don't apply. Maximum 4 proposals; zero is fine. When the LIVE CODE FACTS reveal a real route/service/table/edge that the map is missing or has wrong, you MAY propose node/edge updates so the architecture map matches the real code — this stays read-only, the user approves every change and nothing is ever written back to the codebase.\n\nSEEING THE SCREEN — when a wireframe is open you are given the exact screen as currently rendered (a top-to-bottom component list, and often an image of it). Read it as what the user is looking at. Confirm every UI edit against it: reference real component ids that exist on that screen, keep the layout that already matches the code, and only change what the user pointed at.\n\nVISUAL SKILLS — alongside your words, return up to 3 'actions' that SHOW what you explain on the map (the first auto-plays): 'locate' a key node, 'highlight' a related set, 'open' a page's wireframe, or 'preview' a flow as an ordered list of node ids that animates step by step. Use EXACT node ids. When you describe how something flows, prefer a 'preview' action with the nodes in order. When you point at one thing, 'locate' it. Empty array if the answer is purely conversational.",
+    system:AI_PERSONA+"\n\nReply via the JSON schema. 'answer' is for David. Proposals: use EXACT node ids in from/to. For kind 'node' fill nodeLabel/nodeSub/nodeType/nodeLayer. For kind 'element' (a new UI component on an app wireframe) fill elPage/elScreen/elAfter/elKind/elText/elText2/elLinks and put a short designer note in 'label' — reuse the wireframe kinds you can see in the map data, match the page's existing copy tone, place CTAs above the tab bar. You CAN now change existing components when asked, via kind 'edit': fill editTarget (the existing component id) + editOp (move_after / move_before / restyle / retext / relink / remove) + editRef (for moves, the component to move next to) and use elKind for restyle, elText/elText2 for retext, elLinks for relink. Only edit components the user asked you to change; never reshuffle a screen that already matches the code, and explain each edit in 'reason'. Every edit is still a proposal the user approves. You can also REMOVE map elements via kind 'delete': set delTarget to an existing node id to delete that node and its connections, or set from+to (exact node ids) to delete just a connection. Only delete when the user asks, or when the LIVE CODE FACTS clearly show that node/edge's code no longer exists or has been replaced — be conservative; deletions are recoverable via restore points but don't guess. CRITICAL — pages vs modals: screens marked ◍ MODAL are overlays (bottom sheets / confirm modals), not pages. Content that belongs to a modal goes on that modal's screen; content that belongs to the page goes on the page screen — never mix them (e.g. the token payment sheet is a modal AFTER tapping a pack, so payment UI never sits inline on the Tokens page). If the right modal screen doesn't exist yet, say so in 'answer' and place the trigger element on the page instead. Check the FRONTEND CODE NOTES for what is a modal in the real app. When a feature needs both backend and frontend, propose the FULL PACKAGE in one answer, backend first: node(s) → line(s) → element(s), and explain the flow in 'answer'. Use empty strings for fields that don't apply. Maximum 4 proposals; zero is fine. When the LIVE CODE FACTS reveal a real route/service/table/edge that the map is missing or has wrong, you MAY propose node/edge updates so the architecture map matches the real code — this stays read-only, the user approves every change and nothing is ever written back to the codebase.\n\nSEEING THE SCREEN — when a wireframe is open you are given the exact screen as currently rendered (a top-to-bottom component list, and often an image of it). Read it as what the user is looking at. Confirm every UI edit against it: reference real component ids that exist on that screen, keep the layout that already matches the code, and only change what the user pointed at.\n\nVISUAL SKILLS — alongside your words, return up to 3 'actions' that SHOW what you explain on the map (the first auto-plays): 'locate' a key node, 'highlight' a related set, 'open' a page's wireframe, or 'preview' a flow as an ordered list of node ids that animates step by step. Use EXACT node ids. When you describe how something flows, prefer a 'preview' action with the nodes in order. When you point at one thing, 'locate' it. Empty array if the answer is purely conversational.",
     output_config:{format:{type:"json_schema", schema:AI_SCHEMA}},
     messages:[{role:"user", content}]
   };
@@ -4272,8 +4321,9 @@ async function askClaude(q){
     if(p.kind==="node") return {kind:"node", node:{label:p.nodeLabel||"New node", sub:p.nodeSub||"", type:p.nodeType||"service", layer:p.nodeLayer||"svc", status:(p.status&&p.status!=="active")?p.status:"planned"}, reason:p.reason||""};
     if(p.kind==="element") return {kind:"element", page:p.elPage, screen:p.elScreen, after:p.elAfter||"end", elKind:p.elKind||"card", t1:p.elText||"", t2:p.elText2||"", links:(p.elLinks||"").split(",").map(s=>s.trim()).filter(Boolean), label:p.label||p.elText||"New component", status:p.status||"planned", reason:p.reason||""};
     if(p.kind==="edit") return {kind:"edit", target:p.editTarget, op:p.editOp||"none", ref:p.editRef||"", elKind:p.elKind||"", t1:p.elText||"", t2:p.elText2||"", links:(p.elLinks||"").split(",").map(s=>s.trim()).filter(Boolean), reason:p.reason||""};
+    if(p.kind==="delete") return {kind:"delete", target:p.delTarget||"", from:p.from||"", to:p.to||"", reason:p.reason||""};
     return {kind:"edge", from:p.from, to:p.to, label:p.label||"", status:p.status||"planned", reason:p.reason||""};
-  }).filter(p=>p.kind!=="edit"||(p.op&&p.op!=="none"&&p.target));
+  }).filter(p=>(p.kind!=="edit"||(p.op&&p.op!=="none"&&p.target)) && (p.kind!=="delete"||p.target||(p.from&&p.to)));
   const actions=(obj.actions||[]).slice(0,3).map(a=>({
     type:a.type, nodes:(a.nodes||"").split(",").map(s=>s.trim()).filter(Boolean),
     page:a.page||"", screen:a.screen||"", label:a.label||a.type
@@ -4899,7 +4949,7 @@ $("btnCodeSync").onclick=()=>{
   if(!aiOn()){ toast("Updating from code needs the AI — it works on the hosted site, or add a key in ⚙","warn"); return; }
   if(aiBusy){ aiOpen(); return; }
   aiOpen();
-  aiInputEl.value="SYNC FROM CODE — compare every node and connection on this map against the LIVE CODE FACTS (the real Lagbot codebase) and propose the updates to bring the map in line with reality: add real routes / services / tables / screens the map is missing; if a node marked GAP or PLANNED is now actually implemented in the code, flip it to active; flag any node whose code no longer exists. Propose as many concrete updates as you can this pass. In your answer, say what's already in sync and how many more alignments remain so I can run this again.";
+  aiInputEl.value="SYNC FROM CODE — compare every node and connection on this map against the LIVE CODE FACTS (the real Lagbot codebase) and propose the updates to bring the map in line with reality: add real routes / services / tables / screens the map is missing; if a node marked GAP or PLANNED is now actually implemented in the code, flip it to active; and DELETE (kind 'delete') any node or connection whose code no longer exists or has clearly been replaced by something else in the code facts. Propose as many concrete updates as you can this pass. In your answer, say what's already in sync and how many more alignments remain so I can run this again.";
   codeSyncAuto=true; /* apply the proposals automatically — no review step */
   runAiAsk();
 };
