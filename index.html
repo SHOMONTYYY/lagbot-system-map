@@ -838,6 +838,7 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
     <button class="tbtn danger" id="btnReset" title="Reset to the original map">↺</button>
     <button class="tbtn" id="btnSync" title="Team sync via Supabase">☁ Sync</button>
     <button class="tbtn danger" id="btnHack" title="Hackathon — red-team self-audit of the architecture">⚔ Hackathon</button>
+    <button class="tbtn" id="btnCodeSync" title="Update the map from the real codebase — proposes node/path changes for you to approve">⟳ From code</button>
     <button class="tbtn" id="btnLog" title="Change log — who changed what">≡ Log</button>
     <button class="tbtn" id="btnImprove" title="Ask the Circuit to improve its own code — opens a pull request your team reviews">⟐ Improve</button>
     <button class="tbtn" id="btnHelp" title="Help">?</button>
@@ -4812,6 +4813,13 @@ async function buildWorkOrder(){
   const user=`Write the implementation work order for everything the team changed on the architecture map SINCE ${cutoff}.\n\n=== CHANGE LOG SINCE ${cutoff} (the in-scope decisions, newest last) ===\n${since.log.length?since.log.map(c=>`- ${c.at} · ${c.by} · ${c.msg}`).join("\n"):"(no logged changes in this window — infer scope from the planned/gap items in the brief below)"}\n\n=== TEAM NOTES SINCE ${cutoff} ===\n${since.notes.length?since.notes.map(n=>`- ${n.text} (${n.by}, ${n.at})`).join("\n"):"(none)"}\n\n=== SECURITY FIXES APPLIED SINCE ${cutoff} ===\n${since.sec.length?since.sec.map(s=>`- ${s.finding} → fix: ${s.fix}`).join("\n"):"(none)"}\n\n=== FULL STRUCTURAL BRIEF (map vs baseline — use for component details; focus on items touched since the cutoff) ===\n${brief}\n\n=== LIVE CODE FACTS (the REAL Lagbot codebase — map every change onto these files/routes/tables/services) ===\n${facts||"(code facts unavailable — note this in the output)"}`;
   return aiComplete(sys, user);
 }
+$("btnCodeSync").onclick=()=>{
+  if(!aiOn()){ toast("Updating from code needs the AI — it works on the hosted site, or add a key in ⚙","warn"); return; }
+  if(aiBusy){ aiOpen(); return; }
+  aiOpen();
+  aiInputEl.value="SYNC FROM CODE — compare every node and connection on this map against the LIVE CODE FACTS (the real Lagbot codebase) and propose the most important updates to bring the map in line with reality: add real routes / services / tables / screens the map is missing; if a node marked GAP or PLANNED is now actually implemented in the code, propose flipping it to active; flag any node whose code no longer exists. In your answer, say what's already in sync and how many more alignments remain so I can run this again.";
+  runAiAsk();
+};
 $("exportWorkOrder").onclick=async ()=>{
   const btn=$("exportWorkOrder"), label=btn.textContent;
   btn.disabled=true; btn.textContent="✦ Writing the work order…";
