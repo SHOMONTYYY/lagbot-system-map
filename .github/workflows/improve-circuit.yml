@@ -83,7 +83,8 @@ jobs:
           git checkout -b "$BR"
           git add -A
           git commit -m "⟐ Improve the Circuit (requested by ${AUTHOR})"
-          git push origin "$BR"
+          # push with the workflow token explicitly (the agent step alters git creds)
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$BR"
           # body via file so the instruction is never on a shell command line
           { printf 'Autonomous change requested via ⟐ Improve by **%s**.\n\n' "$AUTHOR";
             printf 'Request:\n\n> '; printf '%s\n\n' "$INSTRUCTION";
