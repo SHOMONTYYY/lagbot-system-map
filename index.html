@@ -1003,7 +1003,7 @@ hr.sep{border:none;border-top:1px solid var(--line-soft);margin:14px 0}
   <div class="note" style="margin-top:6px;margin-bottom:12px">Pick a point to roll back to — nothing happens until you choose. Restore points are auto-saved as you work; the change log, security log, Hackathon history and notes are always kept.</div>
   <div style="display:flex;flex-direction:column;gap:14px">
     <div id="resetHistoryWrap">
-      <label class="note" style="font-size:10px">↶ A recent restore point (auto-saved as you work · this device)</label>
+      <label class="note" style="font-size:10px">↶ A recent restore point (auto-saved as you work · shared with the team when synced)</label>
       <div style="display:flex;gap:8px;margin-top:4px">
         <select id="resetHistory" style="flex:1;min-width:0;background:var(--pane2);border:1px solid var(--line);border-radius:8px;color:var(--cream);padding:9px;font-family:inherit;font-size:11px"></select>
         <button class="pbtn" id="resetToPoint" style="flex:none;padding:9px 14px">Restore</button>
@@ -1940,9 +1940,11 @@ function snapshotHistory(force){
   const label=`${state.nodes.length} nodes · ${(state.edges||[]).length} lines${lastLog?` — ${String(lastLog).slice(0,52)}`:""}`;
   const h=loadHistory();
   if(h.length){ const prev=h[h.length-1]; if(prev.doc&&JSON.stringify(prev.doc.nodes)===JSON.stringify(state.nodes)&&JSON.stringify(prev.doc.edges)===JSON.stringify(state.edges)) return; } /* skip if unchanged */
-  h.push({at, label, doc:{nodes:clone(state.nodes), edges:clone(state.edges), wireframes:clone(state.wireframes)}});
+  const map={nodes:clone(state.nodes), edges:clone(state.edges), wireframes:clone(state.wireframes)};
+  h.push({at, label, doc:map});
   while(h.length>12) h.shift();
   saveHistory(h);
+  if(typeof sharedSnapPush==="function") sharedSnapPush(at, editorNameQuiet(), label, map); /* shared with the team when sync is on */
 }
 /* hard flush — guarantees the latest state lands in storage even if the page
    is reloaded or closed before the debounced save fires */
@@ -2027,6 +2029,33 @@ async function cloudSave(){
     const r=await sb.from("sysmap").upsert({id:SYNC_DOC_ID, doc:state, updated_at:new Date().toISOString(), updated_by:editorNameQuiet(), client_id:CLIENT_ID});
     return !r.error;
   }catch(e){ return false; }
+}
+/* ── shared restore points: one row per snapshot, keyed to the project via
+   doc.project so they're never loaded by cloudLoad nor broadcast (filter is
+   id=eq.SYNC_DOC_ID). Dropdown fetches metadata only; the heavy map is fetched
+   on restore. ── */
+const SHARED_HIST_MAX=8;
+async function sharedSnapPush(at,by,label,map){
+  if(!sb||!syncOn) return;
+  try{
+    /* cap via ring-buffer: once at the max, overwrite the OLDEST row (upsert,
+       which RLS allows) — no delete policy needed */
+    const ex=await sb.from("sysmap").select("id,updated_at").eq("doc->>project",SYNC_DOC_ID).order("updated_at",{ascending:true});
+    const rows=ex.data||[];
+    const id=(rows.length>=SHARED_HIST_MAX&&rows[0])?rows[0].id:("snap_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,7));
+    await sb.from("sysmap").upsert({id, doc:{project:SYNC_DOC_ID, at, by, label, map}, updated_at:new Date().toISOString(), updated_by:by, client_id:CLIENT_ID});
+  }catch(e){}
+}
+async function sharedHistMeta(){
+  if(!sb||!syncOn) return null;
+  try{
+    const r=await sb.from("sysmap").select("id, at:doc->>at, by:doc->>by, label:doc->>label").eq("doc->>project",SYNC_DOC_ID).order("updated_at",{ascending:false}).limit(SHARED_HIST_MAX);
+    if(r.error) return null;
+    return (r.data||[]);
+  }catch(e){ return null; }
+}
+async function sharedHistDoc(id){
+  try{ const r=await sb.from("sysmap").select("doc").eq("id",id).maybeSingle(); return (r.data&&r.data.doc&&r.data.doc.map)||null; }catch(e){ return null; }
 }
 
 /* ════════════════════════════ live cursors ════════════════════════════ */
@@ -4905,24 +4934,32 @@ $("fileImport").addEventListener("change",ev=>{
   };
   rd.readAsText(f);
 });
-$("btnReset").onclick=()=>{
+let histList=[];
+$("btnReset").onclick=async ()=>{
   const b=state&&state.baseline, hasBase=b&&Array.isArray(b.nodes)&&b.nodes.length;
   $("resetBaselineWrap").style.display=hasBase?"":"none";
-  const h=loadHistory().slice().reverse(); /* newest first */
-  $("resetHistory").innerHTML=h.map((p,i)=>`<option value="${h.length-1-i}">${esc(p.at)} · ${esc(p.label)}</option>`).join("");
-  $("resetHistoryWrap").style.display=h.length?"":"none";
+  $("resetHistory").innerHTML="<option>Loading restore points…</option>";
+  $("resetHistoryWrap").style.display="";
   scrim.classList.add("show"); $("resetModal").classList.add("show");
+  let list=null;
+  if(syncOn){ const m=await sharedHistMeta(); if(m&&m.length) list=m.map(x=>({id:x.id, at:x.at, label:x.label, shared:true})); }
+  if(!list){ list=loadHistory().slice().reverse().map(p=>({at:p.at, label:p.label, doc:p.doc})); }
+  histList=list;
+  $("resetHistory").innerHTML=list.length?list.map((p,i)=>`<option value="${i}">${esc(p.at||"")} · ${esc(p.label||"")}</option>`).join(""):"";
+  $("resetHistoryWrap").style.display=list.length?"":"none";
 };
-$("resetToPoint").onclick=()=>{
-  const idx=+$("resetHistory").value; const h=loadHistory(); const pt=h[idx];
-  if(!pt||!pt.doc){ toast("Couldn't load that restore point","warn"); return; }
+$("resetToPoint").onclick=async ()=>{
+  const p=histList[+$("resetHistory").value];
+  if(!p){ toast("Couldn't load that restore point","warn"); return; }
   snapshotHistory(true); /* capture current state first so this restore can itself be undone */
+  let map=p.doc; if(!map&&p.shared) map=await sharedHistDoc(p.id);
+  if(!map||!Array.isArray(map.nodes)){ toast("Couldn't load that restore point","warn"); return; }
   const keep={seclog:(state&&state.seclog)||[], hackathon:(state&&state.hackathon)||[], changelog:(state&&state.changelog)||[], notes:(state&&state.notes)||[], baseline:state&&state.baseline};
-  state=ensureShape(Object.assign({nodes:clone(pt.doc.nodes), edges:clone(pt.doc.edges||[]), wireframes:clone(pt.doc.wireframes||{})}, keep));
+  state=ensureShape(Object.assign({nodes:clone(map.nodes), edges:clone(map.edges||[]), wireframes:clone(map.wireframes||{})}, keep));
   clearFocusAll(); closeModals();
-  logChange(`Reset the map to the restore point from ${pt.at}`);
+  logChange(`Reset the map to the restore point from ${p.at}`);
   rebuild(); fitView(); renderPanel(); autosave();
-  toast(`Restored to ${pt.at} — logs kept`);
+  toast(`Restored to ${p.at} — logs kept`);
 };
 function doReset(toDefault){
   snapshotHistory(true); /* snapshot the about-to-be-replaced map so a reset can be undone */
