@@ -1636,6 +1636,12 @@
       ]
     },
     {
+      "file": "app/(tabs)/inventory.tsx",
+      "routes": [
+        "POST /api/sales/:_/confirm"
+      ]
+    },
+    {
       "file": "app/(tabs)/sales.tsx",
       "routes": [
         "POST /api/routing-rules",

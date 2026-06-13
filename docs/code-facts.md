@@ -87,12 +87,13 @@ Method · Path · Guards · Services · Tables(R/W) · Ext
   - db: R:token_config/vendor_token_state/token_ledger/conversations W:vendor_token_state/token_ledger/conversations
   - exports: TokenService
 
-## Screen → API calls (15 screens that hit routes)
+## Screen → API calls (16 screens that hit routes)
 
 - `app/_layout.tsx` → PUT /api/settings/config
 - `app/(onboarding)/setup.tsx` → POST /api/whatsapp/pairing-code, GET /api/whatsapp/status, POST /api/auth/create-business
 - `app/(product)/import.tsx` → POST /api/products/import
 - `app/(tabs)/chats.tsx` → PATCH /api/conversations/:id/archive, GET /api/conversations/:id/handoff, POST /api/conversations/:id/resume, POST /api/whatsapp/send
+- `app/(tabs)/inventory.tsx` → POST /api/sales/:id/confirm
 - `app/(tabs)/sales.tsx` → POST /api/routing-rules, PATCH /api/routing-rules/:id, DELETE /api/routing-rules/:id
 - `app/(tabs)/settings.tsx` → PUT /api/settings/config, POST /api/settings/refresh, PUT /api/settings/bank, PUT /api/settings/profile, GET /api/whatsapp/status, POST /api/whatsapp/pairing-code, POST /api/whatsapp/disconnect, POST /api/tokens/purchase/init (no backend route), POST /api/account/delete
 - `app/(tabs)/wallet.tsx` → GET /api/wallet, POST /api/wallet/withdraw (no backend route)
