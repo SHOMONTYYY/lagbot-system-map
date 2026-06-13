@@ -75,7 +75,7 @@ const INSTANCE_TO_FILE = {
 };
 /* fuzzy: injected param / this-field name → service file (for DI edges inside services) */
 function paramToFile(name) {
-  const n = name.toLowerCase();
+  const n = String(name || "").toLowerCase();
   if (n.includes("llm")) return "llm.service.js";
   if (n.includes("routing")) return "routing-engine.service.js";
   if (n.includes("token")) return "token.service.js";
@@ -180,7 +180,7 @@ function extractServices() {
     const reqs = new Set(), rr = /require\(\s*['"]\.\/([a-zA-Z.\-]+)['"]\)/g; let mm;
     while ((mm = rr.exec(txt))) { let n = mm[1]; if (!/\.js$/.test(n)) n += ".js"; if (SERVICE_FILES[n]) reqs.add(n); }
     // DI: this.FIELD = PARAM  +  this.FIELD.method(  →  resolve FIELD→PARAM→file
-    const fieldToParam = {}, fa = /this\.([a-zA-Z_]\w*)\s*=\s*([a-zA-Z_]\w*)/g;
+    const fieldToParam = Object.create(null), fa = /this\.([a-zA-Z_]\w*)\s*=\s*([a-zA-Z_]\w*)/g; /* null proto: 'constructor'/'toString' etc. must not resolve to Object.prototype */
     while ((mm = fa.exec(txt))) fieldToParam[mm[1]] = mm[2];
     const di = new Set(), dc = /this\.([a-zA-Z_]\w*)\s*\.\s*[a-zA-Z_]/g;
     while ((mm = dc.exec(txt))) {

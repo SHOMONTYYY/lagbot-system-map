@@ -66,14 +66,18 @@
       "purpose": "Evolution API Webhook Handler"
     },
     {
-      "id": "svc:file-parser",
-      "label": "file-parser",
+      "id": "svc:llm-queue",
+      "label": "llm-queue",
       "kind": "service",
       "layer": "svc",
       "exports": [
-        "FileParser"
+        "runQueued",
+        "LLMQueueError",
+        "QueueOverflowError",
+        "BreakerOpenError",
+        "BurstLimitError"
       ],
-      "purpose": "File Parser Service"
+      "purpose": "LLM Queue — global concurrency gate, per-business burst limiter, and circuit"
     },
     {
       "id": "svc:llm.service",
@@ -104,9 +108,53 @@
         "parseNovaOutput",
         "enforceRules",
         "detectForcedHandoff",
-        "HANDOFF_REASON_LABELS"
+        "HANDOFF_REASON_LABELS",
+        "NOVA_RULES_SUMMARY"
       ],
       "purpose": "Nova rule layer — pure, dependency-free helpers shared by the message"
+    },
+    {
+      "id": "svc:pause-state",
+      "label": "pause-state",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "PauseState"
+      ],
+      "purpose": "pause-state — cross-worker \"AI paused\" flags."
+    },
+    {
+      "id": "svc:redis-state",
+      "label": "redis-state",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "getClient",
+        "isAvailable",
+        "incrFixedWindow",
+        "semAcquire",
+        "semRelease",
+        "zPushCount",
+        "setNX",
+        "setValue",
+        "getValue",
+        "getDel",
+        "delKeys"
+      ],
+      "purpose": "redis-state — shared Redis connection + graceful-degradation helpers."
+    },
+    {
+      "id": "svc:reply-screener",
+      "label": "reply-screener",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "screenReply",
+        "checkDraftDigits",
+        "buildAllowedDigits",
+        "extractDigitRuns"
+      ],
+      "purpose": "Reply Screener — second-AI review of every outbound Nova draft."
     },
     {
       "id": "svc:routing-engine.service",
@@ -224,7 +272,7 @@
       "label": "conversations",
       "kind": "table",
       "layer": "data",
-      "columns": 13
+      "columns": 16
     },
     {
       "id": "tbl:businesses",
@@ -367,6 +415,26 @@
       "columns": 5
     },
     {
+      "id": "route:POST /webhook/evolution",
+      "label": "POST /webhook/evolution",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "webhookLimiter",
+        "webhookHandler"
+      ]
+    },
+    {
+      "id": "route:POST /webhook/evolution/:secret",
+      "label": "POST /webhook/evolution/:secret",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "webhookLimiter",
+        "webhookHandler"
+      ]
+    },
+    {
       "id": "route:GET /",
       "label": "GET /",
       "kind": "route",
@@ -386,24 +454,6 @@
       "kind": "route",
       "layer": "api",
       "guards": []
-    },
-    {
-      "id": "route:POST /webhook/evolution",
-      "label": "POST /webhook/evolution",
-      "kind": "route",
-      "layer": "api",
-      "guards": [
-        "webhookHandler"
-      ]
-    },
-    {
-      "id": "route:POST /webhook/evolution/:secret",
-      "label": "POST /webhook/evolution/:secret",
-      "kind": "route",
-      "layer": "api",
-      "guards": [
-        "webhookHandler"
-      ]
     },
     {
       "id": "route:POST /api/whatsapp/pairing-code",
@@ -493,6 +543,53 @@
       ]
     },
     {
+      "id": "route:PUT /api/settings/profile",
+      "label": "PUT /api/settings/profile",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:PUT /api/settings/config",
+      "label": "PUT /api/settings/config",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:PUT /api/settings/bank",
+      "label": "PUT /api/settings/bank",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness",
+        "rateLimitBusiness"
+      ]
+    },
+    {
+      "id": "route:GET /api/dashboard/stats",
+      "label": "GET /api/dashboard/stats",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "tbl:confirmed_sales",
+      "label": "confirmed_sales",
+      "kind": "table",
+      "layer": "data"
+    },
+    {
       "id": "route:GET /api/dashboard/message-count",
       "label": "GET /api/dashboard/message-count",
       "kind": "route",
@@ -569,24 +666,6 @@
     {
       "id": "route:POST /api/account/delete",
       "label": "POST /api/account/delete",
-      "kind": "route",
-      "layer": "api",
-      "guards": [
-        "requireAuth"
-      ]
-    },
-    {
-      "id": "route:POST /api/auth/login",
-      "label": "POST /api/auth/login",
-      "kind": "route",
-      "layer": "api",
-      "guards": [
-        "validateBody"
-      ]
-    },
-    {
-      "id": "route:GET /api/auth/me",
-      "label": "GET /api/auth/me",
       "kind": "route",
       "layer": "api",
       "guards": [
@@ -682,6 +761,26 @@
       ]
     },
     {
+      "id": "route:GET /api/conversations/:id/handoff",
+      "label": "GET /api/conversations/:id/handoff",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:POST /api/conversations/:id/resume",
+      "label": "POST /api/conversations/:id/resume",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
       "id": "route:POST /api/conversations/:id/smart-replies",
       "label": "POST /api/conversations/:id/smart-replies",
       "kind": "route",
@@ -702,6 +801,12 @@
       ]
     },
     {
+      "id": "tbl:team_members",
+      "label": "team_members",
+      "kind": "table",
+      "layer": "data"
+    },
+    {
       "id": "ext:rpc:increment_message_count",
       "label": "increment_message_count()",
       "kind": "rpc",
@@ -714,12 +819,6 @@
       "layer": "data"
     },
     {
-      "id": "tbl:team_members",
-      "label": "team_members",
-      "kind": "table",
-      "layer": "data"
-    },
-    {
       "id": "client:api",
       "label": "src/services/api.ts",
       "kind": "client",
@@ -729,6 +828,12 @@
       "id": "client:database",
       "label": "src/services/database.ts",
       "kind": "client",
+      "layer": "app"
+    },
+    {
+      "id": "scr:app/_layout.tsx",
+      "label": "app/_layout.tsx",
+      "kind": "screen",
       "layer": "app"
     },
     {
@@ -932,6 +1037,78 @@
       "label": "llm"
     },
     {
+      "from": "route:PUT /api/settings/profile",
+      "to": "svc:llm.service",
+      "kind": "route-service",
+      "label": "llm"
+    },
+    {
+      "from": "route:PUT /api/settings/profile",
+      "to": "tbl:businesses",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:PUT /api/settings/config",
+      "to": "svc:llm.service",
+      "kind": "route-service",
+      "label": "llm"
+    },
+    {
+      "from": "route:PUT /api/settings/config",
+      "to": "tbl:business_config",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:PUT /api/settings/bank",
+      "to": "svc:llm.service",
+      "kind": "route-service",
+      "label": "llm"
+    },
+    {
+      "from": "route:PUT /api/settings/bank",
+      "to": "tbl:business_config",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:PUT /api/settings/bank",
+      "to": "tbl:business_config",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:PUT /api/settings/bank",
+      "to": "ch:expo",
+      "kind": "route-http",
+      "label": "expo"
+    },
+    {
+      "from": "route:GET /api/dashboard/stats",
+      "to": "tbl:message_count_realtime",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/dashboard/stats",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/dashboard/stats",
+      "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/dashboard/stats",
+      "to": "tbl:confirmed_sales",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
       "from": "route:GET /api/dashboard/message-count",
       "to": "tbl:message_count_realtime",
       "kind": "route-table",
@@ -1040,30 +1217,6 @@
       "label": "admin.deleteUser"
     },
     {
-      "from": "route:POST /api/auth/login",
-      "to": "tbl:businesses",
-      "kind": "route-table",
-      "label": "read"
-    },
-    {
-      "from": "route:POST /api/auth/login",
-      "to": "ext:supabase-auth",
-      "kind": "route-auth",
-      "label": "signInWithPassword"
-    },
-    {
-      "from": "route:GET /api/auth/me",
-      "to": "tbl:user_profiles",
-      "kind": "route-table",
-      "label": "read"
-    },
-    {
-      "from": "route:GET /api/auth/me",
-      "to": "tbl:businesses",
-      "kind": "route-table",
-      "label": "read"
-    },
-    {
       "from": "route:GET /api/sales/pending",
       "to": "tbl:pending_sales",
       "kind": "route-table",
@@ -1166,6 +1319,24 @@
       "label": "write"
     },
     {
+      "from": "route:GET /api/conversations/:id/handoff",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/resume",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/resume",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
       "from": "route:POST /api/conversations/:id/smart-replies",
       "to": "svc:llm.service",
       "kind": "route-service",
@@ -1216,6 +1387,12 @@
     {
       "from": "svc:llm.service",
       "to": "svc:sales.helpers",
+      "kind": "service-service",
+      "label": "require"
+    },
+    {
+      "from": "svc:llm.service",
+      "to": "svc:nova-rules",
       "kind": "service-service",
       "label": "require"
     },
@@ -1275,13 +1452,13 @@
     },
     {
       "from": "svc:message-pipeline.service",
-      "to": "svc:token.service",
+      "to": "svc:llm.service",
       "kind": "service-service",
       "label": "inject"
     },
     {
       "from": "svc:message-pipeline.service",
-      "to": "svc:llm.service",
+      "to": "svc:token.service",
       "kind": "service-service",
       "label": "inject"
     },
@@ -1306,6 +1483,18 @@
     {
       "from": "svc:message-pipeline.service",
       "to": "tbl:messages",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:routing_rules",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:team_members",
       "kind": "service-table",
       "label": "read"
     },
@@ -1362,6 +1551,18 @@
       "to": "ch:expo",
       "kind": "service-http",
       "label": "expo"
+    },
+    {
+      "from": "svc:reply-screener",
+      "to": "svc:nova-rules",
+      "kind": "service-service",
+      "label": "require"
+    },
+    {
+      "from": "svc:reply-screener",
+      "to": "ch:anthropic",
+      "kind": "service-http",
+      "label": "anthropic"
     },
     {
       "from": "svc:routing-engine.service",
@@ -1430,6 +1631,12 @@
       "label": "axios"
     },
     {
+      "from": "scr:app/_layout.tsx",
+      "to": "route:PUT /api/settings/config",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
       "from": "scr:app/(onboarding)/setup.tsx",
       "to": "route:POST /api/whatsapp/pairing-code",
       "kind": "screen-route",
@@ -1461,6 +1668,18 @@
     },
     {
       "from": "scr:app/(tabs)/chats.tsx",
+      "to": "route:GET /api/conversations/:id/handoff",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/chats.tsx",
+      "to": "route:POST /api/conversations/:id/resume",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/chats.tsx",
       "to": "route:POST /api/whatsapp/send",
       "kind": "screen-route",
       "label": ""
@@ -1485,7 +1704,25 @@
     },
     {
       "from": "scr:app/(tabs)/settings.tsx",
+      "to": "route:PUT /api/settings/config",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/settings.tsx",
       "to": "route:POST /api/settings/refresh",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/settings.tsx",
+      "to": "route:PUT /api/settings/bank",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/settings.tsx",
+      "to": "route:PUT /api/settings/profile",
       "kind": "screen-route",
       "label": ""
     },
@@ -1557,7 +1794,7 @@
     },
     {
       "from": "scr:src/hooks/useDashboard.ts",
-      "to": "route:POST /api/sales/:id/confirm",
+      "to": "route:GET /api/dashboard/stats",
       "kind": "screen-route",
       "label": ""
     },
