@@ -4918,15 +4918,20 @@ $("exportJson").onclick=()=>{
   closeModals(); toast("Exported lagbot-system-map.json");
 };
 /* ── AI work order: changes since a chosen time, grounded in the real codebase ── */
-async function aiComplete(system, text){
-  const body={ model:aiModel(), max_tokens:8000, system, messages:[{role:"user", content:text}] };
+async function aiComplete(system, text, opts){
+  opts=opts||{};
+  const body={ model:opts.model||aiModel(), max_tokens:opts.maxTokens||8000, system, messages:[{role:"user", content:text}] };
   const useProxy=!aiKey()&&AI_PROXY;
   const res=await fetch(useProxy?"/api/ai":"https://api.anthropic.com/v1/messages",{
     method:"POST",
     headers: useProxy?{"content-type":"application/json"}:{"content-type":"application/json","x-api-key":aiKey(),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
     body:JSON.stringify(body)
   });
-  if(!res.ok) throw new Error(res.status===401?"AI key looks wrong — check ⚙.":`AI service error (HTTP ${res.status}).`);
+  if(!res.ok){
+    if(res.status===401) throw new Error("AI key looks wrong — check ⚙.");
+    if(res.status===504||res.status===408||res.status===524||res.status===524) throw new Error("That took too long to generate — narrow the “changes since” date to a shorter window, or use the Quick brief.");
+    throw new Error(`AI service error (HTTP ${res.status}).`);
+  }
   const data=await res.json();
   return (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
 }
@@ -4943,7 +4948,9 @@ async function buildWorkOrder(){
   const facts=await fetchCodeFacts();
   const sys="You are a staff engineer writing an implementation WORK ORDER for a coding agent that will modify the real Lagbot codebase (Node/Express backend in backend/, an Expo/React Native app in app/, Supabase SQL in sql/). Output ONLY GitHub-flavored markdown, no preamble. Produce a precise, ordered, implementation-ready spec. For EVERY change in scope: (1) state what to build/fix and why; (2) map it to the ACTUAL files / routes / services / tables it touches, citing them from the LIVE CODE FACTS (e.g. `backend/server.js POST /api/wallet/withdraw`, the `wallets` table, `token.service.js`); (3) note dependencies and the order to do them in; (4) flag where the architecture map and the real code disagree; (5) call out anything ambiguous the team must clarify before coding. Group by feature. Be concrete enough that the agent can start immediately. This is planning only — never instruct deleting or overwriting without an explicit confirmation note.";
   const user=`Write the implementation work order for everything the team changed on the architecture map SINCE ${cutoff}.\n\n=== CHANGE LOG SINCE ${cutoff} (the in-scope decisions, newest last) ===\n${since.log.length?since.log.map(c=>`- ${c.at} · ${c.by} · ${c.msg}`).join("\n"):"(no logged changes in this window — infer scope from the planned/gap items in the brief below)"}\n\n=== TEAM NOTES SINCE ${cutoff} ===\n${since.notes.length?since.notes.map(n=>`- ${n.text} (${n.by}, ${n.at})`).join("\n"):"(none)"}\n\n=== SECURITY FIXES APPLIED SINCE ${cutoff} ===\n${since.sec.length?since.sec.map(s=>`- ${s.finding} → fix: ${s.fix}`).join("\n"):"(none)"}\n\n=== FULL STRUCTURAL BRIEF (map vs baseline — use for component details; focus on items touched since the cutoff) ===\n${brief}\n\n=== LIVE CODE FACTS (the REAL Lagbot codebase — map every change onto these files/routes/tables/services) ===\n${facts||"(code facts unavailable — note this in the output)"}`;
-  return aiComplete(sys, user);
+  /* Sonnet 4.6: fast enough to finish inside the serverless timeout, and excellent
+     at structured specs. 5000-token ceiling keeps even a wide date range under the cap. */
+  return aiComplete(sys, user, {model:"claude-sonnet-4-6", maxTokens:5000});
 }
 $("btnCodeSync").onclick=()=>{
   if(!aiOn()){ toast("Updating from code needs the AI — it works on the hosted site, or add a key in ⚙","warn"); return; }
