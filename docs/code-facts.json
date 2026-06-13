@@ -572,6 +572,35 @@
     },
     {
       "method": "POST",
+      "path": "/api/products/image",
+      "guards": [
+        "requireAuth",
+        "requireBusiness",
+        "rateLimitBusiness",
+        "imageUpload"
+      ],
+      "services": [],
+      "tables": [],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/products/image/delete",
+      "guards": [
+        "requireAuth",
+        "requireBusiness",
+        "rateLimitBusiness"
+      ],
+      "services": [],
+      "tables": [],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
       "path": "/api/products/import",
       "guards": [
         "requireAuth",
@@ -759,6 +788,7 @@
         "listInstances",
         "setWebhook",
         "sendText",
+        "sendMedia",
         "sendTyping",
         "downloadMedia"
       ],
@@ -871,6 +901,10 @@
         },
         {
           "table": "messages",
+          "op": "read"
+        },
+        {
+          "table": "products",
           "op": "read"
         },
         {
@@ -1671,6 +1705,13 @@
       "file": "src/hooks/useSales.ts",
       "routes": [
         "POST /api/sales/:_/confirm"
+      ]
+    },
+    {
+      "file": "src/services/uploads.ts",
+      "routes": [
+        "POST /api/products/image",
+        "POST /api/products/image/delete"
       ]
     }
   ]
