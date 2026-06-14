@@ -57,7 +57,6 @@
         "getConnectionState",
         "disconnectInstance",
         "deleteInstance",
-        "listInstances",
         "setWebhook",
         "sendText",
         "sendMedia",
