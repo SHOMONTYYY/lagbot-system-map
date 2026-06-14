@@ -46,8 +46,10 @@ Method · Path · Guards · Services · Tables(R/W) · Ext
 - `POST /api/conversations/:id/smart-replies` · g:requireAuth,requireBusiness · svc:llm · R:conversations/messages
 - `GET /api/wallet` · g:requireAuth,requireBusiness · R:wallets
 
-## Service call graph (12)
+## Service call graph (13)
 
+- **catalogue-agent.service** — Catalogue Agent (read-side product selector)
+  - exports: selectProductsForPrompt
 - **evolution-api.client** — Evolution API Client
   - exports: createInstance, startConnection, getConnectionState, disconnectInstance, deleteInstance, listInstances, setWebhook, sendText, sendMedia, sendTyping, downloadMedia
 - **evolution-webhook.handler** — Evolution API Webhook Handler

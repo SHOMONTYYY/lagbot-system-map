@@ -37,6 +37,16 @@
       "layer": "edge"
     },
     {
+      "id": "svc:catalogue-agent.service",
+      "label": "catalogue-agent.service",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "selectProductsForPrompt"
+      ],
+      "purpose": "Catalogue Agent (read-side product selector)"
+    },
+    {
       "id": "svc:evolution-api.client",
       "label": "evolution-api.client",
       "kind": "service",

@@ -777,6 +777,18 @@
   ],
   "services": [
     {
+      "name": "catalogue-agent.service.js",
+      "purpose": "Catalogue Agent (read-side product selector)",
+      "exports": [
+        "selectProductsForPrompt"
+      ],
+      "requires": [],
+      "di": [],
+      "tables": [],
+      "rpcs": [],
+      "http": []
+    },
+    {
       "name": "evolution-api.client.js",
       "purpose": "Evolution API Client",
       "exports": [
