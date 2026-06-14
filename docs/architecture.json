@@ -50,6 +50,7 @@
         "listInstances",
         "setWebhook",
         "sendText",
+        "sendMedia",
         "sendTyping",
         "downloadMedia"
       ],
@@ -709,6 +710,29 @@
       "layer": "data"
     },
     {
+      "id": "route:POST /api/products/image",
+      "label": "POST /api/products/image",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness",
+        "rateLimitBusiness",
+        "imageUpload"
+      ]
+    },
+    {
+      "id": "route:POST /api/products/image/delete",
+      "label": "POST /api/products/image/delete",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness",
+        "rateLimitBusiness"
+      ]
+    },
+    {
       "id": "route:POST /api/products/import",
       "label": "POST /api/products/import",
       "kind": "route",
@@ -855,6 +879,12 @@
       "layer": "app"
     },
     {
+      "id": "scr:app/(tabs)/inventory.tsx",
+      "label": "app/(tabs)/inventory.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
       "id": "scr:app/(tabs)/sales.tsx",
       "label": "app/(tabs)/sales.tsx",
       "kind": "screen",
@@ -911,6 +941,12 @@
     {
       "id": "scr:src/hooks/useSales.ts",
       "label": "src/hooks/useSales.ts",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:src/services/uploads.ts",
+      "label": "src/services/uploads.ts",
       "kind": "screen",
       "layer": "app"
     }
@@ -1488,6 +1524,12 @@
     },
     {
       "from": "svc:message-pipeline.service",
+      "to": "tbl:products",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:message-pipeline.service",
       "to": "tbl:routing_rules",
       "kind": "service-table",
       "label": "read"
@@ -1685,6 +1727,12 @@
       "label": ""
     },
     {
+      "from": "scr:app/(tabs)/inventory.tsx",
+      "to": "route:POST /api/sales/:id/confirm",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
       "from": "scr:app/(tabs)/sales.tsx",
       "to": "route:POST /api/routing-rules",
       "kind": "screen-route",
@@ -1801,6 +1849,18 @@
     {
       "from": "scr:src/hooks/useSales.ts",
       "to": "route:POST /api/sales/:id/confirm",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/services/uploads.ts",
+      "to": "route:POST /api/products/image",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/services/uploads.ts",
+      "to": "route:POST /api/products/image/delete",
       "kind": "screen-route",
       "label": ""
     }

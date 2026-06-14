@@ -3,7 +3,9 @@ name: Improve the Circuit
 # Fired by /api/improve (repository_dispatch). A SANDBOXED coding agent edits
 # the MAP app's files (no shell, no network — so it cannot read or exfiltrate
 # secrets), then a SEPARATE trusted step the agent can't influence commits the
-# edits and opens a Pull Request. It never merges; a human merges. No access to
+# edits and opens a Pull Request, then (when repo var AUTO_MERGE != 'false', the
+# default) auto-merges + deploys it. Set AUTO_MERGE=false to require a human
+# review/merge instead. The agent itself never merges or pushes to main. No access to
 # the Lagbot codebase.
 
 on:

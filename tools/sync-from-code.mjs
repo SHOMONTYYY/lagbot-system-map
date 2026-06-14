@@ -64,7 +64,7 @@ const SERVICE_FILES = {
 };
 const svcId = f => "svc:" + f.replace(/\.js$/, "");
 /* server.js identifiers (instances / required helpers) → service file */
-const INSTANCE_TO_FILE = {
+const INSTANCE_TO_FILE = Object.assign(Object.create(null), {
   llm: "llm.service.js",
   pipeline: "message-pipeline.service.js",
   routingEngine: "routing-engine.service.js",
@@ -72,7 +72,7 @@ const INSTANCE_TO_FILE = {
   evolutionClient: "evolution-api.client.js",
   webhookHandler: "evolution-webhook.handler.js",
   itemsForDecrement: "sales.helpers.js",
-};
+});
 /* fuzzy: injected param / this-field name → service file (for DI edges inside services) */
 function paramToFile(name) {
   const n = String(name || "").toLowerCase();
@@ -205,7 +205,7 @@ function matchParen(s, open) { // index of ')' matching '(' at `open`
 }
 function extractSchema() {
   const dir = join(SRC, "sql");
-  const tables = {}, rlsEnabled = new Set(), fns = new Set(), policies = [];
+  const tables = Object.create(null), rlsEnabled = new Set(), fns = new Set(), policies = [];
   const addCols = (t, cols) => { tables[t] = tables[t] || []; for (const c of cols) if (!tables[t].includes(c)) tables[t].push(c); };
   if (existsSync(dir)) for (const f of readdirSync(dir).filter(n => n.endsWith(".sql")).sort()) {
     const txt = read(join(dir, f));
@@ -256,7 +256,7 @@ function extractEnv() {
 
 /* ── api.ts: method → route, and database.ts: export object → route(s) ── */
 function extractClients() {
-  const apiMethod = {}; // method name → {method, path}
+  const apiMethod = Object.create(null); // method name → {method, path}
   const apiTxt = read(join(SRC, "src", "services", "api.ts"));
   // find method starts and call('/...') literals, associate each call to nearest preceding method
   const starts = [];
@@ -269,7 +269,7 @@ function extractClients() {
     if (!apiMethod[owner]) apiMethod[owner] = { method: m[2] || "GET", path: m[1] };
   }
   // database.ts export objects that make backend calls
-  const dbObj = {}; // object name → [{method,path}]
+  const dbObj = Object.create(null); // object name → [{method,path}]
   const dbTxt = read(join(SRC, "src", "services", "database.ts"));
   const objs = [];
   const or = /export\s+const\s+([a-zA-Z_]\w*)\s*=\s*\{/g;
@@ -471,7 +471,7 @@ function md() {
   }
 
   // rls
-  const byTable = {};
+  const byTable = Object.create(null);
   for (const p of schema.policies) (byTable[p.table] = byTable[p.table] || []).push(p.name);
   L.push("", `## RLS policies (${schema.policies.length} on ${Object.keys(byTable).length} tables)`, "");
   for (const t of Object.keys(byTable).sort()) L.push(`- **${t}**: ${byTable[t].join(" | ")}`);

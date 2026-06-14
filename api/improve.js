@@ -1,14 +1,16 @@
 /* "Improve the Circuit" — turns an in-app request into an autonomous PR.
  *
  * Fires a GitHub workflow (repository_dispatch) that runs a coding agent which
- * edits this app's own repo and opens a Pull Request. It never merges; a human
- * merges. The Lagbot codebase is not involved.
+ * edits this app's own repo, opens a Pull Request, and (when AUTO_MERGE is on,
+ * the default) auto-merges + deploys it. The Lagbot codebase is not involved.
  *
- * This endpoint is public, so it is deliberately minimal: it only enqueues a
- * job. The agent it triggers is sandboxed to file-editing tools (no shell, no
- * network) in the workflow, so it cannot read or exfiltrate secrets. The token
- * here stays server-side and is never returned. The open-PR cap fails CLOSED so
- * a GitHub hiccup can't disable it.
+ * This endpoint is public, so it is deliberately gated and minimal: it requires
+ * the maintainer code, only enqueues a job, and the token stays server-side
+ * (never returned). The agent it triggers is sandboxed to file-editing tools
+ * (no shell, no network), so it cannot read or exfiltrate secrets. The open-PR
+ * cap fails CLOSED so a GitHub hiccup can't disable it. NOTE: with AUTO_MERGE on,
+ * the maintainer code is the only gate before code reaches the live site — keep
+ * it long/secret, or set AUTO_MERGE=false to require a human PR review.
  */
 const REPO = "SHOMONTYYY/lagbot-system-map";
 const MAX_PENDING = 3;

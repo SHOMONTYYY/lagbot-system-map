@@ -58,11 +58,11 @@ jobs:
         run: |
           git config user.name  "lagbot-map-bot"
           git config user.email "actions@github.com"
-          if git diff --quiet -- docs/code-facts.json docs/code-facts.md; then
+          if git diff --quiet -- docs/code-facts.json docs/code-facts.md docs/architecture.json; then
             echo "No code changes — docs already current."
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            git add docs/code-facts.json docs/code-facts.md
+            git add docs/code-facts.json docs/code-facts.md docs/architecture.json
             git commit -m "Sync code facts from codebase"
             git push
             echo "changed=true" >> "$GITHUB_OUTPUT"

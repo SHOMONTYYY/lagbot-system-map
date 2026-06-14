@@ -4929,14 +4929,15 @@ async function aiComplete(system, text, opts){
   });
   if(!res.ok){
     if(res.status===401) throw new Error("AI key looks wrong — check ⚙.");
-    if(res.status===504||res.status===408||res.status===524||res.status===524) throw new Error("That took too long to generate — narrow the “changes since” date to a shorter window, or use the Quick brief.");
+    if(res.status===504||res.status===408||res.status===524||res.status===502) throw new Error("That took too long to generate — narrow the “changes since” date to a shorter window, or use the Quick brief.");
     throw new Error(`AI service error (HTTP ${res.status}).`);
   }
   const data=await res.json();
   return (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
 }
 function changesSince(cutoff){
-  const f=arr=>(arr||[]).filter(x=>x&&x.at&&x.at>=cutoff);
+  const norm=s=>{ s=String(s); return s.length>=19?s:s+":00"; }; /* notes/seclog stamps lack :SS — pad so boundary-minute entries aren't dropped */
+  const f=arr=>(arr||[]).filter(x=>x&&x.at&&norm(x.at)>=cutoff);
   return { log:f(state.changelog), notes:f(state.notes), sec:f(state.seclog) };
 }
 async function buildWorkOrder(){
@@ -5012,7 +5013,7 @@ $("resetToPoint").onclick=async ()=>{
   snapshotHistory(true); /* capture current state first so this restore can itself be undone */
   let map=p.doc; if(!map&&p.shared) map=await sharedHistDoc(p.id);
   if(!map||!Array.isArray(map.nodes)){ toast("Couldn't load that restore point","warn"); return; }
-  const keep={seclog:(state&&state.seclog)||[], hackathon:(state&&state.hackathon)||[], changelog:(state&&state.changelog)||[], notes:(state&&state.notes)||[], baseline:state&&state.baseline};
+  const keep={meta:(state&&state.meta), seclog:(state&&state.seclog)||[], hackathon:(state&&state.hackathon)||[], changelog:(state&&state.changelog)||[], notes:(state&&state.notes)||[], baseline:state&&state.baseline};
   state=ensureShape(Object.assign({nodes:clone(map.nodes), edges:clone(map.edges||[]), wireframes:clone(map.wireframes||{})}, keep));
   clearFocusAll(); closeModals();
   logChange(`Reset the map to the restore point from ${p.at}`);
@@ -5022,7 +5023,7 @@ $("resetToPoint").onclick=async ()=>{
 function doReset(toDefault){
   snapshotHistory(true); /* snapshot the about-to-be-replaced map so a reset can be undone */
   const b=state&&state.baseline, hasBase=!toDefault&&b&&Array.isArray(b.nodes)&&b.nodes.length;
-  const keep={seclog:(state&&state.seclog)||[], hackathon:(state&&state.hackathon)||[], changelog:(state&&state.changelog)||[], notes:(state&&state.notes)||[]};
+  const keep={meta:(state&&state.meta), seclog:(state&&state.seclog)||[], hackathon:(state&&state.hackathon)||[], changelog:(state&&state.changelog)||[], notes:(state&&state.notes)||[]};
   if(!toDefault) keep.baseline=state&&state.baseline; /* keep the baseline when resetting to it; drop it when going to the original */
   const base=hasBase ? {nodes:clone(b.nodes), edges:clone(b.edges||[]), wireframes:clone(b.wireframes||{})} : clone(defaultState());
   state=ensureShape(Object.assign(base,keep)); clearFocusAll(); closeModals();
