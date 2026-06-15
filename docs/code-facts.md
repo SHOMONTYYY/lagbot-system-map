@@ -52,7 +52,7 @@ Method · Path · Guards · Services · Tables(R/W) · Ext
 - **catalogue-agent.service** — Catalogue Agent (read-side product selector)
   - exports: selectProductsForPrompt
 - **evolution-api.client** — Evolution API Client
-  - exports: createInstance, startConnection, getConnectionState, disconnectInstance, deleteInstance, setWebhook, sendText, sendMedia, sendTyping, downloadMedia
+  - exports: createInstance, startConnection, getConnectionState, disconnectInstance, deleteInstance, setWebhook, sendText, sendMedia, sendTyping, downloadMedia, getConnectedNumberOwners
 - **evolution-webhook.handler** — Evolution API Webhook Handler
   - →svc: evolution-api
   - db: W:whatsapp_connections

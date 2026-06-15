@@ -61,7 +61,8 @@
         "sendText",
         "sendMedia",
         "sendTyping",
-        "downloadMedia"
+        "downloadMedia",
+        "getConnectedNumberOwners"
       ],
       "purpose": "Evolution API Client"
     },
