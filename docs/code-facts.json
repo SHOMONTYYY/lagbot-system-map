@@ -551,8 +551,8 @@
         "requireBusiness"
       ],
       "services": [
-        "itemsForDecrement",
-        "routingEngine"
+        "routingEngine",
+        "itemsForDecrement"
       ],
       "tables": [
         {
@@ -1023,6 +1023,18 @@
       "http": []
     },
     {
+      "name": "phone.util.js",
+      "purpose": "Normalize a human-typed phone number into the digits the Evolution API expects.",
+      "exports": [
+        "normalizeMsisdn"
+      ],
+      "requires": [],
+      "di": [],
+      "tables": [],
+      "rpcs": [],
+      "http": []
+    },
+    {
       "name": "redis-state.js",
       "purpose": "redis-state — shared Redis connection + graceful-degradation helpers.",
       "exports": [
@@ -1428,6 +1440,14 @@
         "stock_committed",
         "rejected_at"
       ],
+      "team_members": [
+        "id",
+        "business_id",
+        "name",
+        "role",
+        "whatsapp_contact",
+        "created_at"
+      ],
       "ai_accuracy_metrics": [
         "id",
         "business_id",
@@ -1650,6 +1670,10 @@
       {
         "name": "owner read",
         "table": "confirmed_sales"
+      },
+      {
+        "name": "owner only",
+        "table": "team_members"
       }
     ]
   },

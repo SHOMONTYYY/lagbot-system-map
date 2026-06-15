@@ -135,6 +135,16 @@
       "purpose": "pause-state — cross-worker \"AI paused\" flags."
     },
     {
+      "id": "svc:phone.util",
+      "label": "phone.util",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "normalizeMsisdn"
+      ],
+      "purpose": "Normalize a human-typed phone number into the digits the Evolution API expects."
+    },
+    {
       "id": "svc:redis-state",
       "label": "redis-state",
       "kind": "service",
@@ -385,6 +395,13 @@
       "kind": "table",
       "layer": "data",
       "columns": 3
+    },
+    {
+      "id": "tbl:team_members",
+      "label": "team_members",
+      "kind": "table",
+      "layer": "data",
+      "columns": 6
     },
     {
       "id": "tbl:ai_accuracy_metrics",
@@ -860,12 +877,6 @@
       ]
     },
     {
-      "id": "tbl:team_members",
-      "label": "team_members",
-      "kind": "table",
-      "layer": "data"
-    },
-    {
       "id": "ext:rpc:increment_message_count",
       "label": "increment_message_count()",
       "kind": "rpc",
@@ -1307,15 +1318,15 @@
     },
     {
       "from": "route:POST /api/sales/:id/confirm",
-      "to": "svc:sales.helpers",
-      "kind": "route-service",
-      "label": "itemsForDecrement"
-    },
-    {
-      "from": "route:POST /api/sales/:id/confirm",
       "to": "svc:routing-engine.service",
       "kind": "route-service",
       "label": "routingEngine"
+    },
+    {
+      "from": "route:POST /api/sales/:id/confirm",
+      "to": "svc:sales.helpers",
+      "kind": "route-service",
+      "label": "itemsForDecrement"
     },
     {
       "from": "route:POST /api/sales/:id/confirm",

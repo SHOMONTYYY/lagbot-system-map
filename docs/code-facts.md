@@ -34,7 +34,7 @@ Method · Path · Guards · Services · Tables(R/W) · Ext
 - `POST /api/account/delete` · g:requireAuth · svc:evolution-api · R:businesses W:businesses/user_profiles · auth.admin.deleteUser
 - `GET /api/sales/pending` · g:requireAuth,requireBusiness · R:pending_sales
 - `GET /api/sales/confirmed` · g:requireAuth,requireBusiness · R:pending_sales
-- `POST /api/sales/:id/confirm` · g:requireAuth,requireBusiness · svc:sales.helpers,routing-engine · R:pending_sales/business_config/products W:pending_sales/conversations · expo
+- `POST /api/sales/:id/confirm` · g:requireAuth,requireBusiness · svc:routing-engine,sales.helpers · R:pending_sales/business_config/products W:pending_sales/conversations · expo
 - `POST /api/sales/:id/reject` · g:requireAuth,requireBusiness · R:pending_sales W:pending_sales
 - `POST /api/products/image` · g:requireAuth,requireBusiness,rateLimitBusiness,imageUpload · —
 - `POST /api/products/image/delete` · g:requireAuth,requireBusiness,rateLimitBusiness · —
@@ -48,7 +48,7 @@ Method · Path · Guards · Services · Tables(R/W) · Ext
 - `POST /api/conversations/:id/smart-replies` · g:requireAuth,requireBusiness · svc:llm · R:conversations/messages
 - `GET /api/wallet` · g:requireAuth,requireBusiness · R:wallets
 
-## Service call graph (14)
+## Service call graph (15)
 
 - **catalogue-agent.service** — Catalogue Agent (read-side product selector)
   - exports: selectProductsForPrompt
@@ -75,6 +75,8 @@ Method · Path · Guards · Services · Tables(R/W) · Ext
   - exports: parseNovaOutput, enforceRules, detectForcedHandoff, HANDOFF_REASON_LABELS, NOVA_RULES_SUMMARY
 - **pause-state** — pause-state — cross-worker "AI paused" flags.
   - exports: PauseState
+- **phone.util** — Normalize a human-typed phone number into the digits the Evolution API expects.
+  - exports: normalizeMsisdn
 - **redis-state** — redis-state — shared Redis connection + graceful-degradation helpers.
   - exports: getClient, isAvailable, incrFixedWindow, semAcquire, semRelease, zPushCount, setNX, setValue, getValue, getDel, delKeys
 - **reply-screener** — Reply Screener — second-AI review of every outbound Nova draft.
@@ -117,7 +119,7 @@ Method · Path · Guards · Services · Tables(R/W) · Ext
 
 PORT, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_DB_URI, ANTHROPIC_API_KEY, REDIS_URL, EVOLUTION_API_URL, EVOLUTION_API_KEY, EVOLUTION_WEBHOOK_SECRET, WEBHOOK_BASE_URL, ALLOWED_ORIGINS, EXPO_PUBLIC_CLAWDBOT_URL, EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY
 
-## SQL tables + columns (32)
+## SQL tables + columns (33)
 
 - **ai_accuracy_metrics** (6): id, business_id, message_id, response_approved, user_edited, created_at
 - **ai_behavior_settings** (12): id, business_id, tone, language, use_emojis, response_style, max_response_words, use_pidgin, business_hours, out_of_hours_message, created_at, updated_at
@@ -142,6 +144,7 @@ PORT, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_DB_URI, AN
 - **sales_records** (7): id, business_id, conversation_id, product_id, quantity, sale_date, created_at
 - **skills** (4): id, description, config_template, created_at
 - **subscriptions** (11): id, business_id, tier, status, ai_responses_limit, ai_responses_used, products_limit, skills_limit, started_at, expires_at, created_at
+- **team_members** (6): id, business_id, name, role, whatsapp_contact, created_at
 - **token_config** (9): id, sell_price_per_token, base_tokens_per_customer, extra_tokens_per_message, free_tokens_per_day, conversation_timeout_hours, max_rollover_tokens, enforcement_enabled, updated_at
 - **token_ledger** (9): id, business_id, delta, bucket, reason, conversation_id, charge_key, cost_naira, created_at
 - **user_profiles** (8): id, user_id, email, full_name, phone_number, avatar_url, created_at, updated_at
@@ -152,7 +155,7 @@ PORT, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_DB_URI, AN
 - **wallets** (11): id, business_id, paystack_subaccount_code, paystack_subaccount_id, bank_name, bank_code, account_number, account_name, status, created_at, updated_at
 - **weekly_reports** (7): id, business_id, report_type, report_data, week_start, week_end, created_at
 
-## RLS policies (29 on 26 tables)
+## RLS policies (30 on 26 tables)
 
 - **ai_accuracy_metrics**: owner only
 - **business_config**: owner only
@@ -171,7 +174,7 @@ PORT, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_DB_URI, AN
 - **routing_rules**: owner only
 - **sales_records**: owner only
 - **skills**: read only | read catalog
-- **team_members**: owner only
+- **team_members**: owner only | owner only
 - **token_config**: read only
 - **token_ledger**: owner read
 - **user_skills**: owner only
