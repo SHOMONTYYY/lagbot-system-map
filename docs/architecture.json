@@ -192,6 +192,16 @@
       "purpose": "Sale line-item helpers — pure, dependency-free; shared by the message"
     },
     {
+      "id": "svc:stock.service",
+      "label": "stock.service",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "reconcileSaleStock"
+      ],
+      "purpose": "Stock reservation reconciler (thin wrapper over the atomic SQL function)."
+    },
+    {
       "id": "svc:token.service",
       "label": "token.service",
       "kind": "service",
@@ -374,7 +384,7 @@
       "label": "pending_sales",
       "kind": "table",
       "layer": "data",
-      "columns": 1
+      "columns": 3
     },
     {
       "id": "tbl:ai_accuracy_metrics",
@@ -725,10 +735,14 @@
       ]
     },
     {
-      "id": "ext:rpc:decrement_product_stock",
-      "label": "decrement_product_stock()",
-      "kind": "rpc",
-      "layer": "data"
+      "id": "route:POST /api/sales/:id/reject",
+      "label": "POST /api/sales/:id/reject",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
     },
     {
       "id": "route:POST /api/products/image",
@@ -860,6 +874,12 @@
     {
       "id": "ext:rpc:increment_budget",
       "label": "increment_budget()",
+      "kind": "rpc",
+      "layer": "data"
+    },
+    {
+      "id": "ext:rpc:reconcile_sale_stock",
+      "label": "reconcile_sale_stock()",
       "kind": "rpc",
       "layer": "data"
     },
@@ -1287,15 +1307,15 @@
     },
     {
       "from": "route:POST /api/sales/:id/confirm",
-      "to": "svc:routing-engine.service",
-      "kind": "route-service",
-      "label": "routingEngine"
-    },
-    {
-      "from": "route:POST /api/sales/:id/confirm",
       "to": "svc:sales.helpers",
       "kind": "route-service",
       "label": "itemsForDecrement"
+    },
+    {
+      "from": "route:POST /api/sales/:id/confirm",
+      "to": "svc:routing-engine.service",
+      "kind": "route-service",
+      "label": "routingEngine"
     },
     {
       "from": "route:POST /api/sales/:id/confirm",
@@ -1329,15 +1349,21 @@
     },
     {
       "from": "route:POST /api/sales/:id/confirm",
-      "to": "ext:rpc:decrement_product_stock",
-      "kind": "ext:rpc:decrement_product_stock",
-      "label": "route-rpc"
-    },
-    {
-      "from": "route:POST /api/sales/:id/confirm",
       "to": "ch:expo",
       "kind": "route-http",
       "label": "expo"
+    },
+    {
+      "from": "route:POST /api/sales/:id/reject",
+      "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/sales/:id/reject",
+      "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "write"
     },
     {
       "from": "route:POST /api/products/import",
@@ -1646,6 +1672,12 @@
       "label": "read"
     },
     {
+      "from": "svc:stock.service",
+      "to": "ext:rpc:reconcile_sale_stock",
+      "kind": "service-rpc",
+      "label": ""
+    },
+    {
       "from": "svc:token.service",
       "to": "tbl:token_config",
       "kind": "service-table",
@@ -1754,6 +1786,12 @@
       "label": ""
     },
     {
+      "from": "scr:app/(tabs)/inventory.tsx",
+      "to": "route:POST /api/sales/:id/reject",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
       "from": "scr:app/(tabs)/sales.tsx",
       "to": "route:POST /api/routing-rules",
       "kind": "screen-route",
@@ -1838,6 +1876,12 @@
       "label": ""
     },
     {
+      "from": "scr:src/components/sales/PendingDetailSheet.tsx",
+      "to": "route:POST /api/sales/:id/reject",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
       "from": "scr:src/components/sales/TeamPickerSheet.tsx",
       "to": "route:POST /api/whatsapp/send",
       "kind": "screen-route",
@@ -1870,6 +1914,12 @@
     {
       "from": "scr:src/hooks/useSales.ts",
       "to": "route:POST /api/sales/:id/confirm",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/hooks/useSales.ts",
+      "to": "route:POST /api/sales/:id/reject",
       "kind": "screen-route",
       "label": ""
     },

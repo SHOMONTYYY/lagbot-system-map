@@ -551,8 +551,8 @@
         "requireBusiness"
       ],
       "services": [
-        "routingEngine",
-        "itemsForDecrement"
+        "itemsForDecrement",
+        "routingEngine"
       ],
       "tables": [
         {
@@ -576,13 +576,33 @@
           "op": "read"
         }
       ],
-      "rpcs": [
-        "decrement_product_stock"
-      ],
+      "rpcs": [],
       "auth": [],
       "http": [
         "expo"
       ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/sales/:id/reject",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "pending_sales",
+          "op": "read"
+        },
+        {
+          "table": "pending_sales",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
     },
     {
       "method": "POST",
@@ -1083,6 +1103,20 @@
       "http": []
     },
     {
+      "name": "stock.service.js",
+      "purpose": "Stock reservation reconciler (thin wrapper over the atomic SQL function).",
+      "exports": [
+        "reconcileSaleStock"
+      ],
+      "requires": [],
+      "di": [],
+      "tables": [],
+      "rpcs": [
+        "reconcile_sale_stock"
+      ],
+      "http": []
+    },
+    {
       "name": "token.service.js",
       "purpose": "Token billing service — Phase 1 (core metering + free tier).",
       "exports": [
@@ -1390,7 +1424,9 @@
         "updated_at"
       ],
       "pending_sales": [
-        "items"
+        "items",
+        "stock_committed",
+        "rejected_at"
       ],
       "ai_accuracy_metrics": [
         "id",
@@ -1493,8 +1529,10 @@
       "decrement_product_stock",
       "increment_budget",
       "increment_message_count",
+      "increment_product_stock",
       "protect_business_columns",
-      "protect_business_config_bank"
+      "protect_business_config_bank",
+      "reconcile_sale_stock"
     ],
     "policies": [
       {
@@ -1665,7 +1703,8 @@
     {
       "file": "app/(tabs)/inventory.tsx",
       "routes": [
-        "POST /api/sales/:_/confirm"
+        "POST /api/sales/:_/confirm",
+        "POST /api/sales/:_/reject"
       ]
     },
     {
@@ -1706,7 +1745,8 @@
     {
       "file": "src/components/sales/PendingDetailSheet.tsx",
       "routes": [
-        "POST /api/sales/:_/confirm"
+        "POST /api/sales/:_/confirm",
+        "POST /api/sales/:_/reject"
       ]
     },
     {
@@ -1737,7 +1777,8 @@
     {
       "file": "src/hooks/useSales.ts",
       "routes": [
-        "POST /api/sales/:_/confirm"
+        "POST /api/sales/:_/confirm",
+        "POST /api/sales/:_/reject"
       ]
     },
     {
