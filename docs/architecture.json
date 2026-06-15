@@ -304,7 +304,7 @@
       "label": "business_config",
       "kind": "table",
       "layer": "data",
-      "columns": 3
+      "columns": 4
     },
     {
       "id": "tbl:wallets",

@@ -119,7 +119,7 @@ PORT, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_DB_URI, AN
 - **ai_behavior_settings** (12): id, business_id, tone, language, use_emojis, response_style, max_response_words, use_pidgin, business_hours, out_of_hours_message, created_at, updated_at
 - **ai_tone_metrics** (8): id, business_id, message_id, tone_detected, sentiment, politeness_score, formality_score, created_at
 - **budget_tracking** (10): id, business_id, date, tokens_used, cost_usd, ollama_messages, haiku_messages, sonnet_messages, tier_breakdown, created_at
-- **business_config** (3): industry, location, description
+- **business_config** (4): industry, location, description, business_address
 - **businesses** (2): subscription_tier, owner_user_id
 - **conversation_state** (10): conversation_id, business_id, turn_count, greeted, deferred_count, close_attempted, consecutive_angry_turns, customer_language, updated_at, abuse_count
 - **conversations** (16): resolved, resolved_at, ai_handled, pipeline_tag, pipeline_tag_source, pipeline_tag_updated_at, pipeline_stage, archived_at, archived_by, nova_message_count, tokens_charged, last_nova_charge_at, billing_session_started_at, handoff_reason, assigned_teammate, paused_at

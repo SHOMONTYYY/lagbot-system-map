@@ -1288,7 +1288,8 @@
       "business_config": [
         "industry",
         "location",
-        "description"
+        "description",
+        "business_address"
       ],
       "wallets": [
         "id",
