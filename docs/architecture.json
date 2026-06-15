@@ -463,7 +463,18 @@
       "label": "GET /healthz",
       "kind": "route",
       "layer": "api",
-      "guards": []
+      "guards": [
+        "healthHandler"
+      ]
+    },
+    {
+      "id": "route:GET /health",
+      "label": "GET /health",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "healthHandler"
+      ]
     },
     {
       "id": "route:POST /api/whatsapp/pairing-code",

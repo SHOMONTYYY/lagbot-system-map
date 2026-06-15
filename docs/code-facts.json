@@ -55,7 +55,21 @@
     {
       "method": "GET",
       "path": "/healthz",
-      "guards": [],
+      "guards": [
+        "healthHandler"
+      ],
+      "services": [],
+      "tables": [],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "guards": [
+        "healthHandler"
+      ],
       "services": [],
       "tables": [],
       "rpcs": [],
