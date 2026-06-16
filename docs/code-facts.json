@@ -1297,7 +1297,8 @@
         "routed_to",
         "classification_tier",
         "confidence_score",
-        "cost_usd"
+        "cost_usd",
+        "media_path"
       ],
       "conversations": [
         "resolved",
@@ -1674,6 +1675,10 @@
       {
         "name": "owner only",
         "table": "team_members"
+      },
+      {
+        "name": "business reads own chat media",
+        "table": "storage"
       }
     ]
   },

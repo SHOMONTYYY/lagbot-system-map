@@ -136,7 +136,7 @@ PORT, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_DB_URI, AN
 - **inventory_imports** (10): id, business_id, file_name, file_type, total_rows, successful_rows, failed_rows, error_log, status, created_at
 - **lead_reminders** (9): id, business_id, conversation_id, reminder_type, scheduled_at, sent, sent_at, message, created_at
 - **message_count_realtime** (8): last_reset_date, business_id, today_count, week_count, month_count, all_time_count, last_message_at, updated_at
-- **messages** (5): handled_by, routed_to, classification_tier, confidence_score, cost_usd
+- **messages** (6): handled_by, routed_to, classification_tier, confidence_score, cost_usd, media_path
 - **pending_sales** (3): items, stock_committed, rejected_at
 - **products** (2): sizes, colors
 - **response_time_metrics** (6): id, business_id, message_id, time_to_first_response, time_to_resolution, created_at
@@ -155,7 +155,7 @@ PORT, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_DB_URI, AN
 - **wallets** (11): id, business_id, paystack_subaccount_code, paystack_subaccount_id, bank_name, bank_code, account_number, account_name, status, created_at, updated_at
 - **weekly_reports** (7): id, business_id, report_type, report_data, week_start, week_end, created_at
 
-## RLS policies (30 on 26 tables)
+## RLS policies (31 on 27 tables)
 
 - **ai_accuracy_metrics**: owner only
 - **business_config**: owner only
@@ -174,6 +174,7 @@ PORT, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_DB_URI, AN
 - **routing_rules**: owner only
 - **sales_records**: owner only
 - **skills**: read only | read catalog
+- **storage**: business reads own chat media
 - **team_members**: owner only | owner only
 - **token_config**: read only
 - **token_ledger**: owner read

@@ -296,7 +296,7 @@
       "label": "messages",
       "kind": "table",
       "layer": "data",
-      "columns": 5
+      "columns": 6
     },
     {
       "id": "tbl:conversations",
