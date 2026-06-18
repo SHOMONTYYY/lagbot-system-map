@@ -877,6 +877,12 @@
       ]
     },
     {
+      "id": "ext:rpc:get_unanswered_conversations",
+      "label": "get_unanswered_conversations()",
+      "kind": "rpc",
+      "layer": "data"
+    },
+    {
       "id": "ext:rpc:increment_message_count",
       "label": "increment_message_count()",
       "kind": "rpc",
@@ -1111,6 +1117,12 @@
       "to": "svc:llm.service",
       "kind": "route-service",
       "label": "llm"
+    },
+    {
+      "from": "route:POST /api/ai/resume",
+      "to": "svc:message-pipeline.service",
+      "kind": "route-service",
+      "label": "pipeline"
     },
     {
       "from": "route:POST /api/ai/resume",
@@ -1633,6 +1645,12 @@
       "to": "tbl:conversation_state",
       "kind": "service-table",
       "label": "write"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "ext:rpc:get_unanswered_conversations",
+      "kind": "service-rpc",
+      "label": ""
     },
     {
       "from": "svc:message-pipeline.service",

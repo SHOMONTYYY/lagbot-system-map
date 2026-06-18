@@ -208,7 +208,8 @@
         "requireBusiness"
       ],
       "services": [
-        "llm"
+        "llm",
+        "pipeline"
       ],
       "tables": [
         {
@@ -987,6 +988,7 @@
         }
       ],
       "rpcs": [
+        "get_unanswered_conversations",
         "increment_message_count",
         "increment_budget"
       ],
@@ -1548,6 +1550,7 @@
       "auth_business_id",
       "calculate_ai_accuracy",
       "decrement_product_stock",
+      "get_unanswered_conversations",
       "increment_budget",
       "increment_message_count",
       "increment_product_stock",

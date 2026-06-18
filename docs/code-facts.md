@@ -18,7 +18,7 @@ Method · Path · Guards · Services · Tables(R/W) · Ext
 - `POST /api/whatsapp/disconnect` · g:requireAuth,requireBusiness · svc:evolution-api · —
 - `POST /api/test/push` · g:requireAuth,requireBusiness · R:business_config · expo
 - `POST /api/ai/pause` · g:requireAuth,requireBusiness · svc:llm · W:business_config
-- `POST /api/ai/resume` · g:requireAuth,requireBusiness · svc:llm · W:business_config
+- `POST /api/ai/resume` · g:requireAuth,requireBusiness · svc:llm,message-pipeline · W:business_config
 - `POST /api/settings/refresh` · g:requireAuth,requireBusiness · svc:llm · —
 - `PUT /api/settings/profile` · g:requireAuth,requireBusiness · svc:llm · W:businesses
 - `PUT /api/settings/config` · g:requireAuth,requireBusiness · svc:llm · W:business_config
@@ -68,7 +68,7 @@ Method · Path · Guards · Services · Tables(R/W) · Ext
 - **message-pipeline.service** — Message Pipeline — Multi-tenant
   - →svc: evolution-api, nova-rules, sales.helpers, llm, token
   - db: R:business_config/conversations/messages/products/routing_rules/team_members/pending_sales W:conversations/pending_sales/messages/response_time_metrics/ai_accuracy_metrics/conversation_state
-  - rpc: increment_message_count, increment_budget
+  - rpc: get_unanswered_conversations, increment_message_count, increment_budget
   - http: expo
   - exports: MessagePipeline
 - **nova-rules** — Nova rule layer — pure, dependency-free helpers shared by the message
@@ -186,4 +186,4 @@ PORT, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_DB_URI, AN
 - **whatsapp_connections**: owner only
 
 RLS enabled (ALTER): ai_accuracy_metrics, ai_behavior_settings, ai_tone_metrics, budget_tracking, business_config, businesses, confirmed_sales, conversation_state, conversations, customer_satisfaction, daily_stats, frequently_asked_questions, heartbeat_logs, human_interventions, inventory_imports, lead_reminders, message_count_realtime, messages, pending_sales, products, response_time_metrics, routing_rules, sales_records, skills, subscriptions, team_members, token_config, token_ledger, user_profiles, user_skills, vendor_token_state, wallet_transactions, wallet_withdrawal_accounts, wallets, weekly_reports, whatsapp_connections
-DB functions: auth_business_id, calculate_ai_accuracy, decrement_product_stock, increment_budget, increment_message_count, increment_product_stock, protect_business_columns, protect_business_config_bank, reconcile_sale_stock
+DB functions: auth_business_id, calculate_ai_accuracy, decrement_product_stock, get_unanswered_conversations, increment_budget, increment_message_count, increment_product_stock, protect_business_columns, protect_business_config_bank, reconcile_sale_stock
