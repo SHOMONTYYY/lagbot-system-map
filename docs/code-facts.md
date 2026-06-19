@@ -136,7 +136,7 @@ PORT, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_DB_URI, AN
 - **inventory_imports** (10): id, business_id, file_name, file_type, total_rows, successful_rows, failed_rows, error_log, status, created_at
 - **lead_reminders** (9): id, business_id, conversation_id, reminder_type, scheduled_at, sent, sent_at, message, created_at
 - **message_count_realtime** (8): last_reset_date, business_id, today_count, week_count, month_count, all_time_count, last_message_at, updated_at
-- **messages** (6): handled_by, routed_to, classification_tier, confidence_score, cost_usd, media_path
+- **messages** (7): handled_by, routed_to, classification_tier, confidence_score, cost_usd, media_path, pipeline_stage
 - **pending_sales** (3): items, stock_committed, rejected_at
 - **products** (2): sizes, colors
 - **response_time_metrics** (6): id, business_id, message_id, time_to_first_response, time_to_resolution, created_at

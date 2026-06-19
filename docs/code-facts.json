@@ -1300,7 +1300,8 @@
         "classification_tier",
         "confidence_score",
         "cost_usd",
-        "media_path"
+        "media_path",
+        "pipeline_stage"
       ],
       "conversations": [
         "resolved",
