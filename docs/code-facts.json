@@ -769,6 +769,30 @@
     },
     {
       "method": "POST",
+      "path": "/api/conversations/:id/takeover",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [
+        "pipeline"
+      ],
+      "tables": [
+        {
+          "table": "conversations",
+          "op": "read"
+        },
+        {
+          "table": "conversations",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
       "path": "/api/conversations/:id/smart-replies",
       "guards": [
         "requireAuth",
@@ -1728,8 +1752,9 @@
       "file": "app/(tabs)/chats.tsx",
       "routes": [
         "PATCH /api/conversations/:_/archive",
-        "GET /api/conversations/:_/handoff",
         "POST /api/conversations/:_/resume",
+        "POST /api/conversations/:_/takeover",
+        "GET /api/conversations/:_/handoff",
         "POST /api/whatsapp/send"
       ]
     },

@@ -857,6 +857,16 @@
       ]
     },
     {
+      "id": "route:POST /api/conversations/:id/takeover",
+      "label": "POST /api/conversations/:id/takeover",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
       "id": "route:POST /api/conversations/:id/smart-replies",
       "label": "POST /api/conversations/:id/smart-replies",
       "kind": "route",
@@ -1443,6 +1453,24 @@
       "label": "write"
     },
     {
+      "from": "route:POST /api/conversations/:id/takeover",
+      "to": "svc:message-pipeline.service",
+      "kind": "route-service",
+      "label": "pipeline"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/takeover",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/takeover",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
       "from": "route:POST /api/conversations/:id/smart-replies",
       "to": "svc:llm.service",
       "kind": "route-service",
@@ -1792,13 +1820,19 @@
     },
     {
       "from": "scr:app/(tabs)/chats.tsx",
-      "to": "route:GET /api/conversations/:id/handoff",
+      "to": "route:POST /api/conversations/:id/resume",
       "kind": "screen-route",
       "label": ""
     },
     {
       "from": "scr:app/(tabs)/chats.tsx",
-      "to": "route:POST /api/conversations/:id/resume",
+      "to": "route:POST /api/conversations/:id/takeover",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/chats.tsx",
+      "to": "route:GET /api/conversations/:id/handoff",
       "kind": "screen-route",
       "label": ""
     },
