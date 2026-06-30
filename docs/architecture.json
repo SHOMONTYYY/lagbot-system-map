@@ -47,6 +47,21 @@
       "purpose": "Catalogue Agent (read-side product selector)"
     },
     {
+      "id": "svc:delivery-message.service",
+      "label": "delivery-message.service",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "resolveDriverReveal",
+        "templateWants",
+        "buildDriverText",
+        "notifyDriver",
+        "upsertConversation",
+        "storeMessage"
+      ],
+      "purpose": "Delivery-message service — the SINGLE place that builds + sends a driver's"
+    },
+    {
       "id": "svc:evolution-api.client",
       "label": "evolution-api.client",
       "kind": "service",
@@ -75,6 +90,28 @@
         "createEvolutionWebhookHandler"
       ],
       "purpose": "Evolution API Webhook Handler"
+    },
+    {
+      "id": "svc:fulfilment.service",
+      "label": "fulfilment.service",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "createFulfilmentService",
+        "FULFIL_STEPS",
+        "orderSummary"
+      ],
+      "purpose": "Fulfilment / delivery state machine (sql/033) + team windows (sql/034)."
+    },
+    {
+      "id": "svc:intent.service",
+      "label": "intent.service",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [
+        "classifyConversationIntents"
+      ],
+      "purpose": "── AI message-intent classifier ─────────────────────────────────────────────"
     },
     {
       "id": "svc:llm-queue",
@@ -119,6 +156,10 @@
         "parseNovaOutput",
         "enforceRules",
         "detectForcedHandoff",
+        "detectPaymentClaim",
+        "detectCancellation",
+        "detectPostSaleConcern",
+        "isPostSaleFollowup",
         "HANDOFF_REASON_LABELS",
         "NOVA_RULES_SUMMARY"
       ],
@@ -197,7 +238,8 @@
         "clampQty",
         "resolveItems",
         "summarizeItems",
-        "itemsForDecrement"
+        "itemsForDecrement",
+        "backfillItems"
       ],
       "purpose": "Sale line-item helpers — pure, dependency-free; shared by the message"
     },
@@ -324,7 +366,7 @@
       "label": "business_config",
       "kind": "table",
       "layer": "data",
-      "columns": 4
+      "columns": 6
     },
     {
       "id": "tbl:wallets",
@@ -359,7 +401,7 @@
       "label": "products",
       "kind": "table",
       "layer": "data",
-      "columns": 2
+      "columns": 4
     },
     {
       "id": "tbl:routing_rules",
@@ -394,14 +436,21 @@
       "label": "pending_sales",
       "kind": "table",
       "layer": "data",
-      "columns": 3
+      "columns": 11
     },
     {
       "id": "tbl:team_members",
       "label": "team_members",
       "kind": "table",
       "layer": "data",
-      "columns": 6
+      "columns": 7
+    },
+    {
+      "id": "tbl:team_windows",
+      "label": "team_windows",
+      "kind": "table",
+      "layer": "data",
+      "columns": 20
     },
     {
       "id": "tbl:ai_accuracy_metrics",
@@ -742,8 +791,38 @@
       ]
     },
     {
+      "id": "route:POST /api/sales/:id/broadcast-drivers",
+      "label": "POST /api/sales/:id/broadcast-drivers",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
       "id": "route:POST /api/sales/:id/confirm",
       "label": "POST /api/sales/:id/confirm",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:POST /api/conversations/:id/mark-paid",
+      "label": "POST /api/conversations/:id/mark-paid",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:POST /api/sales/record-manual",
+      "label": "POST /api/sales/record-manual",
       "kind": "route",
       "layer": "api",
       "guards": [
@@ -867,8 +946,28 @@
       ]
     },
     {
+      "id": "route:POST /api/conversations/:id/clear-context",
+      "label": "POST /api/conversations/:id/clear-context",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
       "id": "route:POST /api/conversations/:id/smart-replies",
       "label": "POST /api/conversations/:id/smart-replies",
+      "kind": "route",
+      "layer": "api",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ]
+    },
+    {
+      "id": "route:GET /api/conversations/:id/intents",
+      "label": "GET /api/conversations/:id/intents",
       "kind": "route",
       "layer": "api",
       "guards": [
@@ -901,6 +1000,12 @@
     {
       "id": "ext:rpc:increment_budget",
       "label": "increment_budget()",
+      "kind": "rpc",
+      "layer": "data"
+    },
+    {
+      "id": "ext:rpc:reconcile_sale_stock_v2",
+      "label": "reconcile_sale_stock_v2()",
       "kind": "rpc",
       "layer": "data"
     },
@@ -941,8 +1046,8 @@
       "layer": "app"
     },
     {
-      "id": "scr:app/(tabs)/chats.tsx",
-      "label": "app/(tabs)/chats.tsx",
+      "id": "scr:app/(tabs)/chats/index.tsx",
+      "label": "app/(tabs)/chats/index.tsx",
       "kind": "screen",
       "layer": "app"
     },
@@ -971,8 +1076,26 @@
       "layer": "app"
     },
     {
+      "id": "scr:src/components/chats/DraftDeck.tsx",
+      "label": "src/components/chats/DraftDeck.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:src/components/chats/RiderPickerSheet.tsx",
+      "label": "src/components/chats/RiderPickerSheet.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
       "id": "scr:src/components/chats/SmartReplyStrip.tsx",
       "label": "src/components/chats/SmartReplyStrip.tsx",
+      "kind": "screen",
+      "layer": "app"
+    },
+    {
+      "id": "scr:src/components/sales/ManualConfirmSheet.tsx",
+      "label": "src/components/sales/ManualConfirmSheet.tsx",
       "kind": "screen",
       "layer": "app"
     },
@@ -1076,19 +1199,7 @@
     },
     {
       "from": "route:POST /api/whatsapp/send",
-      "to": "tbl:conversations",
-      "kind": "route-table",
-      "label": "read"
-    },
-    {
-      "from": "route:POST /api/whatsapp/send",
       "to": "tbl:messages",
-      "kind": "route-table",
-      "label": "write"
-    },
-    {
-      "from": "route:POST /api/whatsapp/send",
-      "to": "tbl:conversations",
       "kind": "route-table",
       "label": "write"
     },
@@ -1339,52 +1450,130 @@
       "label": "read"
     },
     {
-      "from": "route:POST /api/sales/:id/confirm",
+      "from": "route:GET /api/sales/confirmed",
+      "to": "tbl:team_members",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/sales/:id/broadcast-drivers",
       "to": "svc:routing-engine.service",
       "kind": "route-service",
       "label": "routingEngine"
     },
     {
-      "from": "route:POST /api/sales/:id/confirm",
+      "from": "route:POST /api/sales/:id/broadcast-drivers",
+      "to": "svc:evolution-api.client",
+      "kind": "route-service",
+      "label": "evolutionClient"
+    },
+    {
+      "from": "route:POST /api/sales/:id/broadcast-drivers",
       "to": "svc:sales.helpers",
       "kind": "route-service",
       "label": "itemsForDecrement"
     },
     {
-      "from": "route:POST /api/sales/:id/confirm",
+      "from": "route:POST /api/sales/:id/broadcast-drivers",
       "to": "tbl:pending_sales",
       "kind": "route-table",
       "label": "read"
     },
     {
-      "from": "route:POST /api/sales/:id/confirm",
+      "from": "route:POST /api/sales/:id/broadcast-drivers",
+      "to": "tbl:team_members",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/sales/:id/broadcast-drivers",
       "to": "tbl:pending_sales",
       "kind": "route-table",
       "label": "write"
     },
     {
-      "from": "route:POST /api/sales/:id/confirm",
+      "from": "route:POST /api/sales/:id/broadcast-drivers",
       "to": "tbl:conversations",
       "kind": "route-table",
       "label": "write"
     },
     {
-      "from": "route:POST /api/sales/:id/confirm",
+      "from": "route:POST /api/sales/:id/broadcast-drivers",
       "to": "tbl:business_config",
       "kind": "route-table",
       "label": "read"
     },
     {
-      "from": "route:POST /api/sales/:id/confirm",
+      "from": "route:POST /api/sales/:id/broadcast-drivers",
+      "to": "tbl:businesses",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/sales/:id/broadcast-drivers",
+      "to": "tbl:messages",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/sales/:id/broadcast-drivers",
       "to": "tbl:products",
       "kind": "route-table",
       "label": "read"
     },
     {
-      "from": "route:POST /api/sales/:id/confirm",
+      "from": "route:POST /api/sales/:id/broadcast-drivers",
       "to": "ch:expo",
       "kind": "route-http",
       "label": "expo"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/mark-paid",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/mark-paid",
+      "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/mark-paid",
+      "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/mark-paid",
+      "to": "tbl:products",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/sales/record-manual",
+      "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/sales/record-manual",
+      "to": "tbl:products",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/sales/record-manual",
+      "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/sales/:id/reject",
+      "to": "svc:evolution-api.client",
+      "kind": "route-service",
+      "label": "evolutionClient"
     },
     {
       "from": "route:POST /api/sales/:id/reject",
@@ -1395,6 +1584,18 @@
     {
       "from": "route:POST /api/sales/:id/reject",
       "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/sales/:id/reject",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:POST /api/sales/:id/reject",
+      "to": "tbl:messages",
       "kind": "route-table",
       "label": "write"
     },
@@ -1471,6 +1672,30 @@
       "label": "write"
     },
     {
+      "from": "route:POST /api/conversations/:id/clear-context",
+      "to": "svc:message-pipeline.service",
+      "kind": "route-service",
+      "label": "pipeline"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/clear-context",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/clear-context",
+      "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:POST /api/conversations/:id/clear-context",
+      "to": "tbl:pending_sales",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
       "from": "route:POST /api/conversations/:id/smart-replies",
       "to": "svc:llm.service",
       "kind": "route-service",
@@ -1487,6 +1712,30 @@
       "to": "tbl:messages",
       "kind": "route-table",
       "label": "read"
+    },
+    {
+      "from": "route:GET /api/conversations/:id/intents",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/conversations/:id/intents",
+      "to": "tbl:messages",
+      "kind": "route-table",
+      "label": "read"
+    },
+    {
+      "from": "route:GET /api/conversations/:id/intents",
+      "to": "tbl:messages",
+      "kind": "route-table",
+      "label": "write"
+    },
+    {
+      "from": "route:GET /api/conversations/:id/intents",
+      "to": "tbl:conversations",
+      "kind": "route-table",
+      "label": "write"
     },
     {
       "from": "route:GET /api/wallet",
@@ -1507,6 +1756,30 @@
       "label": "handleIncoming"
     },
     {
+      "from": "svc:delivery-message.service",
+      "to": "svc:evolution-api.client",
+      "kind": "service-service",
+      "label": "require"
+    },
+    {
+      "from": "svc:delivery-message.service",
+      "to": "tbl:business_config",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:delivery-message.service",
+      "to": "tbl:conversations",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:delivery-message.service",
+      "to": "tbl:messages",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
       "from": "svc:evolution-webhook.handler",
       "to": "svc:evolution-api.client",
       "kind": "service-service",
@@ -1519,6 +1792,54 @@
       "label": "write"
     },
     {
+      "from": "svc:evolution-webhook.handler",
+      "to": "tbl:messages",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:fulfilment.service",
+      "to": "svc:evolution-api.client",
+      "kind": "service-service",
+      "label": "require"
+    },
+    {
+      "from": "svc:fulfilment.service",
+      "to": "tbl:team_members",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:fulfilment.service",
+      "to": "tbl:pending_sales",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:fulfilment.service",
+      "to": "tbl:team_windows",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:fulfilment.service",
+      "to": "tbl:team_windows",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:fulfilment.service",
+      "to": "tbl:pending_sales",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:intent.service",
+      "to": "ch:anthropic",
+      "kind": "service-http",
+      "label": "anthropic"
+    },
+    {
       "from": "svc:llm.service",
       "to": "svc:sales.helpers",
       "kind": "service-service",
@@ -1529,6 +1850,12 @@
       "to": "svc:nova-rules",
       "kind": "service-service",
       "label": "require"
+    },
+    {
+      "from": "svc:llm.service",
+      "to": "tbl:products",
+      "kind": "service-table",
+      "label": "read"
     },
     {
       "from": "svc:llm.service",
@@ -1545,12 +1872,6 @@
     {
       "from": "svc:llm.service",
       "to": "tbl:business_config",
-      "kind": "service-table",
-      "label": "read"
-    },
-    {
-      "from": "svc:llm.service",
-      "to": "tbl:products",
       "kind": "service-table",
       "label": "read"
     },
@@ -1598,15 +1919,9 @@
     },
     {
       "from": "svc:message-pipeline.service",
-      "to": "tbl:business_config",
+      "to": "tbl:team_windows",
       "kind": "service-table",
-      "label": "read"
-    },
-    {
-      "from": "svc:message-pipeline.service",
-      "to": "tbl:conversations",
-      "kind": "service-table",
-      "label": "read"
+      "label": "write"
     },
     {
       "from": "svc:message-pipeline.service",
@@ -1616,19 +1931,7 @@
     },
     {
       "from": "svc:message-pipeline.service",
-      "to": "tbl:messages",
-      "kind": "service-table",
-      "label": "read"
-    },
-    {
-      "from": "svc:message-pipeline.service",
-      "to": "tbl:products",
-      "kind": "service-table",
-      "label": "read"
-    },
-    {
-      "from": "svc:message-pipeline.service",
-      "to": "tbl:routing_rules",
+      "to": "tbl:business_config",
       "kind": "service-table",
       "label": "read"
     },
@@ -1649,6 +1952,42 @@
       "to": "tbl:pending_sales",
       "kind": "service-table",
       "label": "write"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:team_windows",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:team_members",
+      "kind": "service-table",
+      "label": "write"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:conversations",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:messages",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:products",
+      "kind": "service-table",
+      "label": "read"
+    },
+    {
+      "from": "svc:message-pipeline.service",
+      "to": "tbl:routing_rules",
+      "kind": "service-table",
+      "label": "read"
     },
     {
       "from": "svc:message-pipeline.service",
@@ -1727,6 +2066,12 @@
       "to": "tbl:team_members",
       "kind": "service-table",
       "label": "read"
+    },
+    {
+      "from": "svc:stock.service",
+      "to": "ext:rpc:reconcile_sale_stock_v2",
+      "kind": "service-rpc",
+      "label": ""
     },
     {
       "from": "svc:stock.service",
@@ -1813,31 +2158,73 @@
       "label": ""
     },
     {
-      "from": "scr:app/(tabs)/chats.tsx",
+      "from": "scr:app/(tabs)/chats/index.tsx",
+      "to": "route:POST /api/sales/:id/confirm",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/chats/index.tsx",
+      "to": "route:POST /api/sales/:id/reject",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/chats/index.tsx",
+      "to": "route:POST /api/conversations/:id/mark-paid",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/chats/index.tsx",
+      "to": "route:POST /api/sales/:id/broadcast-drivers",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/chats/index.tsx",
+      "to": "route:POST /api/sales/record-manual",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/chats/index.tsx",
       "to": "route:PATCH /api/conversations/:id/archive",
       "kind": "screen-route",
       "label": ""
     },
     {
-      "from": "scr:app/(tabs)/chats.tsx",
+      "from": "scr:app/(tabs)/chats/index.tsx",
       "to": "route:POST /api/conversations/:id/resume",
       "kind": "screen-route",
       "label": ""
     },
     {
-      "from": "scr:app/(tabs)/chats.tsx",
+      "from": "scr:app/(tabs)/chats/index.tsx",
       "to": "route:POST /api/conversations/:id/takeover",
       "kind": "screen-route",
       "label": ""
     },
     {
-      "from": "scr:app/(tabs)/chats.tsx",
+      "from": "scr:app/(tabs)/chats/index.tsx",
       "to": "route:GET /api/conversations/:id/handoff",
       "kind": "screen-route",
       "label": ""
     },
     {
-      "from": "scr:app/(tabs)/chats.tsx",
+      "from": "scr:app/(tabs)/chats/index.tsx",
+      "to": "route:GET /api/conversations/:id/intents",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/chats/index.tsx",
+      "to": "route:POST /api/conversations/:id/clear-context",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/chats/index.tsx",
       "to": "route:POST /api/whatsapp/send",
       "kind": "screen-route",
       "label": ""
@@ -1851,6 +2238,54 @@
     {
       "from": "scr:app/(tabs)/inventory.tsx",
       "to": "route:POST /api/sales/:id/reject",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/inventory.tsx",
+      "to": "route:POST /api/conversations/:id/mark-paid",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/inventory.tsx",
+      "to": "route:POST /api/sales/:id/broadcast-drivers",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/inventory.tsx",
+      "to": "route:POST /api/sales/record-manual",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/sales.tsx",
+      "to": "route:POST /api/sales/:id/confirm",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/sales.tsx",
+      "to": "route:POST /api/sales/:id/reject",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/sales.tsx",
+      "to": "route:POST /api/conversations/:id/mark-paid",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/sales.tsx",
+      "to": "route:POST /api/sales/:id/broadcast-drivers",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:app/(tabs)/sales.tsx",
+      "to": "route:POST /api/sales/record-manual",
       "kind": "screen-route",
       "label": ""
     },
@@ -1927,8 +2362,74 @@
       "label": ""
     },
     {
+      "from": "scr:src/components/chats/DraftDeck.tsx",
+      "to": "route:POST /api/conversations/:id/smart-replies",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/chats/RiderPickerSheet.tsx",
+      "to": "route:POST /api/sales/:id/confirm",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/chats/RiderPickerSheet.tsx",
+      "to": "route:POST /api/sales/:id/reject",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/chats/RiderPickerSheet.tsx",
+      "to": "route:POST /api/conversations/:id/mark-paid",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/chats/RiderPickerSheet.tsx",
+      "to": "route:POST /api/sales/:id/broadcast-drivers",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/chats/RiderPickerSheet.tsx",
+      "to": "route:POST /api/sales/record-manual",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
       "from": "scr:src/components/chats/SmartReplyStrip.tsx",
       "to": "route:POST /api/conversations/:id/smart-replies",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/ManualConfirmSheet.tsx",
+      "to": "route:POST /api/sales/:id/confirm",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/ManualConfirmSheet.tsx",
+      "to": "route:POST /api/sales/:id/reject",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/ManualConfirmSheet.tsx",
+      "to": "route:POST /api/conversations/:id/mark-paid",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/ManualConfirmSheet.tsx",
+      "to": "route:POST /api/sales/:id/broadcast-drivers",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/ManualConfirmSheet.tsx",
+      "to": "route:POST /api/sales/record-manual",
       "kind": "screen-route",
       "label": ""
     },
@@ -1941,6 +2442,54 @@
     {
       "from": "scr:src/components/sales/PendingDetailSheet.tsx",
       "to": "route:POST /api/sales/:id/reject",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/PendingDetailSheet.tsx",
+      "to": "route:POST /api/conversations/:id/mark-paid",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/PendingDetailSheet.tsx",
+      "to": "route:POST /api/sales/:id/broadcast-drivers",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/PendingDetailSheet.tsx",
+      "to": "route:POST /api/sales/record-manual",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/TeamPickerSheet.tsx",
+      "to": "route:POST /api/sales/:id/confirm",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/TeamPickerSheet.tsx",
+      "to": "route:POST /api/sales/:id/reject",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/TeamPickerSheet.tsx",
+      "to": "route:POST /api/conversations/:id/mark-paid",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/TeamPickerSheet.tsx",
+      "to": "route:POST /api/sales/:id/broadcast-drivers",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/components/sales/TeamPickerSheet.tsx",
+      "to": "route:POST /api/sales/record-manual",
       "kind": "screen-route",
       "label": ""
     },
@@ -1983,6 +2532,24 @@
     {
       "from": "scr:src/hooks/useSales.ts",
       "to": "route:POST /api/sales/:id/reject",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/hooks/useSales.ts",
+      "to": "route:POST /api/conversations/:id/mark-paid",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/hooks/useSales.ts",
+      "to": "route:POST /api/sales/:id/broadcast-drivers",
+      "kind": "screen-route",
+      "label": ""
+    },
+    {
+      "from": "scr:src/hooks/useSales.ts",
+      "to": "route:POST /api/sales/record-manual",
       "kind": "screen-route",
       "label": ""
     },

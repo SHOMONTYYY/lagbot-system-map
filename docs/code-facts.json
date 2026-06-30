@@ -129,15 +129,7 @@
       ],
       "tables": [
         {
-          "table": "conversations",
-          "op": "read"
-        },
-        {
           "table": "messages",
-          "op": "write"
-        },
-        {
-          "table": "conversations",
           "op": "write"
         }
       ],
@@ -538,6 +530,10 @@
         {
           "table": "pending_sales",
           "op": "read"
+        },
+        {
+          "table": "team_members",
+          "op": "read"
         }
       ],
       "rpcs": [],
@@ -546,18 +542,23 @@
     },
     {
       "method": "POST",
-      "path": "/api/sales/:id/confirm",
+      "path": "/api/sales/:id/broadcast-drivers",
       "guards": [
         "requireAuth",
         "requireBusiness"
       ],
       "services": [
         "routingEngine",
+        "evolutionClient",
         "itemsForDecrement"
       ],
       "tables": [
         {
           "table": "pending_sales",
+          "op": "read"
+        },
+        {
+          "table": "team_members",
           "op": "read"
         },
         {
@@ -573,6 +574,14 @@
           "op": "read"
         },
         {
+          "table": "businesses",
+          "op": "read"
+        },
+        {
+          "table": "messages",
+          "op": "write"
+        },
+        {
           "table": "products",
           "op": "read"
         }
@@ -585,7 +594,50 @@
     },
     {
       "method": "POST",
-      "path": "/api/sales/:id/reject",
+      "path": "/api/sales/:id/confirm",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/conversations/:id/mark-paid",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "conversations",
+          "op": "read"
+        },
+        {
+          "table": "pending_sales",
+          "op": "read"
+        },
+        {
+          "table": "pending_sales",
+          "op": "write"
+        },
+        {
+          "table": "products",
+          "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/sales/record-manual",
       "guards": [
         "requireAuth",
         "requireBusiness"
@@ -597,7 +649,43 @@
           "op": "read"
         },
         {
+          "table": "products",
+          "op": "read"
+        },
+        {
           "table": "pending_sales",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/sales/:id/reject",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [
+        "evolutionClient"
+      ],
+      "tables": [
+        {
+          "table": "pending_sales",
+          "op": "read"
+        },
+        {
+          "table": "pending_sales",
+          "op": "write"
+        },
+        {
+          "table": "conversations",
+          "op": "write"
+        },
+        {
+          "table": "messages",
           "op": "write"
         }
       ],
@@ -793,6 +881,34 @@
     },
     {
       "method": "POST",
+      "path": "/api/conversations/:id/clear-context",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [
+        "pipeline"
+      ],
+      "tables": [
+        {
+          "table": "conversations",
+          "op": "read"
+        },
+        {
+          "table": "pending_sales",
+          "op": "read"
+        },
+        {
+          "table": "pending_sales",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "POST",
       "path": "/api/conversations/:id/smart-replies",
       "guards": [
         "requireAuth",
@@ -809,6 +925,36 @@
         {
           "table": "messages",
           "op": "read"
+        }
+      ],
+      "rpcs": [],
+      "auth": [],
+      "http": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/conversations/:id/intents",
+      "guards": [
+        "requireAuth",
+        "requireBusiness"
+      ],
+      "services": [],
+      "tables": [
+        {
+          "table": "conversations",
+          "op": "read"
+        },
+        {
+          "table": "messages",
+          "op": "read"
+        },
+        {
+          "table": "messages",
+          "op": "write"
+        },
+        {
+          "table": "conversations",
+          "op": "write"
         }
       ],
       "rpcs": [],
@@ -848,6 +994,38 @@
       "http": []
     },
     {
+      "name": "delivery-message.service.js",
+      "purpose": "Delivery-message service — the SINGLE place that builds + sends a driver's",
+      "exports": [
+        "resolveDriverReveal",
+        "templateWants",
+        "buildDriverText",
+        "notifyDriver",
+        "upsertConversation",
+        "storeMessage"
+      ],
+      "requires": [
+        "evolution-api.client.js"
+      ],
+      "di": [],
+      "tables": [
+        {
+          "table": "business_config",
+          "op": "read"
+        },
+        {
+          "table": "conversations",
+          "op": "write"
+        },
+        {
+          "table": "messages",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "http": []
+    },
+    {
       "name": "evolution-api.client.js",
       "purpose": "Evolution API Client",
       "exports": [
@@ -883,10 +1061,65 @@
         {
           "table": "whatsapp_connections",
           "op": "write"
+        },
+        {
+          "table": "messages",
+          "op": "write"
         }
       ],
       "rpcs": [],
       "http": []
+    },
+    {
+      "name": "fulfilment.service.js",
+      "purpose": "Fulfilment / delivery state machine (sql/033) + team windows (sql/034).",
+      "exports": [
+        "createFulfilmentService",
+        "FULFIL_STEPS",
+        "orderSummary"
+      ],
+      "requires": [
+        "evolution-api.client.js"
+      ],
+      "di": [],
+      "tables": [
+        {
+          "table": "team_members",
+          "op": "read"
+        },
+        {
+          "table": "pending_sales",
+          "op": "read"
+        },
+        {
+          "table": "team_windows",
+          "op": "read"
+        },
+        {
+          "table": "team_windows",
+          "op": "write"
+        },
+        {
+          "table": "pending_sales",
+          "op": "write"
+        }
+      ],
+      "rpcs": [],
+      "http": []
+    },
+    {
+      "name": "intent.service.js",
+      "purpose": "── AI message-intent classifier ─────────────────────────────────────────────",
+      "exports": [
+        "classifyConversationIntents"
+      ],
+      "requires": [],
+      "di": [],
+      "tables": [],
+      "rpcs": [],
+      "http": [
+        "anthropic"
+      ]
     },
     {
       "name": "llm-queue.js",
@@ -917,6 +1150,10 @@
       "di": [],
       "tables": [
         {
+          "table": "products",
+          "op": "read"
+        },
+        {
           "table": "businesses",
           "op": "read"
         },
@@ -926,10 +1163,6 @@
         },
         {
           "table": "business_config",
-          "op": "read"
-        },
-        {
-          "table": "products",
           "op": "read"
         },
         {
@@ -959,27 +1192,15 @@
       ],
       "tables": [
         {
-          "table": "business_config",
-          "op": "read"
-        },
-        {
-          "table": "conversations",
-          "op": "read"
+          "table": "team_windows",
+          "op": "write"
         },
         {
           "table": "conversations",
           "op": "write"
         },
         {
-          "table": "messages",
-          "op": "read"
-        },
-        {
-          "table": "products",
-          "op": "read"
-        },
-        {
-          "table": "routing_rules",
+          "table": "business_config",
           "op": "read"
         },
         {
@@ -993,6 +1214,30 @@
         {
           "table": "pending_sales",
           "op": "write"
+        },
+        {
+          "table": "team_windows",
+          "op": "read"
+        },
+        {
+          "table": "team_members",
+          "op": "write"
+        },
+        {
+          "table": "conversations",
+          "op": "read"
+        },
+        {
+          "table": "messages",
+          "op": "read"
+        },
+        {
+          "table": "products",
+          "op": "read"
+        },
+        {
+          "table": "routing_rules",
+          "op": "read"
         },
         {
           "table": "messages",
@@ -1027,6 +1272,10 @@
         "parseNovaOutput",
         "enforceRules",
         "detectForcedHandoff",
+        "detectPaymentClaim",
+        "detectCancellation",
+        "detectPostSaleConcern",
+        "isPostSaleFollowup",
         "HANDOFF_REASON_LABELS",
         "NOVA_RULES_SUMMARY"
       ],
@@ -1132,7 +1381,8 @@
         "clampQty",
         "resolveItems",
         "summarizeItems",
-        "itemsForDecrement"
+        "itemsForDecrement",
+        "backfillItems"
       ],
       "requires": [],
       "di": [],
@@ -1150,6 +1400,7 @@
       "di": [],
       "tables": [],
       "rpcs": [
+        "reconcile_sale_stock_v2",
         "reconcile_sale_stock"
       ],
       "http": []
@@ -1363,7 +1614,9 @@
         "industry",
         "location",
         "description",
-        "business_address"
+        "business_address",
+        "delivery_mode",
+        "driver_reveal"
       ],
       "wallets": [
         "id",
@@ -1418,7 +1671,9 @@
       ],
       "products": [
         "sizes",
-        "colors"
+        "colors",
+        "stock_by_size",
+        "size_convention"
       ],
       "routing_rules": [
         "id",
@@ -1466,7 +1721,15 @@
       "pending_sales": [
         "items",
         "stock_committed",
-        "rejected_at"
+        "rejected_at",
+        "delivery_status",
+        "fulfilment_type",
+        "assigned_to",
+        "dispatched_at",
+        "delivered_at",
+        "delivery_fee",
+        "pod_url",
+        "fulfilment_events"
       ],
       "team_members": [
         "id",
@@ -1474,7 +1737,30 @@
         "name",
         "role",
         "whatsapp_contact",
-        "created_at"
+        "created_at",
+        "whatsapp_lid"
+      ],
+      "team_windows": [
+        "id",
+        "business_id",
+        "team_member_id",
+        "team_member_phone",
+        "role",
+        "purpose",
+        "related_sale_id",
+        "related_conversation_id",
+        "status",
+        "context",
+        "opened_at",
+        "closed_at",
+        "close_reason",
+        "expires_at",
+        "team_member_lid",
+        "eta_text",
+        "driver_note",
+        "last_driver_update_at",
+        "last_nudge_at",
+        "nudge_stage"
       ],
       "ai_accuracy_metrics": [
         "id",
@@ -1560,6 +1846,7 @@
       "skills",
       "subscriptions",
       "team_members",
+      "team_windows",
       "token_config",
       "token_ledger",
       "user_profiles",
@@ -1581,7 +1868,8 @@
       "increment_product_stock",
       "protect_business_columns",
       "protect_business_config_bank",
-      "reconcile_sale_stock"
+      "reconcile_sale_stock",
+      "reconcile_sale_stock_v2"
     ],
     "policies": [
       {
@@ -1749,12 +2037,23 @@
       ]
     },
     {
-      "file": "app/(tabs)/chats.tsx",
+      "file": "app/(tabs)/chats/index.tsx",
       "routes": [
+        "POST /api/sales/:_/confirm",
+        "POST /api/sales/:_/reject",
+        "POST /api/conversations/:_/mark-paid",
+        "POST /api/sales/:_/assign",
+        "POST /api/sales/:_/dispatch",
+        "POST /api/sales/:_/deliver",
+        "POST /api/sales/:_/fail",
+        "POST /api/sales/:_/broadcast-drivers",
+        "POST /api/sales/record-manual",
         "PATCH /api/conversations/:_/archive",
         "POST /api/conversations/:_/resume",
         "POST /api/conversations/:_/takeover",
         "GET /api/conversations/:_/handoff",
+        "GET /api/conversations/:_/intents",
+        "POST /api/conversations/:_/clear-context",
         "POST /api/whatsapp/send"
       ]
     },
@@ -1762,12 +2061,28 @@
       "file": "app/(tabs)/inventory.tsx",
       "routes": [
         "POST /api/sales/:_/confirm",
-        "POST /api/sales/:_/reject"
+        "POST /api/sales/:_/reject",
+        "POST /api/conversations/:_/mark-paid",
+        "POST /api/sales/:_/assign",
+        "POST /api/sales/:_/dispatch",
+        "POST /api/sales/:_/deliver",
+        "POST /api/sales/:_/fail",
+        "POST /api/sales/:_/broadcast-drivers",
+        "POST /api/sales/record-manual"
       ]
     },
     {
       "file": "app/(tabs)/sales.tsx",
       "routes": [
+        "POST /api/sales/:_/confirm",
+        "POST /api/sales/:_/reject",
+        "POST /api/conversations/:_/mark-paid",
+        "POST /api/sales/:_/assign",
+        "POST /api/sales/:_/dispatch",
+        "POST /api/sales/:_/deliver",
+        "POST /api/sales/:_/fail",
+        "POST /api/sales/:_/broadcast-drivers",
+        "POST /api/sales/record-manual",
         "POST /api/routing-rules",
         "PATCH /api/routing-rules/:_",
         "DELETE /api/routing-rules/:_"
@@ -1795,21 +2110,71 @@
       ]
     },
     {
+      "file": "src/components/chats/DraftDeck.tsx",
+      "routes": [
+        "POST /api/conversations/:_/smart-replies"
+      ]
+    },
+    {
+      "file": "src/components/chats/RiderPickerSheet.tsx",
+      "routes": [
+        "POST /api/sales/:_/confirm",
+        "POST /api/sales/:_/reject",
+        "POST /api/conversations/:_/mark-paid",
+        "POST /api/sales/:_/assign",
+        "POST /api/sales/:_/dispatch",
+        "POST /api/sales/:_/deliver",
+        "POST /api/sales/:_/fail",
+        "POST /api/sales/:_/broadcast-drivers",
+        "POST /api/sales/record-manual"
+      ]
+    },
+    {
       "file": "src/components/chats/SmartReplyStrip.tsx",
       "routes": [
         "POST /api/conversations/:_/smart-replies"
       ]
     },
     {
+      "file": "src/components/sales/ManualConfirmSheet.tsx",
+      "routes": [
+        "POST /api/sales/:_/confirm",
+        "POST /api/sales/:_/reject",
+        "POST /api/conversations/:_/mark-paid",
+        "POST /api/sales/:_/assign",
+        "POST /api/sales/:_/dispatch",
+        "POST /api/sales/:_/deliver",
+        "POST /api/sales/:_/fail",
+        "POST /api/sales/:_/broadcast-drivers",
+        "POST /api/sales/record-manual"
+      ]
+    },
+    {
       "file": "src/components/sales/PendingDetailSheet.tsx",
       "routes": [
         "POST /api/sales/:_/confirm",
-        "POST /api/sales/:_/reject"
+        "POST /api/sales/:_/reject",
+        "POST /api/conversations/:_/mark-paid",
+        "POST /api/sales/:_/assign",
+        "POST /api/sales/:_/dispatch",
+        "POST /api/sales/:_/deliver",
+        "POST /api/sales/:_/fail",
+        "POST /api/sales/:_/broadcast-drivers",
+        "POST /api/sales/record-manual"
       ]
     },
     {
       "file": "src/components/sales/TeamPickerSheet.tsx",
       "routes": [
+        "POST /api/sales/:_/confirm",
+        "POST /api/sales/:_/reject",
+        "POST /api/conversations/:_/mark-paid",
+        "POST /api/sales/:_/assign",
+        "POST /api/sales/:_/dispatch",
+        "POST /api/sales/:_/deliver",
+        "POST /api/sales/:_/fail",
+        "POST /api/sales/:_/broadcast-drivers",
+        "POST /api/sales/record-manual",
         "POST /api/whatsapp/send"
       ]
     },
@@ -1836,7 +2201,14 @@
       "file": "src/hooks/useSales.ts",
       "routes": [
         "POST /api/sales/:_/confirm",
-        "POST /api/sales/:_/reject"
+        "POST /api/sales/:_/reject",
+        "POST /api/conversations/:_/mark-paid",
+        "POST /api/sales/:_/assign",
+        "POST /api/sales/:_/dispatch",
+        "POST /api/sales/:_/deliver",
+        "POST /api/sales/:_/fail",
+        "POST /api/sales/:_/broadcast-drivers",
+        "POST /api/sales/record-manual"
       ]
     },
     {
