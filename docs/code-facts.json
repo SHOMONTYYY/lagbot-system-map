@@ -47,7 +47,12 @@
       "path": "/api/status",
       "guards": [],
       "services": [],
-      "tables": [],
+      "tables": [
+        {
+          "table": "businesses",
+          "op": "read"
+        }
+      ],
       "rpcs": [],
       "auth": [],
       "http": []
@@ -912,7 +917,8 @@
       "path": "/api/conversations/:id/smart-replies",
       "guards": [
         "requireAuth",
-        "requireBusiness"
+        "requireBusiness",
+        "rateLimitBusiness"
       ],
       "services": [
         "llm"
@@ -936,7 +942,8 @@
       "path": "/api/conversations/:id/intents",
       "guards": [
         "requireAuth",
-        "requireBusiness"
+        "requireBusiness",
+        "rateLimitBusiness"
       ],
       "services": [],
       "tables": [
@@ -1443,6 +1450,16 @@
           "op": "write"
         }
       ],
+      "rpcs": [],
+      "http": []
+    },
+    {
+      "name": "xlsx-parse.worker.js",
+      "purpose": "Isolated spreadsheet parser (Finding M6).",
+      "exports": [],
+      "requires": [],
+      "di": [],
+      "tables": [],
       "rpcs": [],
       "http": []
     }
@@ -1995,6 +2012,30 @@
       {
         "name": "business reads own chat media",
         "table": "storage"
+      },
+      {
+        "name": "owner read",
+        "table": "wallets"
+      },
+      {
+        "name": "owner read",
+        "table": "wallet_transactions"
+      },
+      {
+        "name": "owner read",
+        "table": "wallet_withdrawal_accounts"
+      },
+      {
+        "name": "owner read",
+        "table": "vendor_token_state"
+      },
+      {
+        "name": "owner read",
+        "table": "token_ledger"
+      },
+      {
+        "name": "read only",
+        "table": "token_config"
       }
     ]
   },

@@ -264,6 +264,14 @@
       "purpose": "Token billing service — Phase 1 (core metering + free tier)."
     },
     {
+      "id": "svc:xlsx-parse.worker",
+      "label": "xlsx-parse.worker",
+      "kind": "service",
+      "layer": "svc",
+      "exports": [],
+      "purpose": "Isolated spreadsheet parser (Finding M6)."
+    },
+    {
       "id": "tbl:user_profiles",
       "label": "user_profiles",
       "kind": "table",
@@ -962,7 +970,8 @@
       "layer": "api",
       "guards": [
         "requireAuth",
-        "requireBusiness"
+        "requireBusiness",
+        "rateLimitBusiness"
       ]
     },
     {
@@ -972,7 +981,8 @@
       "layer": "api",
       "guards": [
         "requireAuth",
-        "requireBusiness"
+        "requireBusiness",
+        "rateLimitBusiness"
       ]
     },
     {
@@ -1166,6 +1176,12 @@
       "to": "svc:evolution-webhook.handler",
       "kind": "route-service",
       "label": "webhookHandler"
+    },
+    {
+      "from": "route:GET /api/status",
+      "to": "tbl:businesses",
+      "kind": "route-table",
+      "label": "read"
     },
     {
       "from": "route:POST /api/whatsapp/pairing-code",

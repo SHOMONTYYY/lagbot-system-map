@@ -9,7 +9,7 @@ Method · Path · Guards · Services · Tables(R/W) · Ext
 - `POST /webhook/evolution` · g:webhookLimiter,webhookHandler · svc:evolution-webhook · —
 - `POST /webhook/evolution/:secret` · g:webhookLimiter,webhookHandler · svc:evolution-webhook · —
 - `GET /` · —
-- `GET /api/status` · —
+- `GET /api/status` · R:businesses
 - `GET /healthz` · g:healthHandler · —
 - `GET /health` · g:healthHandler · —
 - `POST /api/whatsapp/pairing-code` · g:requireAuth,requireBusiness,rateLimitBusiness · svc:evolution-api · W:whatsapp_connections
@@ -50,11 +50,11 @@ Method · Path · Guards · Services · Tables(R/W) · Ext
 - `POST /api/conversations/:id/resume` · g:requireAuth,requireBusiness · R:conversations W:conversations
 - `POST /api/conversations/:id/takeover` · g:requireAuth,requireBusiness · svc:message-pipeline · R:conversations W:conversations
 - `POST /api/conversations/:id/clear-context` · g:requireAuth,requireBusiness · svc:message-pipeline · R:conversations/pending_sales W:pending_sales
-- `POST /api/conversations/:id/smart-replies` · g:requireAuth,requireBusiness · svc:llm · R:conversations/messages
-- `GET /api/conversations/:id/intents` · g:requireAuth,requireBusiness · R:conversations/messages W:messages/conversations
+- `POST /api/conversations/:id/smart-replies` · g:requireAuth,requireBusiness,rateLimitBusiness · svc:llm · R:conversations/messages
+- `GET /api/conversations/:id/intents` · g:requireAuth,requireBusiness,rateLimitBusiness · R:conversations/messages W:messages/conversations
 - `GET /api/wallet` · g:requireAuth,requireBusiness · R:wallets
 
-## Service call graph (18)
+## Service call graph (19)
 
 - **catalogue-agent.service** — Catalogue Agent (read-side product selector)
   - exports: selectProductsForPrompt
@@ -112,6 +112,7 @@ Method · Path · Guards · Services · Tables(R/W) · Ext
 - **token.service** — Token billing service — Phase 1 (core metering + free tier).
   - db: R:token_config/vendor_token_state/token_ledger/conversations W:vendor_token_state/token_ledger/conversations
   - exports: TokenService
+- **xlsx-parse.worker** — Isolated spreadsheet parser (Finding M6).
 
 ## Screen → API calls (19 screens that hit routes)
 
@@ -176,7 +177,7 @@ PORT, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_DB_URI, AN
 - **wallets** (11): id, business_id, paystack_subaccount_code, paystack_subaccount_id, bank_name, bank_code, account_number, account_name, status, created_at, updated_at
 - **weekly_reports** (7): id, business_id, report_type, report_data, week_start, week_end, created_at
 
-## RLS policies (31 on 27 tables)
+## RLS policies (37 on 27 tables)
 
 - **ai_accuracy_metrics**: owner only
 - **business_config**: owner only
@@ -197,13 +198,13 @@ PORT, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, SUPABASE_DB_URI, AN
 - **skills**: read only | read catalog
 - **storage**: business reads own chat media
 - **team_members**: owner only | owner only
-- **token_config**: read only
-- **token_ledger**: owner read
+- **token_config**: read only | read only
+- **token_ledger**: owner read | owner read
 - **user_skills**: owner only
-- **vendor_token_state**: owner read
-- **wallet_transactions**: owner only
-- **wallet_withdrawal_accounts**: owner only
-- **wallets**: owner only
+- **vendor_token_state**: owner read | owner read
+- **wallet_transactions**: owner only | owner read
+- **wallet_withdrawal_accounts**: owner only | owner read
+- **wallets**: owner only | owner read
 - **whatsapp_connections**: owner only
 
 RLS enabled (ALTER): ai_accuracy_metrics, ai_behavior_settings, ai_tone_metrics, budget_tracking, business_config, businesses, confirmed_sales, conversation_state, conversations, customer_satisfaction, daily_stats, frequently_asked_questions, heartbeat_logs, human_interventions, inventory_imports, lead_reminders, message_count_realtime, messages, pending_sales, products, response_time_metrics, routing_rules, sales_records, skills, subscriptions, team_members, team_windows, token_config, token_ledger, user_profiles, user_skills, vendor_token_state, wallet_transactions, wallet_withdrawal_accounts, wallets, weekly_reports, whatsapp_connections
